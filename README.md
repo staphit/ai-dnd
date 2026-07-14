@@ -2,7 +2,7 @@
 
 這個專案包含兩種本機 D&D 介面：
 
-- 瀏覽器網站：1–4 人遊戲桌、2024 角色規則、骰盤、戰役紀錄與 OpenAI Dungeon Master Agent
+- 瀏覽器網站：1–4 人遊戲桌、2024 角色規則、骰盤、戰役紀錄與 Codex CLI Dungeon Master
 - VS Code 擴充套件：較精簡的側邊欄版本，使用 VS Code Language Model API
 
 ## 本機網站
@@ -16,8 +16,8 @@
 - 短休／長休恢復，以及施法和職業資源消耗
 - 可按角色與技能自動套用加值的公開多面骰
 - 瀏覽器自動存檔及戰役紀錄頁
-- 官方 OpenAI Agents SDK 地城主
-- `gpt-image-2` 場景插圖，玩家手動觸發
+- 本機 `codex exec` 結構化地城主，不需要 API Key
+- Codex `$imagegen` 場景插圖，玩家手動觸發
 - 沒有模型時可切換示範 DM，測試完整遊戲流程
 - 桌面、平板與手機響應式布局
 
@@ -25,6 +25,7 @@
 
 ```bash
 npm install
+codex login
 npm run web:dev
 ```
 
@@ -47,34 +48,32 @@ npm run web:check
 npm run web:server-check
 ```
 
-`npm test` 會檢查 12 職業角色建立、法術與法術位、資源和休息、動態隊伍回合、開團表單，以及送往 AI 地城主的完整角色快照；測試不會呼叫 OpenAI API。
+`npm test` 會檢查 12 職業角色建立、法術與法術位、資源和休息、動態隊伍回合、開團表單，以及送往 AI 地城主的完整角色快照；測試不會呼叫 Codex。
 
-### 設定 OpenAI Agent
+### 設定 Codex CLI
 
-複製環境變數範例，然後只在本機的 `.env` 填入 OpenAI API Key：
+網站重用 Codex CLI 的本機 ChatGPT 登入，不需要 `OPENAI_API_KEY`。先安裝 Codex CLI，再確認登入狀態：
 
 ```bash
-cp .env.example .env
+codex login
+codex login status
 ```
+
+可選擇在 `.env` 設定：
 
 ```text
-OPENAI_API_KEY=你的金鑰
-OPENAI_MODEL=gpt-5.6-terra
-OPENAI_IMAGE_MODEL=gpt-image-2
+CODEX_CLI_PATH=codex
+CODEX_MODEL=
+PORT=4318
 ```
 
-`.env` 已列入 `.gitignore`，金鑰只由本機 Node 伺服器讀取，不會進入前端 bundle。Agent tracing 預設關閉，避免另外記錄戰役內容；如需 OpenAI Dashboard traces，可設定 `OPENAI_AGENT_TRACING=1`。
+`CODEX_MODEL` 留空時使用 Codex CLI 的預設模型。伺服器啟動 Codex 子程序時會移除 `OPENAI_API_KEY` 與 `CODEX_API_KEY`，確保走 ChatGPT 登入而不是 API 計費。
 
-目前伺服器只監聽 `127.0.0.1`，不會直接暴露到區域網路。未設定金鑰時可在首頁切換示範 DM。
+DM 流程使用 `codex exec --ephemeral --sandbox read-only --output-schema`，回傳經 JSON Schema 約束的裁定結果。場景插圖明確呼叫 `$imagegen` 的內建工具；原圖先由 Codex 保存於個人 `generated_images`，伺服器驗證工作識別碼後才複製到 `campaign-data/images/`。
 
-### 模型選擇
+目前伺服器只監聽 `127.0.0.1`，不會直接暴露到區域網路。Codex 未安裝或未登入時，可在首頁切換示範 DM。
 
-- `gpt-5.6-terra`：預設，適合長篇劇情一致性與成本平衡
-- `gpt-5.6-luna`：回應較經濟，適合頻繁短回合
-- `gpt-5.6-sol`：品質優先，適合重要劇情或複雜規則裁定
-- `gpt-image-2`：場景插圖模型
-
-圖片不會每回合自動生成。玩家按下「生成場景」後才會產生一張 1536×1024 中等品質 JPEG，並保存在 `campaign-data/images/`；該資料夾不會進入 Git 或 VSIX。
+圖片不會每回合自動生成。玩家按下「生成場景」後才會產生一張 3:2 場景圖並保存到 `campaign-data/images/`；該資料夾不會進入 Git 或 VSIX。文字與圖片都會計入目前 ChatGPT 方案的 Codex 使用限制，但不需要 OpenAI Platform API Key。
 
 ## VS Code 擴充套件
 

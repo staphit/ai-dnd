@@ -85,7 +85,7 @@
     "web:dev": "node scripts/dev.mjs",
     "web:build": "vite build",
     "web:check": "tsc -p web/tsconfig.json --noEmit",
-    "web:server-check": "tsc scene-image.mjs dm-agent.mjs dm-request.mjs server.mjs --noEmit --allowJs --checkJs --module nodenext --moduleResolution nodenext --target es2022 --skipLibCheck",
+    "web:server-check": "tsc codex-cli.mjs scene-image.mjs dm-agent.mjs dm-request.mjs server.mjs --noEmit --allowJs --checkJs --module nodenext --moduleResolution nodenext --target es2022 --skipLibCheck",
     "test": "npm run test:web && npm run test:server",
     "test:web": "vitest run --config vitest.config.ts",
     "test:server": "node --test tests/*.test.mjs",
@@ -112,12 +112,9 @@
   "dependencies": {
     "@fontsource-variable/geist": "^5.2.9",
     "@fontsource-variable/geist-mono": "^5.2.8",
-    "@openai/agents": "^0.13.3",
     "@phosphor-icons/react": "^2.1.10",
     "framer-motion": "^12.42.2",
-    "openai": "^6.46.0",
     "react": "^19.2.7",
-    "react-dom": "^19.2.7",
-    "zod": "^4.4.3"
+    "react-dom": "^19.2.7"
   }
 }

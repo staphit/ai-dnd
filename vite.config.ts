@@ -14,6 +14,7 @@ export default defineConfig({
     port: 4317,
     proxy: {
       '/api': 'http://127.0.0.1:4318',
+      '/generated': 'http://127.0.0.1:4318',
     },
   },
 });

@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "narration": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000
+    },
+    "scene": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 240
+    },
+    "requiresCheck": {
+      "type": "boolean"
+    },
+    "check": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "character": { "type": "string", "minLength": 1, "maxLength": 100 },
+            "ability": { "type": "string", "minLength": 1, "maxLength": 100 },
+            "skill": { "type": "string", "minLength": 1, "maxLength": 100 },
+            "dc": { "type": "integer", "minimum": 5, "maximum": 30 },
+            "reason": { "type": "string", "minLength": 1, "maxLength": 500 }
+          },
+          "required": ["character", "ability", "skill", "dc", "reason"],
+          "additionalProperties": false
+        },
+        { "type": "null" }
+      ]
+    },
+    "choices": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1, "maxLength": 240 },
+      "minItems": 1,
+      "maxItems": 3
+    }
+  },
+  "required": ["narration", "scene", "requiresCheck", "check", "choices"],
+  "additionalProperties": false
+}
