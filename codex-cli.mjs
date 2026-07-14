@@ -1,6 +1,8 @@
 export {
   codexImageModel,
   codexModel,
+  codexModelOptions,
+  normalizeCodexModel,
   runCodexImageGeneration,
   runCodexStructured,
 } from './codex-exec.mjs';

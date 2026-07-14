@@ -1,0 +1,5 @@
+:root {
+  --panel: var(--surface);
+  --text: #e7e3d9;
+  --mono: "Geist Mono Variable", monospace;
+}

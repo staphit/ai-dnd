@@ -49,3 +49,16 @@ test('supports the legacy action object without calling the model', () => {
   });
   assert.match(result.prompt, /本輪宣告：檢查符文/);
 });
+
+test('labels private history and includes active combat state', () => {
+  const result = buildDmRequest({
+    campaign: { title: '測試戰役', scene: '石門', round: 3 },
+    players: [player('player1', '甲', '法師')],
+    actions: [{ playerId: 'player1', text: '攻擊哥布林' }],
+    history: [{ speaker: 'dm', audience: 'player1', text: '你看見暗號。' }],
+    combat: { active: true, round: 2, combatants: [{ name: '哥布林', hp: 4, maxHp: 12, ac: 13, initiative: 15 }] },
+  });
+  assert.match(result.prompt, /僅 player1 可見/);
+  assert.match(result.prompt, /戰鬥第 2 輪/);
+  assert.match(result.prompt, /哥布林 HP 4\/12 AC 13 先攻 15/);
+});

@@ -267,6 +267,7 @@ button:focus-visible, textarea:focus-visible, input:focus-visible, select:focus-
 .spell-tags span { padding: 4px 5px; border: 1px solid var(--line-soft); color: #918e84; font-family: "Geist Mono Variable", monospace; font-size: 7px; }
 .spell-group article > p { margin: 0; color: #aaa69b; font-size: 9px; line-height: 1.55; }
 .spell-actions { display: grid; gap: 4px; }
+.spell-actions select { min-height: 28px; border: 1px solid var(--line); background: #11120f; color: var(--text); font-size: 9px; padding: 4px; }
 .spell-actions button { min-width: 72px; min-height: 28px; border: 0; background: var(--accent); color: #211d16; font-size: 9px; cursor: pointer; }
 .spell-actions .ritual-button { border: 1px solid var(--line); background: transparent; color: #c5c0b5; }
 .spell-actions button:disabled { opacity: .32; cursor: not-allowed; }

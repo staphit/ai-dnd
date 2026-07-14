@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Bed, BookOpenText, Minus, Plus, Shield, Sparkle, Sword, Timer, X } from '@phosphor-icons/react';
+import { Bed, BookOpenText, Minus, Shield, Sparkle, Sword, Timer, X } from '@phosphor-icons/react';
 import type { CharacterSpell, PlayerCharacter, RestType } from '../types';
 import { abilityLabels, abilityModifier } from '../rules/characters';
 
@@ -7,9 +8,9 @@ interface CharacterSheetProps {
   player: PlayerCharacter;
   open: boolean;
   onClose: () => void;
-  onHpChange: (id: PlayerCharacter['id'], delta: number) => void;
   onResourceChange: (id: PlayerCharacter['id'], resourceId: string, delta: number) => void;
-  onCastSpell: (id: PlayerCharacter['id'], spell: CharacterSpell, asRitual: boolean) => void;
+  spellTargets: Array<{ id: string; name: string; side: 'party' | 'enemy' }>;
+  onCastSpell: (id: PlayerCharacter['id'], spell: CharacterSpell, asRitual: boolean, targetId?: string) => void;
   onRest: (id: PlayerCharacter['id'], type: RestType) => void;
 }
 
@@ -17,7 +18,8 @@ function signed(value: number) {
   return value >= 0 ? `+${value}` : String(value);
 }
 
-export function CharacterSheet({ player, open, onClose, onHpChange, onResourceChange, onCastSpell, onRest }: CharacterSheetProps) {
+export function CharacterSheet({ player, open, onClose, spellTargets, onResourceChange, onCastSpell, onRest }: CharacterSheetProps) {
+  const [spellTarget, setSpellTarget] = useState<Record<string, string>>({});
   const spellGroups = player.spellcasting
     ? [...new Set(player.spellcasting.spells.map((spell) => spell.level))].sort((a, b) => a - b)
     : [];
@@ -47,7 +49,7 @@ export function CharacterSheet({ player, open, onClose, onHpChange, onResourceCh
             </header>
 
             <section className="sheet-vitals">
-              <div><small>生命</small><strong>{player.hp}<i>／{player.maxHp}</i></strong><span className="sheet-stepper"><button type="button" onClick={() => onHpChange(player.id, -1)}><Minus /></button><button type="button" onClick={() => onHpChange(player.id, 1)}><Plus /></button></span></div>
+              <div><small>生命</small><strong>{player.hp}<i>／{player.maxHp}</i></strong><span>{player.temporaryHp ? `暫時生命 ${player.temporaryHp}` : player.condition}</span></div>
               <div><small>護甲</small><strong>{player.ac}</strong><Shield /></div>
               <div><small>先攻</small><strong>{signed(player.initiative)}</strong><span>速度 {player.speed} 呎</span></div>
               <div><small>熟練</small><strong>+{player.proficiencyBonus}</strong><span>被動察覺 {player.passive}</span></div>
@@ -94,7 +96,7 @@ export function CharacterSheet({ player, open, onClose, onHpChange, onResourceCh
                       {player.resources.map((entry) => (
                         <div key={entry.id}>
                           <span><strong>{entry.name}{entry.die ? ` ${entry.die}` : ''}</strong><small>{entry.description}</small></span>
-                          <div><button type="button" onClick={() => onResourceChange(player.id, entry.id, -1)} disabled={entry.current === 0}><Minus /></button><b>{entry.current}／{entry.max}</b><button type="button" onClick={() => onResourceChange(player.id, entry.id, 1)} disabled={entry.current === entry.max}><Plus /></button></div>
+                          <div><b>{entry.current}／{entry.max}</b><button type="button" onClick={() => onResourceChange(player.id, entry.id, -1)} disabled={entry.current === 0}><Minus />使用</button></div>
                         </div>
                       ))}
                     </div>
@@ -125,14 +127,21 @@ export function CharacterSheet({ player, open, onClose, onHpChange, onResourceCh
                         const canRitual = spell.ritual && (spell.prepared || spell.inSpellbook);
                         const hasFreeUse = Boolean(spell.freeUseResourceId && player.resources.some((entry) => entry.id === spell.freeUseResourceId && entry.current > 0));
                         const hasSlot = spell.level === 0 || hasFreeUse || Boolean(player.spellcasting?.slots.some((slot) => slot.level >= spell.level && slot.current > 0));
+                        const candidates = spell.effect?.target === 'self'
+                          ? spellTargets.filter((entry) => entry.id === player.id)
+                          : spell.effect?.target === 'ally'
+                            ? spellTargets.filter((entry) => entry.side === 'party')
+                            : spellTargets.filter((entry) => entry.side === 'enemy');
+                        const selectedTarget = spellTarget[spell.id] || candidates[0]?.id;
                         return (
                           <article key={spell.id} className={!canCastNormally ? 'spell-unprepared' : ''}>
                             <div className="spell-name"><BookOpenText /><span><strong>{spell.name}</strong><small>{spell.englishName}・{spell.school}{spell.alwaysPrepared ? '・常備' : !spell.prepared ? '・未準備' : ''}</small></span></div>
                             <div className="spell-tags"><span>{spell.castingTime}</span><span>{spell.range}</span>{spell.concentration && <span>專注</span>}{spell.ritual && <span>儀式</span>}</div>
                             <p>{spell.description}</p>
                             <div className="spell-actions">
-                              {canCastNormally && <button type="button" onClick={() => onCastSpell(player.id, spell, false)} disabled={!hasSlot}>施放</button>}
-                              {canRitual && <button type="button" className="ritual-button" onClick={() => onCastSpell(player.id, spell, true)}>儀式施放</button>}
+                              {spell.effect && candidates.length > 0 && <select aria-label={`${spell.name}目標`} value={selectedTarget} onChange={(event) => setSpellTarget((current) => ({ ...current, [spell.id]: event.target.value }))}>{candidates.map((target) => <option key={target.id} value={target.id}>{target.name}</option>)}</select>}
+                              {canCastNormally && <button type="button" onClick={() => onCastSpell(player.id, spell, false, selectedTarget)} disabled={!hasSlot || Boolean(spell.effect && !selectedTarget)}>施放並結算</button>}
+                              {canRitual && <button type="button" className="ritual-button" onClick={() => onCastSpell(player.id, spell, true, selectedTarget)}>儀式施放</button>}
                             </div>
                           </article>
                         );

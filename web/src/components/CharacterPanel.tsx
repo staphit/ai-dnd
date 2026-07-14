@@ -1,17 +1,17 @@
 import { useState } from 'react';
-import { BookOpenText, Minus, Plus, Shield, Sword } from '@phosphor-icons/react';
+import { BookOpenText, Shield, Sword } from '@phosphor-icons/react';
 import type { CharacterSpell, PlayerCharacter, RestType } from '../types';
 import { CharacterSheet } from './CharacterSheet';
 
 interface CharacterPanelProps {
   player: PlayerCharacter;
-  onHpChange: (id: PlayerCharacter['id'], delta: number) => void;
   onResourceChange: (id: PlayerCharacter['id'], resourceId: string, delta: number) => void;
-  onCastSpell: (id: PlayerCharacter['id'], spell: CharacterSpell, asRitual: boolean) => void;
+  spellTargets: Array<{ id: string; name: string; side: 'party' | 'enemy' }>;
+  onCastSpell: (id: PlayerCharacter['id'], spell: CharacterSpell, asRitual: boolean, targetId?: string) => void;
   onRest: (id: PlayerCharacter['id'], type: RestType) => void;
 }
 
-export function CharacterPanel({ player, onHpChange, onResourceChange, onCastSpell, onRest }: CharacterPanelProps) {
+export function CharacterPanel({ player, spellTargets, onResourceChange, onCastSpell, onRest }: CharacterPanelProps) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const hpRatio = Math.max(0, Math.min(100, (player.hp / player.maxHp) * 100));
 
@@ -31,11 +31,7 @@ export function CharacterPanel({ player, onHpChange, onResourceChange, onCastSpe
           <strong>{player.hp}<i>／{player.maxHp}</i></strong>
         </div>
         <div className="hp-track"><span style={{ transform: `scaleX(${hpRatio / 100})` }} /></div>
-        <div className="hp-controls">
-          <button type="button" onClick={() => onHpChange(player.id, -1)} aria-label={`${player.name} 失去一點生命`}><Minus size={15} /></button>
-          <span>{player.condition}</span>
-          <button type="button" onClick={() => onHpChange(player.id, 1)} aria-label={`${player.name} 恢復一點生命`}><Plus size={15} /></button>
-        </div>
+        <div className="hp-controls"><span>{player.condition}{player.temporaryHp ? `／暫時生命 ${player.temporaryHp}` : ''}</span></div>
       </div>
       <div className="stat-line">
         <div><Shield size={17} /><span>護甲</span><strong>{player.ac}</strong></div>
@@ -47,7 +43,7 @@ export function CharacterPanel({ player, onHpChange, onResourceChange, onCastSpe
         <div className="slots"><span>職業資源</span><div>{player.resources.slice(0, 2).map((entry) => <b key={entry.id}>{entry.name} {entry.current}/{entry.max}</b>)}</div></div>
       )}
       <button type="button" className="open-sheet" onClick={() => setSheetOpen(true)}><BookOpenText />完整角色卡</button>
-      <CharacterSheet player={player} open={sheetOpen} onClose={() => setSheetOpen(false)} onHpChange={onHpChange} onResourceChange={onResourceChange} onCastSpell={onCastSpell} onRest={onRest} />
+      <CharacterSheet player={player} open={sheetOpen} onClose={() => setSheetOpen(false)} spellTargets={spellTargets} onResourceChange={onResourceChange} onCastSpell={onCastSpell} onRest={onRest} />
     </article>
   );
 }

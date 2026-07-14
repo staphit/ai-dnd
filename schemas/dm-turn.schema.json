@@ -2,19 +2,9 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
   "properties": {
-    "narration": {
-      "type": "string",
-      "minLength": 1,
-      "maxLength": 2000
-    },
-    "scene": {
-      "type": "string",
-      "minLength": 1,
-      "maxLength": 240
-    },
-    "requiresCheck": {
-      "type": "boolean"
-    },
+    "narration": { "type": "string", "minLength": 1, "maxLength": 2000 },
+    "scene": { "type": "string", "minLength": 1, "maxLength": 240 },
+    "requiresCheck": { "type": "boolean" },
     "check": {
       "anyOf": [
         {
@@ -37,8 +27,37 @@
       "items": { "type": "string", "minLength": 1, "maxLength": 240 },
       "minItems": 1,
       "maxItems": 3
+    },
+    "effects": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "properties": {
+          "targetId": { "type": "string", "pattern": "^player[1-4]$" },
+          "kind": { "type": "string", "enum": ["damage", "healing", "condition"] },
+          "amount": { "type": "integer", "minimum": 0, "maximum": 500 },
+          "condition": { "type": "string", "minLength": 1, "maxLength": 40 },
+          "reason": { "type": "string", "minLength": 1, "maxLength": 160 }
+        },
+        "required": ["targetId", "kind", "reason"],
+        "additionalProperties": false
+      }
+    },
+    "privateMessages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "playerId": { "type": "string", "pattern": "^player[1-4]$" },
+          "text": { "type": "string", "minLength": 1, "maxLength": 1000 }
+        },
+        "required": ["playerId", "text"],
+        "additionalProperties": false
+      },
+      "maxItems": 4
     }
   },
-  "required": ["narration", "scene", "requiresCheck", "check", "choices"],
+  "required": ["narration", "scene", "requiresCheck", "check", "choices", "effects", "privateMessages"],
   "additionalProperties": false
 }
