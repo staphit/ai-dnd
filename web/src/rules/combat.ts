@@ -47,13 +47,34 @@ export function partyCombatants(players: PlayerCharacter[]): Combatant[] {
   });
 }
 
-export function startCombat(combatants: Combatant[], random: RandomSource = Math.random): CombatState {
+export function startCombat(combatants: Combatant[], random: RandomSource = Math.random, firstTurn: 'initiative' | 'enemy' = 'initiative'): CombatState {
   const rolled = combatants.map((combatant) => ({
     ...combatant,
     initiative: die(20, random) + combatant.initiativeBonus,
     defeated: combatant.hp <= 0,
   })).sort((a, b) => b.initiative - a.initiative || b.initiativeBonus - a.initiativeBonus || a.name.localeCompare(b.name, 'zh-TW'));
-  return { active: true, round: 1, turnIndex: 0, combatants: rolled };
+  const enemyIndex = firstTurn === 'enemy' ? rolled.findIndex((entry) => entry.side === 'enemy' && !entry.defeated) : -1;
+  return { active: true, round: 1, turnIndex: enemyIndex >= 0 ? enemyIndex : 0, combatants: rolled, turnEconomy: Object.fromEntries(rolled.map((entry) => [entry.id, { actionUsed: false, bonusActionUsed: false, reactionUsed: false }])) };
+}
+
+export type CombatResource = 'action' | 'bonusAction' | 'reaction';
+
+export function combatResourceForCastingTime(castingTime: string): CombatResource {
+  if (/附贈動作/.test(castingTime)) return 'bonusAction';
+  if (/反應/.test(castingTime)) return 'reaction';
+  return 'action';
+}
+
+export function spendCombatResource(state: CombatState, combatantId: string, resource: CombatResource): CombatState {
+  const actor = state.combatants.find((entry) => entry.id === combatantId || entry.playerId === combatantId);
+  if (!actor) throw new Error('找不到要消耗行動次數的戰鬥角色。');
+  const current = state.combatants[state.turnIndex];
+  if (resource !== 'reaction' && current?.id !== actor.id) throw new Error(`現在是 ${current?.name || '其他角色'} 的回合。`);
+  const economy = state.turnEconomy || {};
+  const usage = economy[actor.id] || { actionUsed: false, bonusActionUsed: false, reactionUsed: false };
+  const key = resource === 'action' ? 'actionUsed' : resource === 'bonusAction' ? 'bonusActionUsed' : 'reactionUsed';
+  if (usage[key]) throw new Error(`${actor.name}本輪的${resource === 'action' ? '動作' : resource === 'bonusAction' ? '附贈動作' : '反應'}已使用。`);
+  return { ...state, turnEconomy: { ...economy, [actor.id]: { ...usage, [key]: true } } };
 }
 
 export function advanceTurn(state: CombatState): CombatState {
@@ -65,7 +86,8 @@ export function advanceTurn(state: CombatState): CombatState {
     attempts += 1;
   } while (state.combatants[next]?.defeated && attempts < state.combatants.length);
   const wrapped = next <= state.turnIndex;
-  return { ...state, turnIndex: next, round: state.round + (wrapped ? 1 : 0) };
+  const nextActor = state.combatants[next];
+  return { ...state, turnIndex: next, round: state.round + (wrapped ? 1 : 0), turnEconomy: { ...(state.turnEconomy || {}), ...(nextActor ? { [nextActor.id]: { actionUsed: false, bonusActionUsed: false, reactionUsed: false } } : {}) } };
 }
 
 export function resolveAttack(
@@ -104,5 +126,3 @@ export function syncPlayersFromCombat(players: PlayerCharacter[], state: CombatS
     return combatant ? { ...player, hp: combatant.hp, temporaryHp: combatant.temporaryHp, condition: combatant.hp === 0 ? '倒地' : player.condition } : player;
   });
 }
-
-

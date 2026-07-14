@@ -25,6 +25,7 @@ const spell = (
   description,
   concentration: Boolean(options.concentration),
   ritual: Boolean(options.ritual),
+  effect: options.effect,
 });
 
 export const spellCatalog: Record<string, SpellDefinition> = {

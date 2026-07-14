@@ -36,7 +36,7 @@ function amountFor(effect: SpellEffect, caster: PlayerCharacter, random: RandomS
   return Math.max(0, dice + (effect.flat || 0) + modifier);
 }
 
-export function resolveSpellEffect(players: PlayerCharacter[], combat: CombatState | undefined, casterId: PlayerId, targetId: string, effect: SpellEffect, random: RandomSource = Math.random) {
+export function resolveSpellEffect(players: PlayerCharacter[], combat: CombatState | undefined, casterId: PlayerId, targetId: string, effect: SpellEffect, random: RandomSource = Math.random, forcedRolls?: { attackTotal?: number; saveTotal?: number }) {
   const caster = players.find((entry) => entry.id === casterId);
   const targetPlayer = players.find((entry) => entry.id === targetId);
   const targetCombatant = combat?.combatants.find((entry) => entry.id === targetId || entry.playerId === targetId);
@@ -45,11 +45,11 @@ export function resolveSpellEffect(players: PlayerCharacter[], combat: CombatSta
   let amount = amountFor(effect, caster, random);
   let outcome = '';
   if (effect.attackRoll && targetCombatant) {
-    const attack = Math.floor(random() * 20) + 1 + (caster.spellcasting?.attackBonus || 0);
+    const attack = forcedRolls?.attackTotal ?? Math.floor(random() * 20) + 1 + (caster.spellcasting?.attackBonus || 0);
     if (attack < targetCombatant.ac) { amount = 0; outcome = '法術攻擊未命中'; }
   }
   if (effect.saveAbility && targetCombatant && !outcome) {
-    const save = Math.floor(random() * 20) + 1 + Number(targetCombatant.savingThrows?.[effect.saveAbility] || 0);
+    const save = forcedRolls?.saveTotal ?? Math.floor(random() * 20) + 1 + Number(targetCombatant.savingThrows?.[effect.saveAbility] || 0);
     if (save >= (caster.spellcasting?.saveDc || 10)) {
       amount = effect.halfOnSave ? Math.floor(amount / 2) : 0;
       outcome = amount ? `豁免成功，承受 ${amount} 點` : '豁免成功，未受影響';
@@ -96,5 +96,4 @@ export function applyDmEffects(players: PlayerCharacter[], effects: DmEffect[]) 
   }
   return { players: next, logs };
 }
-
 

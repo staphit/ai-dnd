@@ -40,4 +40,15 @@ describe('automatic effect settlement', () => {
     const dm = applyDmEffects(healed.players, [{ targetId: 'player2', kind: 'damage', amount: 5, reason: '落石' }]);
     expect(dm.players[1]).toMatchObject({ temporaryHp: 0, hp: 3 });
   });
+
+  it('uses the visible spell attack total instead of rolling a hidden d20', () => {
+    const caster = createLevel3Character('player1', '術者', '術士');
+    const enemy = { id: 'enemy', name: '敵人', side: 'enemy' as const, initiativeBonus: 0, initiative: 10, ac: 15, hp: 10, maxHp: 10, attackBonus: 0, damage: '1d4', damageType: '鈍擊' };
+    const combat = { active: true, round: 1, turnIndex: 0, combatants: [{ ...enemy }] };
+    const missed = resolveSpellEffect([caster], combat, caster.id, enemy.id, { kind: 'damage', target: 'creature', flat: 4, attackRoll: true }, () => .99, { attackTotal: 14 });
+    expect(missed.amount).toBe(0);
+    expect(missed.combat?.combatants[0].hp).toBe(10);
+    const hit = resolveSpellEffect([caster], combat, caster.id, enemy.id, { kind: 'damage', target: 'creature', flat: 4, attackRoll: true }, () => 0, { attackTotal: 15 });
+    expect(hit.combat?.combatants[0].hp).toBe(6);
+  });
 });

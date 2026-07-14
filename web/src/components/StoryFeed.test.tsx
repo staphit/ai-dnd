@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { StoryFeed } from './StoryFeed';
 import { createLevel3Character } from '../rules/characters';
@@ -22,5 +23,17 @@ describe('StoryFeed privacy', () => {
     render(<StoryFeed story={story} players={players} loading={false} viewer="player1" />);
     expect(screen.getByText('艾拉注意到牆上的暗號。')).toBeVisible();
     expect(screen.queryByText('米拉感覺到魔法。')).not.toBeInTheDocument();
+  });
+
+  it('keeps older rounds behind the history button', async () => {
+    render(<StoryFeed story={[
+      { id: 'old', speaker: 'dm', text: '舊場景。', time: '09:00', audience: 'public' },
+      { id: 'action', speaker: 'player1', text: '向前走。', time: '09:01', audience: 'public' },
+      { id: 'latest', speaker: 'dm', text: '最新場景。', time: '09:02', audience: 'public' },
+    ]} players={players} loading={false} viewer="public" />);
+    expect(screen.getByText('最新場景。')).toBeVisible();
+    expect(screen.queryByText('舊場景。')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /歷史對話/ }));
+    await waitFor(() => expect(screen.getByText('舊場景。')).toBeVisible());
   });
 });

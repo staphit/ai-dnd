@@ -110,6 +110,15 @@ export interface StoryEntry {
   audience?: MessageAudience;
 }
 
+export interface RequiredCheck {
+  character: string;
+  ability: string;
+  skill: string;
+  dc: number;
+  reason: string;
+  modifier?: number;
+}
+
 export interface PlayerCharacter {
   id: PlayerId;
   name: string;
@@ -141,6 +150,10 @@ export interface PlayerCharacter {
   spellcasting?: CharacterSpellcasting;
   concentration?: string;
   condition: string;
+  experience: number;
+  abilityPoints?: number;
+  appearance?: string;
+  portraitUrl?: string;
 }
 
 export interface Combatant {
@@ -166,6 +179,7 @@ export interface CombatState {
   round: number;
   turnIndex: number;
   combatants: Combatant[];
+  turnEconomy?: Record<string, { actionUsed: boolean; bonusActionUsed: boolean; reactionUsed: boolean }>;
 }
 
 export interface Campaign {
@@ -178,10 +192,18 @@ export interface Campaign {
   scene: string;
   round: number;
   objective: string;
+  objectiveContext: string;
+  stakes: string;
   selectedModel?: string;
   players: PlayerCharacter[];
   story: StoryEntry[];
   pending: Partial<Record<PlayerId, string>>;
+  choices?: string[];
+  requiredCheck?: RequiredCheck | null;
+  fontScale?: number;
+  showStatHints?: boolean;
+  autoSceneImages?: boolean;
+  dismissedTips?: string[];
   combat?: CombatState;
   sceneImage?: {
     url: string;
@@ -189,6 +211,12 @@ export interface Campaign {
     createdAt: string;
     model: string;
   };
+  sceneImages?: Array<{
+    url: string;
+    scene: string;
+    createdAt: string;
+    model: string;
+  }>;
 }
 
 export interface CampaignSummary {
@@ -207,4 +235,4 @@ export interface AiStatus {
   message?: string;
 }
 
-export type Page = 'table' | 'combat' | 'characters' | 'journal' | 'settings';
+export type Page = 'table' | 'characters' | 'journal' | 'settings';

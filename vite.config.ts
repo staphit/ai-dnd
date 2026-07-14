@@ -8,6 +8,15 @@ export default defineConfig({
   build: {
     outDir: '../web-dist',
     emptyOutDir: true,
+    rolldownOptions: {
+      output: {
+        codeSplitting: {
+          groups: [
+            { name: 'vendor', test: /node_modules/ },
+          ],
+        },
+      },
+    },
   },
   server: {
     host: '127.0.0.1',

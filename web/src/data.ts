@@ -8,6 +8,9 @@ export const initialCampaign: Campaign = {
   scene: '下城區・無燈禮拜堂',
   round: 1,
   objective: '在午夜鐘響前找到失蹤的製圖師伊薩克',
+  objectiveContext: '製圖師伊薩克在調查下城區失蹤事件後失去音訊。他最後留下的地圖指向無燈禮拜堂，而祭壇下方傳來不自然的敲擊聲。',
+  stakes: '午夜鐘響後，地下水道會漲潮，伊薩克留下的線索可能被淹沒，失蹤者也將更難救回。',
+  showStatHints: true,
   players: [
     createLevel3Character('player1', '賽勒恩・瓦爾', '遊俠'),
     createLevel3Character('player2', '米芮・鐵歌', '牧師'),

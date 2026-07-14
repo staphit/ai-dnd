@@ -1,18 +1,19 @@
 import { useMemo, useState } from 'react';
 import { ArrowClockwise, Crosshair, Plus, Shield, Sword, X } from '@phosphor-icons/react';
 import type { CombatState, Combatant, PlayerCharacter } from '../types';
-import { advanceTurn, partyCombatants, resolveAttack, startCombat } from '../rules/combat';
+import { advanceTurn, partyCombatants, resolveAttack, spendCombatResource, startCombat } from '../rules/combat';
 
 interface CombatTrackerProps {
   players: PlayerCharacter[];
   combat?: CombatState;
   onChange: (combat: CombatState) => void;
+  onEnd: (combat: CombatState) => void;
   onLog: (text: string) => void;
 }
 
 const emptyEnemy = { name: '骸骨守衛', ac: 13, hp: 13, initiativeBonus: 2, attackBonus: 4, damage: '1d6+2', damageType: '穿刺' };
 
-export function CombatTracker({ players, combat, onChange, onLog }: CombatTrackerProps) {
+export function CombatTracker({ players, combat, onChange, onEnd, onLog }: CombatTrackerProps) {
   const [enemies, setEnemies] = useState<Combatant[]>([]);
   const [draft, setDraft] = useState(emptyEnemy);
   const [targetId, setTargetId] = useState('');
@@ -20,7 +21,8 @@ export function CombatTracker({ players, combat, onChange, onLog }: CombatTracke
   const current = combat?.combatants[combat.turnIndex];
   const currentPlayer = players.find((player) => player.id === current?.playerId);
   const availableAttacks = currentPlayer?.attacks || [];
-  const validTargets = useMemo(() => combat?.combatants.filter((entry) => !entry.defeated && entry.id !== current?.id) || [], [combat, current]);
+  const validTargets = useMemo(() => combat?.combatants.filter((entry) => !entry.defeated && entry.id !== current?.id && entry.side !== current?.side) || [], [combat, current]);
+  const currentEconomy = current ? combat?.turnEconomy?.[current.id] || { actionUsed: false, bonusActionUsed: false, reactionUsed: false } : undefined;
 
   function addEnemy() {
     const enemy: Combatant = {
@@ -50,8 +52,9 @@ export function CombatTracker({ players, combat, onChange, onLog }: CombatTracke
       const chosenAttack = availableAttacks.find((entry) => entry.id === attackId) || availableAttacks[0];
       const prepared = chosenAttack ? { ...combat, combatants: combat.combatants.map((entry) => entry.id === current.id ? { ...entry, attackBonus: chosenAttack.attackBonus, damage: chosenAttack.damage, damageType: chosenAttack.damageType } : entry) } : combat;
       const result = resolveAttack(prepared, current.id, target);
-      onLog(result.resolution.text);
-      onChange(advanceTurn(result.state));
+      const spent = spendCombatResource(result.state, current.id, 'action');
+      onLog(`${result.resolution.text}（已使用動作）`);
+      onChange(spent);
       setTargetId('');
     } catch (error) {
       onLog(error instanceof Error ? error.message : String(error));
@@ -90,12 +93,13 @@ export function CombatTracker({ players, combat, onChange, onLog }: CombatTracke
           </article>
         ))}
       </div>
+      {currentEconomy && <div className="turn-economy"><span className={currentEconomy.actionUsed ? 'used' : ''}>動作：{currentEconomy.actionUsed ? '已使用' : '可用'}</span><span className={currentEconomy.bonusActionUsed ? 'used' : ''}>附贈動作：{currentEconomy.bonusActionUsed ? '已使用' : '可用'}</span><span className={currentEconomy.reactionUsed ? 'used' : ''}>反應：{currentEconomy.reactionUsed ? '已使用' : '可用'}</span></div>}
       <div className="combat-actions">
         {availableAttacks.length > 0 && <label>攻擊方式<select value={attackId || availableAttacks[0]?.id} onChange={(event) => setAttackId(event.target.value)}>{availableAttacks.map((entry) => <option key={entry.id} value={entry.id}>{entry.name}／命中 +{entry.attackBonus}／{entry.damage}</option>)}</select></label>}
         <label>攻擊目標<select value={targetId} onChange={(event) => setTargetId(event.target.value)}>{validTargets.map((entry) => <option key={entry.id} value={entry.id}>{entry.name}（AC {entry.ac}）</option>)}</select></label>
-        <button type="button" className="primary-action" onClick={attack} disabled={!validTargets.length}><Crosshair />攻擊並結算</button>
-        <button type="button" onClick={() => onChange(advanceTurn(combat))}><ArrowClockwise />跳過回合</button>
-        <button type="button" onClick={() => onChange({ ...combat, active: false })}><X />結束戰鬥</button>
+        <button type="button" className="primary-action" onClick={attack} disabled={!validTargets.length || currentEconomy?.actionUsed}><Crosshair />攻擊（使用動作）</button>
+        <button type="button" onClick={() => onChange(advanceTurn(combat))}><ArrowClockwise />結束回合</button>
+        <button type="button" onClick={() => onEnd(combat)}><X />結束戰鬥並敘述</button>
       </div>
     </section>
   );

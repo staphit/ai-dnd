@@ -50,6 +50,12 @@ describe('2024 level 3 class rules', () => {
     expect(wizard.spellcasting?.ability).toBe('int');
   });
 
+  it('preserves spell attack and target rules on character spells', () => {
+    const warlock = createLevel3Character('player1', '契約者', '魔契師');
+    const blast = warlock.spellcasting?.spells.find((spell) => spell.id === 'eldritch_blast');
+    expect(blast?.effect).toMatchObject({ target: 'creature', attackRoll: true, dice: '1d10' });
+  });
+
   it('uses the paladin free Divine Smite before spending a spell slot', () => {
     const paladin = createLevel3Character('player1', '聖騎士', '聖武士');
     const smite = paladin.spellcasting?.spells.find((spell) => spell.id === 'divine_smite');

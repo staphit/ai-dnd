@@ -1,10 +1,9 @@
-import { BookOpen, Compass, GearSix, Scroll, Sword, UsersThree } from '@phosphor-icons/react';
+import { BookOpen, Compass, GearSix, Scroll, TrendUp } from '@phosphor-icons/react';
 import type { Page } from '../types';
 
 const items = [
   { id: 'table' as const, label: '遊戲桌', icon: Compass },
-  { id: 'combat' as const, label: '戰鬥', icon: Sword },
-  { id: 'characters' as const, label: '角色', icon: UsersThree },
+  { id: 'characters' as const, label: '成長', icon: TrendUp },
   { id: 'journal' as const, label: '戰役紀錄', icon: BookOpen },
   { id: 'settings' as const, label: '設定', icon: GearSix },
 ];

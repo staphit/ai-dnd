@@ -7,7 +7,7 @@ import process from 'node:process';
 const root = path.dirname(fileURLToPath(import.meta.url));
 try { process.loadEnvFile(path.join(root, '.env')); } catch (error) { if (error?.code !== 'ENOENT') throw error; }
 const { getAgentStatus, runDungeonMaster } = await import('./dm-agent.mjs');
-const { getImageStatus, generateSceneImage } = await import('./scene-image.mjs');
+const { getImageStatus, generateSceneImage, generateCharacterImage } = await import('./scene-image.mjs');
 const { codexModelOptions, normalizeCodexModel } = await import('./codex-cli.mjs');
 const { buildDmRequest } = await import('./dm-request.mjs');
 const publicRoot = path.join(root, 'web-dist');
@@ -50,6 +50,24 @@ async function handleSceneImage(request, response) {
   }
 }
 
+async function handleCharacterImage(request, response) {
+  try {
+    const body = await readJson(request);
+    const input = {
+      name: String(body.name || '').trim().slice(0, 100),
+      species: String(body.species || '').trim().slice(0, 80),
+      className: String(body.className || '').trim().slice(0, 100),
+      background: String(body.background || '').trim().slice(0, 100),
+      appearance: String(body.appearance || '').trim().slice(0, 1200),
+    };
+    if (!input.name || !input.appearance) return json(response, 400, { error: '需要角色名稱與外觀描述才能生成角色圖。' });
+    const result = await generateCharacterImage(input, generatedRoot, AbortSignal.timeout(450_000));
+    json(response, 200, result);
+  } catch (error) {
+    json(response, 503, { error: error instanceof Error ? error.message : String(error) });
+  }
+}
+
 async function handleDm(request, response) {
   try {
     const body = await readJson(request);
@@ -62,9 +80,17 @@ async function handleDm(request, response) {
     json(response, 200, {
       text: `${output.narration}${checkText}${choiceText}`,
       scene: output.scene,
+      objective: output.objective,
+      objectiveContext: output.objectiveContext,
+      stakes: output.stakes,
+      choices: output.choices,
+      requiresCheck: output.requiresCheck,
       check: output.check,
       privateMessages: output.privateMessages,
       effects: output.effects,
+      combat: output.combat,
+      actionIssues: output.actionIssues,
+      experienceAwards: output.experienceAwards,
       model: selectedModel || status.model,
     });
   } catch (error) {
@@ -106,6 +132,7 @@ const server = http.createServer(async (request, response) => {
   if (request.method === 'GET' && request.url === '/api/status') return handleStatus(response);
   if (request.method === 'POST' && request.url === '/api/dm') return handleDm(request, response);
   if (request.method === 'POST' && request.url === '/api/scene-image') return handleSceneImage(request, response);
+  if (request.method === 'POST' && request.url === '/api/character-image') return handleCharacterImage(request, response);
   if (request.method === 'GET' && request.url?.startsWith('/generated/')) return serveGenerated(request, response);
   await serveStatic(request, response);
 });

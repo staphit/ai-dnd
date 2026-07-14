@@ -4,6 +4,8 @@ import { makeSpell, spellCatalog } from './spells';
 
 const fullCasters = new Set<ClassName>(['吟遊詩人', '牧師', '德魯伊', '術士', '法師']);
 const halfCasters = new Set<ClassName>(['聖武士', '遊俠']);
+export const experienceThresholds = [0, 0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000, 85000, 100000, 120000, 140000, 165000, 195000, 225000, 265000, 305000, 355000] as const;
+const abilityImprovementLevels = new Set([4, 8, 12, 16, 19]);
 const slotTable: number[][] = [
   [], [2], [3], [4, 2], [4, 3], [4, 3, 2], [4, 3, 3], [4, 3, 3, 1], [4, 3, 3, 2], [4, 3, 3, 3, 1],
   [4, 3, 3, 3, 2], [4, 3, 3, 3, 2, 1], [4, 3, 3, 3, 2, 1], [4, 3, 3, 3, 2, 1, 1], [4, 3, 3, 3, 2, 1, 1],
@@ -13,6 +15,22 @@ const slotTable: number[][] = [
 
 function proficiencyForLevel(level: number) {
   return 2 + Math.floor((Math.max(1, level) - 1) / 4);
+}
+
+export function experienceForLevel(level: number) {
+  return experienceThresholds[Math.min(20, Math.max(1, level))];
+}
+
+export function experienceToNextLevel(character: PlayerCharacter) {
+  if (character.level >= 20) return { current: character.experience, required: character.experience, remaining: 0, ready: false, progress: 1 };
+  const floor = experienceForLevel(character.level);
+  const required = experienceForLevel(character.level + 1);
+  const current = Math.max(floor, character.experience || 0);
+  return { current, required, remaining: Math.max(0, required - current), ready: current >= required, progress: Math.max(0, Math.min(1, (current - floor) / (required - floor))) };
+}
+
+export function grantExperience(character: PlayerCharacter, amount: number) {
+  return { ...character, experience: Math.max(0, Math.min(9_999_999, (character.experience || experienceForLevel(character.level)) + Math.max(0, Math.floor(amount)))) };
 }
 
 function normalizedClasses(character: PlayerCharacter): CharacterClassLevel[] {
@@ -94,6 +112,8 @@ export function createConfiguredCharacter(id: PlayerId, name: string, className:
     abilities: options.abilities || base.abilities,
     hitDice: level,
     maxHitDice: level,
+    experience: experienceForLevel(level),
+    abilityPoints: 0,
   });
 }
 
@@ -103,6 +123,7 @@ export function customizeCharacter(character: PlayerCharacter, patch: Pick<Chara
 
 export function levelUpCharacter(character: PlayerCharacter, className: ClassName): PlayerCharacter {
   if (character.level >= 20) throw new Error('角色總等級已達 20。');
+  if (!experienceToNextLevel(character).ready) throw new Error(`尚缺 ${experienceToNextLevel(character).remaining} XP 才能升級。`);
   const classes = normalizedClasses(character);
   const existing = classes.find((entry) => entry.className === className);
   const starter = createLevel3Character(character.id, character.name, className);
@@ -110,17 +131,34 @@ export function levelUpCharacter(character: PlayerCharacter, className: ClassNam
     ? classes.map((entry) => entry.className === className ? { ...entry, level: entry.level + 1 } : entry)
     : [...classes, { className, level: 1, subclass: starter.subclass }];
   const mergeById = <T extends { id: string }>(left: T[], right: T[]) => [...left, ...right.filter((candidate) => !left.some((entry) => entry.id === candidate.id))];
+  const nextLevel = character.level + 1;
+  const nextClassLevel = (existing?.level || 0) + 1;
+  const progressionFeature = {
+    id: `progression-${className}-${nextClassLevel}`,
+    name: `${className} ${nextClassLevel} 級進展`,
+    description: abilityImprovementLevels.has(nextLevel)
+      ? '解鎖 2 點能力值提升，可在角色成長頁分配；生命、熟練與法術進展亦已重新計算。'
+      : `解鎖 ${className} 第 ${nextClassLevel} 級進展；生命值、熟練加值、攻擊與法術位依新等級重新計算。`,
+  };
   return recalculate({
     ...character,
-    level: character.level + 1,
+    level: nextLevel,
     classLevels,
     hp: character.hp + Math.max(1, Math.floor(starter.hitDie / 2) + 1 + abilityModifier(character.abilities.con)),
     hitDice: character.hitDice + 1,
     attacks: mergeById(character.attacks, starter.attacks),
     resources: mergeById(character.resources, starter.resources),
-    features: mergeById(character.features, starter.features),
+    features: mergeById(mergeById(character.features, starter.features), [progressionFeature]),
     spellcasting: character.spellcasting || starter.spellcasting,
+    abilityPoints: (character.abilityPoints || 0) + (abilityImprovementLevels.has(nextLevel) ? 2 : 0),
   });
+}
+
+export function spendAbilityPoint(character: PlayerCharacter, ability: keyof AbilityScores) {
+  const points = character.abilityPoints || 0;
+  if (points < 1) throw new Error('目前沒有可分配的能力值點數。');
+  if (character.abilities[ability] >= 20) throw new Error(`${ability} 已達一般上限 20。`);
+  return recalculate({ ...character, abilities: { ...character.abilities, [ability]: character.abilities[ability] + 1 }, abilityPoints: points - 1 });
 }
 
 export function setPreparedSpells(character: PlayerCharacter, spellIds: string[]): PlayerCharacter {
@@ -136,5 +174,4 @@ export function setPreparedSpells(character: PlayerCharacter, spellIds: string[]
 export function getCharacterClasses(character: PlayerCharacter) {
   return normalizedClasses(character);
 }
-
 

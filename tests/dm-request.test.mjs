@@ -40,6 +40,7 @@ test('includes complete rules state and all actions in the DM prompt', () => {
   assert.match(result.prompt, /奧術回復 1\/1/);
   assert.match(result.prompt, /魔法飛彈\(1環\)/);
   assert.match(result.prompt, /本輪宣告：推開石門/);
+  assert.match(result.prompt, /必須在 actionIssues 駁回並給出具體規則理由/);
 });
 
 test('supports the legacy action object without calling the model', () => {
@@ -61,4 +62,30 @@ test('labels private history and includes active combat state', () => {
   assert.match(result.prompt, /僅 player1 可見/);
   assert.match(result.prompt, /戰鬥第 2 輪/);
   assert.match(result.prompt, /哥布林 HP 4\/12 AC 13 先攻 15/);
+});
+
+test('continues directly from a required check without inventing player actions', () => {
+  const result = buildDmRequest({
+    campaign: { title: '測試戰役', scene: '石門', round: 3 },
+    players: [player('player1', '甲', '法師'), player('player2', '乙', '戰士')],
+    actions: [],
+    resolution: { character: '乙', ability: '力量', skill: '運動', reason: '推開卡死的石門', dc: 14, natural: 12, modifier: 3, total: 15, success: true },
+  });
+  assert.match(result.prompt, /不是新的玩家行動/);
+  assert.match(result.prompt, /總值 15，DC 14，結果為成功/);
+  assert.match(result.prompt, /不可插入、假設或要求任何新的玩家行動/);
+  assert.doesNotMatch(result.prompt, /本輪宣告：/);
+});
+
+test('continues directly from combat conclusion without requiring player actions', () => {
+  const result = buildDmRequest({
+    campaign: { title: '測試戰役', scene: '石門', round: 4 },
+    players: [player('player1', '甲', '法師'), player('player2', '乙', '戰士')],
+    actions: [],
+    combatConclusion: { outcome: 'victory', summary: '哥布林全數倒下；甲剩餘 8 HP，乙剩餘 17 HP。' },
+  });
+  assert.match(result.prompt, /這不是新的玩家行動/);
+  assert.match(result.prompt, /戰鬥結果：隊伍勝利/);
+  assert.match(result.prompt, /直接敘述戰鬥結束後的現場/);
+  assert.doesNotMatch(result.prompt, /本輪宣告：/);
 });

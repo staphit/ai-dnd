@@ -3,9 +3,12 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Bed, BookOpenText, Minus, Shield, Sparkle, Sword, Timer, X } from '@phosphor-icons/react';
 import type { CharacterSpell, PlayerCharacter, RestType } from '../types';
 import { abilityLabels, abilityModifier } from '../rules/characters';
+import { StatHint } from './StatHint';
 
 interface CharacterSheetProps {
   player: PlayerCharacter;
+  showStatHints?: boolean;
+  combatActive?: boolean;
   open: boolean;
   onClose: () => void;
   onResourceChange: (id: PlayerCharacter['id'], resourceId: string, delta: number) => void;
@@ -18,7 +21,7 @@ function signed(value: number) {
   return value >= 0 ? `+${value}` : String(value);
 }
 
-export function CharacterSheet({ player, open, onClose, spellTargets, onResourceChange, onCastSpell, onRest }: CharacterSheetProps) {
+export function CharacterSheet({ player, showStatHints = true, combatActive = false, open, onClose, spellTargets, onResourceChange, onCastSpell, onRest }: CharacterSheetProps) {
   const [spellTarget, setSpellTarget] = useState<Record<string, string>>({});
   const spellGroups = player.spellcasting
     ? [...new Set(player.spellcasting.spells.map((spell) => spell.level))].sort((a, b) => a - b)
@@ -49,10 +52,10 @@ export function CharacterSheet({ player, open, onClose, spellTargets, onResource
             </header>
 
             <section className="sheet-vitals">
-              <div><small>生命</small><strong>{player.hp}<i>／{player.maxHp}</i></strong><span>{player.temporaryHp ? `暫時生命 ${player.temporaryHp}` : player.condition}</span></div>
-              <div><small>護甲</small><strong>{player.ac}</strong><Shield /></div>
-              <div><small>先攻</small><strong>{signed(player.initiative)}</strong><span>速度 {player.speed} 呎</span></div>
-              <div><small>熟練</small><strong>+{player.proficiencyBonus}</strong><span>被動察覺 {player.passive}</span></div>
+              <div><StatHint hint="hp" enabled={showStatHints}><small>生命</small></StatHint><strong>{player.hp}<i>／{player.maxHp}</i></strong><span>{player.temporaryHp ? `暫時生命 ${player.temporaryHp}` : player.condition}</span></div>
+              <div><StatHint hint="ac" enabled={showStatHints}><small>護甲</small></StatHint><strong>{player.ac}</strong><Shield /></div>
+              <div><StatHint hint="initiative" enabled={showStatHints}><small>先攻</small></StatHint><strong>{signed(player.initiative)}</strong><StatHint hint="speed" enabled={showStatHints}><span>速度 {player.speed} 呎</span></StatHint></div>
+              <div><StatHint hint="proficiency" enabled={showStatHints}><small>熟練</small></StatHint><strong>+{player.proficiencyBonus}</strong><StatHint hint="passive" enabled={showStatHints}><span>被動察覺 {player.passive}</span></StatHint></div>
             </section>
 
             <section className="sheet-section">
@@ -60,7 +63,7 @@ export function CharacterSheet({ player, open, onClose, spellTargets, onResource
               <div className="ability-grid">
                 {(Object.keys(abilityLabels) as Array<keyof typeof abilityLabels>).map((ability) => (
                   <div key={ability}>
-                    <small>{abilityLabels[ability]}{player.savingThrowProficiencies.includes(ability) ? ' ◆' : ''}</small>
+                    <StatHint hint={ability} enabled={showStatHints}><small>{abilityLabels[ability]}{player.savingThrowProficiencies.includes(ability) ? ' ◆' : ''}</small></StatHint>
                     <strong>{player.abilities[ability]}</strong>
                     <span>{signed(abilityModifier(player.abilities[ability]))}</span>
                   </div>
@@ -109,12 +112,12 @@ export function CharacterSheet({ player, open, onClose, spellTargets, onResource
               <section className="sheet-section spellbook-section">
                 <div className="sheet-section-title"><span>法術與法術位</span><small>SPELLBOOK</small></div>
                 <div className="spellcasting-summary">
-                  <div><small>施法屬性</small><strong>{abilityLabels[player.spellcasting.ability]}</strong></div>
-                  <div><small>法術攻擊</small><strong>{signed(player.spellcasting.attackBonus)}</strong></div>
-                  <div><small>豁免 DC</small><strong>{player.spellcasting.saveDc}</strong></div>
+                  <div><StatHint hint="spellAbility" enabled={showStatHints}><small>施法屬性</small></StatHint><strong>{abilityLabels[player.spellcasting.ability]}</strong></div>
+                  <div><StatHint hint="spellAttack" enabled={showStatHints}><small>法術攻擊</small></StatHint><strong>{signed(player.spellcasting.attackBonus)}</strong></div>
+                  <div><StatHint hint="spellSaveDc" enabled={showStatHints}><small>豁免 DC</small></StatHint><strong>{player.spellcasting.saveDc}</strong></div>
                   <div><small>法器</small><strong>{player.spellcasting.focus}</strong></div>
                   {player.spellcasting.slots.map((slot) => (
-                    <div key={slot.level} className="slot-counter"><small>{slot.level} 環法術位</small><strong>{slot.current}／{slot.max}</strong></div>
+                    <div key={slot.level} className="slot-counter"><StatHint hint="spellSlots" enabled={showStatHints}><small>{slot.level} 環法術位</small></StatHint><strong>{slot.current}／{slot.max}</strong></div>
                   ))}
                 </div>
                 {player.concentration && <p className="concentration-mark"><Sparkle />正在專注：{player.concentration}</p>}
@@ -127,21 +130,23 @@ export function CharacterSheet({ player, open, onClose, spellTargets, onResource
                         const canRitual = spell.ritual && (spell.prepared || spell.inSpellbook);
                         const hasFreeUse = Boolean(spell.freeUseResourceId && player.resources.some((entry) => entry.id === spell.freeUseResourceId && entry.current > 0));
                         const hasSlot = spell.level === 0 || hasFreeUse || Boolean(player.spellcasting?.slots.some((slot) => slot.level >= spell.level && slot.current > 0));
-                        const candidates = spell.effect?.target === 'self'
+                        const candidates = spell.effect?.target === 'self' || /自身/.test(spell.range)
                           ? spellTargets.filter((entry) => entry.id === player.id)
                           : spell.effect?.target === 'ally'
                             ? spellTargets.filter((entry) => entry.side === 'party')
-                            : spellTargets.filter((entry) => entry.side === 'enemy');
-                        const selectedTarget = spellTarget[spell.id] || candidates[0]?.id;
+                            : spell.effect?.target === 'creature'
+                              ? spellTargets.filter((entry) => entry.side === 'enemy')
+                              : [...spellTargets, { id: 'scene', name: '目前場景／指定位置', side: 'party' as const }];
+                        const selectedTarget = spellTarget[spell.id] || ((spell.effect?.target === 'self' || /自身/.test(spell.range)) ? player.id : undefined);
                         return (
                           <article key={spell.id} className={!canCastNormally ? 'spell-unprepared' : ''}>
                             <div className="spell-name"><BookOpenText /><span><strong>{spell.name}</strong><small>{spell.englishName}・{spell.school}{spell.alwaysPrepared ? '・常備' : !spell.prepared ? '・未準備' : ''}</small></span></div>
                             <div className="spell-tags"><span>{spell.castingTime}</span><span>{spell.range}</span>{spell.concentration && <span>專注</span>}{spell.ritual && <span>儀式</span>}</div>
                             <p>{spell.description}</p>
                             <div className="spell-actions">
-                              {spell.effect && candidates.length > 0 && <select aria-label={`${spell.name}目標`} value={selectedTarget} onChange={(event) => setSpellTarget((current) => ({ ...current, [spell.id]: event.target.value }))}>{candidates.map((target) => <option key={target.id} value={target.id}>{target.name}</option>)}</select>}
-                              {canCastNormally && <button type="button" onClick={() => onCastSpell(player.id, spell, false, selectedTarget)} disabled={!hasSlot || Boolean(spell.effect && !selectedTarget)}>施放並結算</button>}
-                              {canRitual && <button type="button" className="ritual-button" onClick={() => onCastSpell(player.id, spell, true, selectedTarget)}>儀式施放</button>}
+                              <select aria-label={`${spell.name}目標`} value={selectedTarget || ''} onChange={(event) => setSpellTarget((current) => ({ ...current, [spell.id]: event.target.value }))}><option value="" disabled>必須指定目標</option>{candidates.map((target) => <option key={target.id} value={target.id}>{target.name}</option>)}</select>
+                              {canCastNormally && <button type="button" onClick={() => onCastSpell(player.id, spell, false, selectedTarget)} disabled={!hasSlot || !selectedTarget}>施放並鎖定行動</button>}
+                              {canRitual && <button type="button" className="ritual-button" disabled={!selectedTarget} onClick={() => onCastSpell(player.id, spell, true, selectedTarget)}>儀式並鎖定</button>}
                             </div>
                           </article>
                         );
@@ -164,8 +169,8 @@ export function CharacterSheet({ player, open, onClose, spellTargets, onResource
             </section>
 
             <footer className="sheet-rests">
-              <span>生命骰 d{player.hitDie}：{player.hitDice}／{player.maxHitDice}</span>
-              <div><button type="button" onClick={() => onRest(player.id, 'short')}><Timer />短休</button><button type="button" onClick={() => onRest(player.id, 'long')}><Bed />長休</button></div>
+              <span>生命骰 d{player.hitDie}：{player.hitDice}／{player.maxHitDice}<small>{combatActive ? '戰鬥進行中，休息暫時不可使用。' : '只能在沒有待裁定行動時休息。短休消耗 1 點探索行動時間；長休消耗 4 點。'}</small></span>
+              <div><button type="button" disabled={combatActive} onClick={() => onRest(player.id, 'short')}><Timer />短休／1 點</button><button type="button" disabled={combatActive} onClick={() => onRest(player.id, 'long')}><Bed />長休／4 點</button></div>
             </footer>
           </motion.article>
         </motion.div>

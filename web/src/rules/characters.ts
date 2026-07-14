@@ -346,6 +346,8 @@ export function createLevel3Character(id: PlayerId, name: string, className: str
     features: definition.features.map((entry) => ({ ...entry })),
     spellcasting,
     condition: '正常',
+    experience: 900,
+    abilityPoints: 0,
   };
 }
 
