@@ -1,0 +1,166 @@
+import { AnimatePresence, motion } from 'framer-motion';
+import { Bed, BookOpenText, Minus, Plus, Shield, Sparkle, Sword, Timer, X } from '@phosphor-icons/react';
+import type { CharacterSpell, PlayerCharacter, RestType } from '../types';
+import { abilityLabels, abilityModifier } from '../rules/characters';
+
+interface CharacterSheetProps {
+  player: PlayerCharacter;
+  open: boolean;
+  onClose: () => void;
+  onHpChange: (id: PlayerCharacter['id'], delta: number) => void;
+  onResourceChange: (id: PlayerCharacter['id'], resourceId: string, delta: number) => void;
+  onCastSpell: (id: PlayerCharacter['id'], spell: CharacterSpell, asRitual: boolean) => void;
+  onRest: (id: PlayerCharacter['id'], type: RestType) => void;
+}
+
+function signed(value: number) {
+  return value >= 0 ? `+${value}` : String(value);
+}
+
+export function CharacterSheet({ player, open, onClose, onHpChange, onResourceChange, onCastSpell, onRest }: CharacterSheetProps) {
+  const spellGroups = player.spellcasting
+    ? [...new Set(player.spellcasting.spells.map((spell) => spell.level))].sort((a, b) => a - b)
+    : [];
+
+  return (
+    <AnimatePresence>
+      {open && (
+        <motion.div className="sheet-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onMouseDown={onClose}>
+          <motion.article
+            className="character-sheet"
+            role="dialog"
+            aria-modal="true"
+            aria-label={`${player.name} 完整角色卡`}
+            initial={{ opacity: 0, x: 40 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 30 }}
+            transition={{ type: 'spring', stiffness: 120, damping: 22 }}
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <header className="sheet-head">
+              <div>
+                <p className="eyebrow">2024 角色卡／等級 {player.level}</p>
+                <h2>{player.name}</h2>
+                <span>{player.species}・{player.background}・{player.className}／{player.subclass}</span>
+              </div>
+              <button type="button" onClick={onClose} aria-label="關閉角色卡"><X size={21} /></button>
+            </header>
+
+            <section className="sheet-vitals">
+              <div><small>生命</small><strong>{player.hp}<i>／{player.maxHp}</i></strong><span className="sheet-stepper"><button type="button" onClick={() => onHpChange(player.id, -1)}><Minus /></button><button type="button" onClick={() => onHpChange(player.id, 1)}><Plus /></button></span></div>
+              <div><small>護甲</small><strong>{player.ac}</strong><Shield /></div>
+              <div><small>先攻</small><strong>{signed(player.initiative)}</strong><span>速度 {player.speed} 呎</span></div>
+              <div><small>熟練</small><strong>+{player.proficiencyBonus}</strong><span>被動察覺 {player.passive}</span></div>
+            </section>
+
+            <section className="sheet-section">
+              <div className="sheet-section-title"><span>能力與豁免</span><small>ABILITY SCORES</small></div>
+              <div className="ability-grid">
+                {(Object.keys(abilityLabels) as Array<keyof typeof abilityLabels>).map((ability) => (
+                  <div key={ability}>
+                    <small>{abilityLabels[ability]}{player.savingThrowProficiencies.includes(ability) ? ' ◆' : ''}</small>
+                    <strong>{player.abilities[ability]}</strong>
+                    <span>{signed(abilityModifier(player.abilities[ability]))}</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="sheet-two-column">
+              <div className="sheet-section">
+                <div className="sheet-section-title"><span>技能</span><small>SKILLS</small></div>
+                <div className="skill-list">
+                  {player.skills.map((skill) => (
+                    <div key={skill.name} className={skill.proficient ? 'skill-proficient' : ''}>
+                      <i>{skill.expertise ? '◆' : skill.proficient ? '●' : '○'}</i><span>{skill.name}</span><small>{abilityLabels[skill.ability]}</small><strong>{signed(skill.bonus)}</strong>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <section className="sheet-section">
+                  <div className="sheet-section-title"><span>攻擊</span><small>ATTACKS</small></div>
+                  <div className="attack-list">
+                    {player.attacks.map((entry) => (
+                      <div key={entry.id}><Sword /><span><strong>{entry.name}</strong><small>{entry.properties.join('・')}</small></span><b>{signed(entry.attackBonus)}</b><em>{entry.damage} {entry.damageType}</em></div>
+                    ))}
+                  </div>
+                </section>
+
+                {player.resources.length > 0 && (
+                  <section className="sheet-section">
+                    <div className="sheet-section-title"><span>職業資源</span><small>RESOURCES</small></div>
+                    <div className="resource-list">
+                      {player.resources.map((entry) => (
+                        <div key={entry.id}>
+                          <span><strong>{entry.name}{entry.die ? ` ${entry.die}` : ''}</strong><small>{entry.description}</small></span>
+                          <div><button type="button" onClick={() => onResourceChange(player.id, entry.id, -1)} disabled={entry.current === 0}><Minus /></button><b>{entry.current}／{entry.max}</b><button type="button" onClick={() => onResourceChange(player.id, entry.id, 1)} disabled={entry.current === entry.max}><Plus /></button></div>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
+              </div>
+            </section>
+
+            {player.spellcasting && (
+              <section className="sheet-section spellbook-section">
+                <div className="sheet-section-title"><span>法術與法術位</span><small>SPELLBOOK</small></div>
+                <div className="spellcasting-summary">
+                  <div><small>施法屬性</small><strong>{abilityLabels[player.spellcasting.ability]}</strong></div>
+                  <div><small>法術攻擊</small><strong>{signed(player.spellcasting.attackBonus)}</strong></div>
+                  <div><small>豁免 DC</small><strong>{player.spellcasting.saveDc}</strong></div>
+                  <div><small>法器</small><strong>{player.spellcasting.focus}</strong></div>
+                  {player.spellcasting.slots.map((slot) => (
+                    <div key={slot.level} className="slot-counter"><small>{slot.level} 環法術位</small><strong>{slot.current}／{slot.max}</strong></div>
+                  ))}
+                </div>
+                {player.concentration && <p className="concentration-mark"><Sparkle />正在專注：{player.concentration}</p>}
+                <div className="spell-groups">
+                  {spellGroups.map((level) => (
+                    <div key={level} className="spell-group">
+                      <h3>{level === 0 ? '戲法' : `${level} 環法術`}</h3>
+                      {player.spellcasting?.spells.filter((spell) => spell.level === level).map((spell) => {
+                        const canCastNormally = spell.level === 0 || spell.prepared || spell.alwaysPrepared;
+                        const canRitual = spell.ritual && (spell.prepared || spell.inSpellbook);
+                        const hasFreeUse = Boolean(spell.freeUseResourceId && player.resources.some((entry) => entry.id === spell.freeUseResourceId && entry.current > 0));
+                        const hasSlot = spell.level === 0 || hasFreeUse || Boolean(player.spellcasting?.slots.some((slot) => slot.level >= spell.level && slot.current > 0));
+                        return (
+                          <article key={spell.id} className={!canCastNormally ? 'spell-unprepared' : ''}>
+                            <div className="spell-name"><BookOpenText /><span><strong>{spell.name}</strong><small>{spell.englishName}・{spell.school}{spell.alwaysPrepared ? '・常備' : !spell.prepared ? '・未準備' : ''}</small></span></div>
+                            <div className="spell-tags"><span>{spell.castingTime}</span><span>{spell.range}</span>{spell.concentration && <span>專注</span>}{spell.ritual && <span>儀式</span>}</div>
+                            <p>{spell.description}</p>
+                            <div className="spell-actions">
+                              {canCastNormally && <button type="button" onClick={() => onCastSpell(player.id, spell, false)} disabled={!hasSlot}>施放</button>}
+                              {canRitual && <button type="button" className="ritual-button" onClick={() => onCastSpell(player.id, spell, true)}>儀式施放</button>}
+                            </div>
+                          </article>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            <section className="sheet-two-column sheet-bottom">
+              <div className="sheet-section">
+                <div className="sheet-section-title"><span>職業能力</span><small>FEATURES</small></div>
+                <div className="feature-list">{player.features.map((entry) => <div key={entry.id}><strong>{entry.name}</strong><p>{entry.description}</p></div>)}</div>
+              </div>
+              <div className="sheet-section">
+                <div className="sheet-section-title"><span>裝備</span><small>EQUIPMENT</small></div>
+                <ul className="equipment-list">{player.equipment.map((entry) => <li key={entry}>{entry}</li>)}</ul>
+              </div>
+            </section>
+
+            <footer className="sheet-rests">
+              <span>生命骰 d{player.hitDie}：{player.hitDice}／{player.maxHitDice}</span>
+              <div><button type="button" onClick={() => onRest(player.id, 'short')}><Timer />短休</button><button type="button" onClick={() => onRest(player.id, 'long')}><Bed />長休</button></div>
+            </footer>
+          </motion.article>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
