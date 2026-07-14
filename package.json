@@ -1,7 +1,7 @@
 {
   "name": "dnd-duet-ai",
   "displayName": "D&D Duet AI",
-  "description": "A local 1-4 player 2024 fifth-edition web table and VS Code extension with an AI Dungeon Master.",
+  "description": "A local two-player D&D VS Code extension with an AI Dungeon Master. The browser table lives in frontend/ (React) and backend/ (Go).",
   "version": "0.1.0",
   "publisher": "local",
   "license": "MIT",
@@ -81,40 +81,12 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "check": "tsc -p ./ --noEmit",
-    "package": "vsce package --no-dependencies --allow-missing-repository",
-    "web:dev": "node scripts/dev.mjs",
-    "web:build": "vite build",
-    "web:check": "tsc -p web/tsconfig.json --noEmit",
-    "web:server-check": "tsc codex-cli.mjs scene-image.mjs dm-agent.mjs dm-request.mjs server.mjs --noEmit --allowJs --checkJs --module nodenext --moduleResolution nodenext --target es2022 --skipLibCheck",
-    "test": "npm run test:web && npm run test:server",
-    "test:web": "vitest run --config vitest.config.ts",
-    "test:server": "node --test tests/*.test.mjs",
-    "test:watch": "vitest --config vitest.config.ts",
-    "web:start": "node server.mjs"
+    "package": "vsce package --no-dependencies --allow-missing-repository"
   },
   "devDependencies": {
-    "@tailwindcss/vite": "^4.3.2",
-    "@testing-library/jest-dom": "^6.9.1",
-    "@testing-library/react": "^16.3.2",
-    "@testing-library/user-event": "^14.6.1",
     "@types/node": "^22.10.0",
-    "@types/react": "^19.2.17",
-    "@types/react-dom": "^19.2.3",
     "@types/vscode": "^1.95.0",
-    "@vitejs/plugin-react": "^6.0.3",
     "@vscode/vsce": "^3.9.2",
-    "jsdom": "^29.1.1",
-    "tailwindcss": "^4.3.2",
-    "typescript": "^5.7.2",
-    "vite": "^8.1.4",
-    "vitest": "^4.1.10"
-  },
-  "dependencies": {
-    "@fontsource-variable/geist": "^5.2.9",
-    "@fontsource-variable/geist-mono": "^5.2.8",
-    "@phosphor-icons/react": "^2.1.10",
-    "framer-motion": "^12.42.2",
-    "react": "^19.2.7",
-    "react-dom": "^19.2.7"
+    "typescript": "^5.7.2"
   }
 }

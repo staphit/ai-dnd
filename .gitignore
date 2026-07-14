@@ -5,3 +5,9 @@ out/
 campaign-data/
 web-dist/
 .DS_Store
+
+# Go backend
+backend/bin/
+*.db
+*.db-shm
+*.db-wal
