@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { DiceFive } from '@phosphor-icons/react';
 import { MagneticButton } from './MagneticButton';
@@ -29,9 +29,14 @@ function randomD20() {
 
 export function DiceTray({ players, onResult, requiredCheck, onRequiredRoll, onRoll }: DiceTrayProps) {
   const [result, setResult] = useState<{ natural: number; total: number } | null>(null);
+  const timerRef = useRef<number | null>(null);
   const player = players.find((entry) => entry.name === requiredCheck.character) || players[0];
   const checkLabel = requiredCheck.skill || requiredCheck.ability;
   const bonus = requiredCheck.modifier ?? (player ? getCheckBonus(player, checkLabel) : 0);
+
+  // Clear the pending advance timer if the tray unmounts (e.g. page change)
+  // before it fires, so the callback never runs against a stale closure.
+  useEffect(() => () => { if (timerRef.current !== null) window.clearTimeout(timerRef.current); }, []);
 
   function roll() {
     if (!player) return;
@@ -43,7 +48,7 @@ export function DiceTray({ players, onResult, requiredCheck, onRequiredRoll, onR
     setResult({ natural, total });
     onResult(text);
     onRoll?.(rollResult);
-    window.setTimeout(() => onRequiredRoll(rollResult), 900);
+    timerRef.current = window.setTimeout(() => { timerRef.current = null; onRequiredRoll(rollResult); }, 900);
   }
 
   return (

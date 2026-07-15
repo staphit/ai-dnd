@@ -1,11 +1,28 @@
 package codex
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"strings"
 	"testing"
+	"time"
+
+	"dndduet/internal/provider"
 )
+
+// TestRunTurnRequiresConsent verifies a turn on an unbound connection returns
+// ErrNeedsConsent instead of implicitly connecting (no process is spawned).
+func TestRunTurnRequiresConsent(t *testing.T) {
+	a := NewAppServer("codex", "/tmp")
+	_, err := a.RunTurn(context.Background(), "story1", "prompt", "", "", "{}", time.Second)
+	if !errors.Is(err, provider.ErrNeedsConsent) {
+		t.Fatalf("want ErrNeedsConsent, got %v", err)
+	}
+	if cs := a.ConnectionState(); cs.Alive || cs.StoryID != "" {
+		t.Errorf("fresh AppServer should report no connection, got %+v", cs)
+	}
+}
 
 func TestAppServerErrorMessage(t *testing.T) {
 	cases := []struct {
@@ -46,14 +63,19 @@ func TestAppServerClientImplementsAPI(t *testing.T) {
 func TestAppServerResetClearsFailedConnectionState(t *testing.T) {
 	a := NewAppServer("codex", "/tmp")
 	a.started = true
-	a.initErr = errors.New("failed")
+	a.alive = true
+	a.boundStory = "story1"
+	a.threadID = "thread1"
 	a.nextID = 42
-	a.incoming = make(chan rpcMessage, 1)
+	a.pending[42] = make(chan rpcMessage, 1)
 
 	if err := a.Reset(); err != nil {
 		t.Fatalf("Reset() error = %v", err)
 	}
-	if a.started || a.initErr != nil || a.nextID != 0 || a.incoming != nil {
+	if cs := a.ConnectionState(); cs.Alive || cs.StoryID != "" {
+		t.Fatalf("Reset() left a live binding: %+v", cs)
+	}
+	if a.started || a.alive || a.boundStory != "" || a.threadID != "" || a.nextID != 0 || len(a.pending) != 0 {
 		t.Fatalf("Reset() did not clear state: %#v", a)
 	}
 }

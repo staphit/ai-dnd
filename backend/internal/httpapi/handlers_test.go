@@ -210,7 +210,7 @@ func TestStatusIncludesMessageWhenDisconnected(t *testing.T) {
 
 func TestDmEndpointSuccess(t *testing.T) {
 	srv := newServer(t, &fakeCodex{Client: &codex.Client{}, status: configured(), turn: validTurnJSON})
-	body := `{"players":[{"name":"甲","className":"法師"}],"actions":[{"playerId":"player1","text":"檢查符文"}],"campaign":{"title":"測試","scene":"石門","round":1}}`
+	body := `{"campaignId":"campaign-1","players":[{"name":"甲","className":"法師"}],"actions":[{"playerId":"player1","text":"檢查符文"}],"campaign":{"title":"測試","scene":"石門","round":1}}`
 	w := do(t, srv, http.MethodPost, "/api/dm", body)
 	if w.Code != 200 {
 		t.Fatalf("status %d body %s", w.Code, w.Body.String())
@@ -231,7 +231,7 @@ func TestDmEndpointSuccess(t *testing.T) {
 
 func TestDmEndpointRejectsIncompleteParty(t *testing.T) {
 	srv := newServer(t, &fakeCodex{Client: &codex.Client{}, status: configured(), turn: validTurnJSON})
-	body := `{"players":[{"name":"甲","className":"法師"},{"name":"乙","className":"戰士"}],"actions":[{"playerId":"player1","text":"檢查符文"}]}`
+	body := `{"campaignId":"campaign-1","players":[{"name":"甲","className":"法師"},{"name":"乙","className":"戰士"}],"actions":[{"playerId":"player1","text":"檢查符文"}]}`
 	w := do(t, srv, http.MethodPost, "/api/dm", body)
 	if w.Code != 400 {
 		t.Fatalf("status %d, want 400", w.Code)
