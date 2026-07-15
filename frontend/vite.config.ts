@@ -12,6 +12,10 @@ export default defineConfig({
       output: {
         codeSplitting: {
           groups: [
+            // Keep the large three.js / react-three stack in its own async chunk
+            // (this group must precede the node_modules catch-all, else three is
+            // pulled into the eager vendor chunk and the DMTable lazy-load is moot).
+            { name: 'three', test: /node_modules\/(three|@react-three)/ },
             { name: 'vendor', test: /node_modules/ },
           ],
         },

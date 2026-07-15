@@ -23,6 +23,9 @@ import { spellCatalog } from './rules/spells';
 import { activateCampaign, addCampaign, duplicateCampaign, importCampaign, listCampaigns, loadActiveCampaign, saveActiveCampaign } from './campaign-storage';
 
 const CharacterManager = lazy(() => import('./components/CharacterManager').then((module) => ({ default: module.CharacterManager })));
+// Lazy so the three.js chunk (see vite.config.ts `three` group) loads only when
+// the table page mounts, and never enters the jsdom test bundle.
+const DMTable = lazy(() => import('./components/DMTable').then((module) => ({ default: module.DMTable })));
 
 interface CombatConclusion {
   outcome: 'victory' | 'defeat' | 'withdrawal';
@@ -103,6 +106,8 @@ export default function App() {
   const [notice, setNotice] = useState('');
   const [imageLoading, setImageLoading] = useState(false);
   const [imageError, setImageError] = useState('');
+  // True while a TTS narration clip is playing; drives the 3D DM's talking pose.
+  const [dmSpeaking, setDmSpeaking] = useState(false);
   const [spellRoll, setSpellRoll] = useState<{ check: RequiredCheck; casterId: PlayerId; spell: CharacterSpell; asRitual: boolean; targetId: string } | null>(null);
   const [codexConn, setCodexConn] = useState<{ alive: boolean; storyId: string } | null>(null);
   const [connecting, setConnecting] = useState(false);
@@ -320,13 +325,18 @@ export default function App() {
       }
       const audio = new Audio(url);
       // Revoke this clip's blob URL once it finishes or errors, so the final
-      // clip (which no later clip replaces) does not leak.
-      const revoke = () => URL.revokeObjectURL(url);
-      audio.addEventListener('ended', revoke, { once: true });
-      audio.addEventListener('error', revoke, { once: true });
+      // clip (which no later clip replaces) does not leak. The same lifecycle
+      // drives dmSpeaking, which the 3D DM avatar reads to animate its mouth.
+      const stop = () => { URL.revokeObjectURL(url); setDmSpeaking(false); };
+      audio.addEventListener('playing', () => setDmSpeaking(true));
+      audio.addEventListener('ended', stop, { once: true });
+      audio.addEventListener('error', stop, { once: true });
+      audio.addEventListener('pause', () => setDmSpeaking(false));
       ttsAudioRef.current = audio;
+      setDmSpeaking(true); // optimistic; 'playing' confirms, avoids a start flicker
       void audio.play();
     } catch (caught) {
+      setDmSpeaking(false);
       setNotice(`語音朗讀失敗：${caught instanceof Error ? caught.message : String(caught)}`);
     }
   }
@@ -543,6 +553,9 @@ export default function App() {
           {needsCodexConnect && status?.connected && <div className="model-notice"><Plugs size={20} /><div><strong>需要連線 Codex</strong><span>每個故事各自一條 Codex 連線；「{campaign.title}」要先連線後 DM 才會裁定。切換故事或連線中斷後都需要重新連線。</span></div><MagneticButton onClick={() => void connectCodex()} disabled={connecting}>{connecting ? '連線中…' : '連線 codex'}</MagneticButton></div>}
           {error && <div className="error-banner" role="alert"><XCircle size={19} /><div><strong>操作中斷</strong><span>{error}</span></div><button type="button" onClick={() => setError('')}><XCircle /></button></div>}
           <SceneVisual image={campaign.sceneImage} images={campaign.sceneImages} scene={campaign.scene} loading={imageLoading} error={imageError} canGenerate={canGenerateImages} onGenerate={() => void generateImage()} onSelect={(image) => setCampaign((current) => ({ ...current, sceneImage: image }))} />
+          <Suspense fallback={<div className="dm-table dm-table-loading" aria-hidden="true" />}>
+            <DMTable speaking={dmSpeaking} thinking={loading} combatActive={campaign.combat?.active === true} scene={campaign.scene} />
+          </Suspense>
           <div className="viewer-switch"><LockKey /><span>訊息視角</span><select value={viewer} onChange={(event) => setViewer(event.target.value as MessageAudience)}><option value="public">公開訊息</option>{campaign.players.map((player) => <option key={player.id} value={player.id}>{player.name} 的私密訊息</option>)}</select></div>
           <StoryFeed story={campaign.story} players={campaign.players} loading={loading} viewer={viewer} />
           {activeRequiredCheck && <DiceTray players={campaign.players} requiredCheck={activeRequiredCheck} onRoll={({ total }) => { if (spellRoll) applySpellCast(spellRoll.casterId, spellRoll.spell, spellRoll.asRitual, spellRoll.targetId, total); }} onRequiredRoll={(roll) => { if (spellRoll) { setSpellRoll(null); return; } const check = campaign.requiredCheck; if (check) void advance({}, [...campaign.story, makeEntry('system', roll.text)], { ...check, ...roll }); }} onResult={addLog} />}
