@@ -102,11 +102,13 @@ type fakeAPI struct {
 	calls     int
 }
 
-func (f *fakeAPI) Status(context.Context) provider.Status  { return f.status }
-func (f *fakeAPI) NormalizeModel(v string) (string, error) { return v, nil }
-func (f *fakeAPI) Model() string                           { return f.status.Model }
-func (f *fakeAPI) ModelOptions() []provider.ModelOption    { return nil }
-func (f *fakeAPI) ImageModel() string                      { return "" }
+func (f *fakeAPI) Status(context.Context) provider.Status   { return f.status }
+func (f *fakeAPI) NormalizeModel(v string) (string, error)  { return v, nil }
+func (f *fakeAPI) NormalizeEffort(v string) (string, error) { return v, nil }
+func (f *fakeAPI) EffortOptions() []provider.ModelOption    { return nil }
+func (f *fakeAPI) Model() string                            { return f.status.Model }
+func (f *fakeAPI) ModelOptions() []provider.ModelOption     { return nil }
+func (f *fakeAPI) ImageModel() string                       { return "" }
 func (f *fakeAPI) RunImageGeneration(context.Context, string, provider.ImageOpts) (string, error) {
 	return "", nil
 }
@@ -125,7 +127,7 @@ func configured() provider.Status {
 
 func TestRunDungeonMasterReturnsValidatedTurn(t *testing.T) {
 	api := &fakeAPI{status: configured(), responses: []string{validTurnJSON}}
-	turn, err := RunDungeonMaster(context.Background(), api, "input", "", "schema.json", ".")
+	turn, err := RunDungeonMaster(context.Background(), api, "input", "", "", "schema.json", ".")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -136,7 +138,7 @@ func TestRunDungeonMasterReturnsValidatedTurn(t *testing.T) {
 
 func TestRunDungeonMasterRequiresLogin(t *testing.T) {
 	api := &fakeAPI{status: provider.Status{Configured: false, Message: "尚未登入"}, responses: []string{validTurnJSON}}
-	_, err := RunDungeonMaster(context.Background(), api, "input", "", "schema.json", ".")
+	_, err := RunDungeonMaster(context.Background(), api, "input", "", "", "schema.json", ".")
 	if err == nil || !strings.Contains(err.Error(), "尚未登入") {
 		t.Errorf("expected login error, got %v", err)
 	}
@@ -148,7 +150,7 @@ func TestRunDungeonMasterRetriesWhenCombatUndeclared(t *testing.T) {
 	firstNoCombat := `{"narration":"怪獸撲向隊伍，戰鬥現在開始。","scene":"s","objective":"o","objectiveContext":"c","stakes":"x","requiresCheck":false,"check":null,"choices":["a"],"effects":[],"privateMessages":[],"combat":{"starts":false,"firstTurn":"initiative","enemies":[]},"actionIssues":[],"experienceAwards":[]}`
 	secondWithCombat := `{"narration":"怪獸撲向隊伍，戰鬥現在開始。","scene":"s","objective":"o","objectiveContext":"c","stakes":"x","requiresCheck":false,"check":null,"choices":["a"],"effects":[],"privateMessages":[],"combat":{"starts":true,"firstTurn":"enemy","enemies":[{"name":"哥布林","ac":13,"hp":7,"initiativeBonus":2,"attackBonus":4,"damage":"1d6+2","damageType":"刺擊"}]},"actionIssues":[],"experienceAwards":[]}`
 	api := &fakeAPI{status: configured(), responses: []string{firstNoCombat, secondWithCombat}}
-	turn, err := RunDungeonMaster(context.Background(), api, "input", "", "schema.json", ".")
+	turn, err := RunDungeonMaster(context.Background(), api, "input", "", "", "schema.json", ".")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -163,7 +165,7 @@ func TestRunDungeonMasterRetriesWhenCombatUndeclared(t *testing.T) {
 func TestRunDungeonMasterFailsWhenCombatNeverProvided(t *testing.T) {
 	noCombat := `{"narration":"敵人突襲，戰鬥開始。","scene":"s","objective":"o","objectiveContext":"c","stakes":"x","requiresCheck":false,"check":null,"choices":["a"],"effects":[],"privateMessages":[],"combat":{"starts":false,"firstTurn":"initiative","enemies":[]},"actionIssues":[],"experienceAwards":[]}`
 	api := &fakeAPI{status: configured(), responses: []string{noCombat, noCombat}}
-	_, err := RunDungeonMaster(context.Background(), api, "input", "", "schema.json", ".")
+	_, err := RunDungeonMaster(context.Background(), api, "input", "", "", "schema.json", ".")
 	if err == nil || !strings.Contains(err.Error(), "沒有提供可建立戰鬥介面的敵人資料") {
 		t.Errorf("expected combat-data error, got %v", err)
 	}

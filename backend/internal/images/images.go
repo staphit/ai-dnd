@@ -1,6 +1,7 @@
-// Package images generates scene and character illustrations through the Codex
-// CLI's built-in image_gen tool and stores the results in SQLite. It mirrors
-// scene-image.mjs.
+// Package images generates scene and character illustrations and stores the
+// results in SQLite. Two interchangeable renderers are provided: one through
+// the Codex CLI's built-in image_gen tool (mirrors scene-image.mjs) and one
+// through a local Stable Diffusion WebUI Forge server.
 package images
 
 import (
@@ -16,6 +17,7 @@ import (
 	"strings"
 	"time"
 
+	"dndduet/internal/forge"
 	"dndduet/internal/provider"
 	"dndduet/internal/store"
 )
@@ -48,6 +50,22 @@ type Result struct {
 	URL    string `json:"url"`
 	Prompt string `json:"prompt"`
 	Model  string `json:"model"`
+}
+
+// Rendered is one generated image before persistence.
+type Rendered struct {
+	Data   []byte
+	Ext    string // lower-case extension including the dot, e.g. ".png"
+	Prompt string
+	Model  string
+}
+
+// Renderer produces illustrations for one image backend.
+type Renderer interface {
+	// Model is the human-readable label for this backend (shown in /api/status).
+	Model() string
+	RenderScene(ctx context.Context, input SceneInput) (Rendered, error)
+	RenderCharacter(ctx context.Context, input CharacterInput) (Rendered, error)
 }
 
 // The visual* structs are marshalled into the prompt. Struct field order is
@@ -116,32 +134,60 @@ func mimeForExt(ext string) string {
 	}
 }
 
-// persist reads the generated file, verifies it is non-empty, and stores it.
-func persist(st *store.Store, sourcePath, prompt, model, emptyErr string) (Result, error) {
-	ext := strings.ToLower(filepath.Ext(sourcePath))
-	data, err := os.ReadFile(sourcePath)
-	if err != nil {
-		return Result{}, err
-	}
-	if len(data) == 0 {
-		return Result{}, errors.New(emptyErr)
-	}
-	filename := fmt.Sprintf("%d-%s%s", nowMillis(), newID(), ext)
+// persist stores one rendered image and returns the client payload.
+func persist(st *store.Store, rd Rendered) (Result, error) {
+	filename := fmt.Sprintf("%d-%s%s", nowMillis(), newID(), rd.Ext)
 	if err := st.SaveImage(store.Image{
 		Filename:  filename,
-		Mime:      mimeForExt(ext),
-		Bytes:     data,
-		Prompt:    prompt,
-		Model:     model,
+		Mime:      mimeForExt(rd.Ext),
+		Bytes:     rd.Data,
+		Prompt:    rd.Prompt,
+		Model:     rd.Model,
 		CreatedAt: nowMillis(),
 	}); err != nil {
 		return Result{}, err
 	}
-	return Result{URL: "/generated/" + filename, Prompt: prompt, Model: model}, nil
+	return Result{URL: "/generated/" + filename, Prompt: rd.Prompt, Model: rd.Model}, nil
 }
 
-func requireConfigured(ctx context.Context, api provider.API) error {
-	status := api.Status(ctx)
+// GenerateScene creates one scene illustration and stores it.
+func GenerateScene(ctx context.Context, r Renderer, st *store.Store, input SceneInput) (Result, error) {
+	rd, err := r.RenderScene(ctx, input)
+	if err != nil {
+		return Result{}, err
+	}
+	return persist(st, rd)
+}
+
+// GenerateCharacter creates one character portrait and stores it.
+func GenerateCharacter(ctx context.Context, r Renderer, st *store.Store, input CharacterInput) (Result, error) {
+	rd, err := r.RenderCharacter(ctx, input)
+	if err != nil {
+		return Result{}, err
+	}
+	return persist(st, rd)
+}
+
+// ---------------------------------------------------------------------------
+// Codex renderer
+
+// CodexRenderer generates images through the Codex CLI's built-in image_gen
+// tool via provider.API.
+type CodexRenderer struct {
+	API provider.API
+	CWD string
+}
+
+// NewCodexRenderer wraps a provider for image generation rooted at cwd.
+func NewCodexRenderer(api provider.API, cwd string) *CodexRenderer {
+	return &CodexRenderer{API: api, CWD: cwd}
+}
+
+// Model returns the Codex image-model label.
+func (r *CodexRenderer) Model() string { return r.API.ImageModel() }
+
+func (r *CodexRenderer) requireConfigured(ctx context.Context) error {
+	status := r.API.Status(ctx)
 	if status.Configured {
 		return nil
 	}
@@ -151,10 +197,31 @@ func requireConfigured(ctx context.Context, api provider.API) error {
 	return errors.New("Codex CLI 尚未登入")
 }
 
-// GenerateScene creates one scene illustration and stores it.
-func GenerateScene(ctx context.Context, api provider.API, st *store.Store, input SceneInput, cwd string) (Result, error) {
-	if err := requireConfigured(ctx, api); err != nil {
-		return Result{}, err
+// run executes one image generation and reads the produced file.
+func (r *CodexRenderer) run(ctx context.Context, prompt, emptyErr string) (Rendered, error) {
+	sourcePath, err := r.API.RunImageGeneration(ctx, prompt, provider.ImageOpts{CWD: r.CWD, Timeout: 420 * time.Second})
+	if err != nil {
+		return Rendered{}, err
+	}
+	data, err := os.ReadFile(sourcePath)
+	if err != nil {
+		return Rendered{}, err
+	}
+	if len(data) == 0 {
+		return Rendered{}, errors.New(emptyErr)
+	}
+	return Rendered{
+		Data:   data,
+		Ext:    strings.ToLower(filepath.Ext(sourcePath)),
+		Prompt: prompt,
+		Model:  r.API.ImageModel(),
+	}, nil
+}
+
+// RenderScene builds the Codex scene prompt and runs the image_gen tool.
+func (r *CodexRenderer) RenderScene(ctx context.Context, input SceneInput) (Rendered, error) {
+	if err := r.requireConfigured(ctx); err != nil {
+		return Rendered{}, err
 	}
 
 	characterParts := make([]string, 0, len(input.Players))
@@ -168,7 +235,7 @@ func GenerateScene(ctx context.Context, api provider.API, st *store.Store, input
 		LatestScene: input.Narration,
 	}})
 	if err != nil {
-		return Result{}, err
+		return Rendered{}, err
 	}
 	prompt := strings.Join([]string{
 		"明確使用 $imagegen skill，以內建 image_gen 工具產生恰好一張原創桌上角色扮演遊戲場景插圖。",
@@ -184,17 +251,13 @@ func GenerateScene(ctx context.Context, api provider.API, st *store.Store, input
 		"完成後不要修改專案檔案；讓內建工具保留圖片在 Codex 預設 generated_images 目錄即可。",
 	}, "\n")
 
-	sourcePath, err := api.RunImageGeneration(ctx, prompt, provider.ImageOpts{CWD: cwd, Timeout: 420 * time.Second})
-	if err != nil {
-		return Result{}, err
-	}
-	return persist(st, sourcePath, prompt, api.ImageModel(), "Codex 圖片輸出是空檔案")
+	return r.run(ctx, prompt, "Codex 圖片輸出是空檔案")
 }
 
-// GenerateCharacter creates one character portrait and stores it.
-func GenerateCharacter(ctx context.Context, api provider.API, st *store.Store, input CharacterInput, cwd string) (Result, error) {
-	if err := requireConfigured(ctx, api); err != nil {
-		return Result{}, err
+// RenderCharacter builds the Codex portrait prompt and runs the image_gen tool.
+func (r *CodexRenderer) RenderCharacter(ctx context.Context, input CharacterInput) (Rendered, error) {
+	if err := r.requireConfigured(ctx); err != nil {
+		return Rendered{}, err
 	}
 
 	visualJSON, err := jsonStringify(characterWrapper{VisualData: characterVisual{
@@ -205,7 +268,7 @@ func GenerateCharacter(ctx context.Context, api provider.API, st *store.Store, i
 		Appearance: input.Appearance,
 	}})
 	if err != nil {
-		return Result{}, err
+		return Rendered{}, err
 	}
 	prompt := strings.Join([]string{
 		"明確使用 $imagegen skill，以內建 image_gen 工具產生恰好一張原創桌上角色扮演遊戲角色肖像。",
@@ -221,9 +284,140 @@ func GenerateCharacter(ctx context.Context, api provider.API, st *store.Store, i
 		"完成後不要修改專案檔案；讓內建工具保留圖片在 Codex 預設 generated_images 目錄即可。",
 	}, "\n")
 
-	sourcePath, err := api.RunImageGeneration(ctx, prompt, provider.ImageOpts{CWD: cwd, Timeout: 420 * time.Second})
-	if err != nil {
-		return Result{}, err
+	return r.run(ctx, prompt, "Codex 角色圖片輸出是空檔案")
+}
+
+// ---------------------------------------------------------------------------
+// Forge renderer
+
+// ForgeRenderer generates images on a local Stable Diffusion WebUI Forge
+// server. SDXL checkpoints are trained on English tags, so the prompt is an
+// English descriptor list; well-known Chinese class/species names are mapped
+// and everything else is passed through as-is.
+type ForgeRenderer struct {
+	Client *forge.Client
+}
+
+// NewForgeRenderer wraps a Forge client.
+func NewForgeRenderer(c *forge.Client) *ForgeRenderer { return &ForgeRenderer{Client: c} }
+
+// Model returns the Forge backend label.
+func (r *ForgeRenderer) Model() string { return r.Client.ModelLabel() }
+
+// SDXL native resolution buckets: near-3:2 landscape for scenes, square for
+// portraits.
+const (
+	sceneWidth     = 1216
+	sceneHeight    = 832
+	portraitWidth  = 1024
+	portraitHeight = 1024
+)
+
+// englishTerms maps the class/species names the UI ships with to English tags
+// CLIP understands; unknown values pass through unchanged.
+var englishTerms = map[string]string{
+	"法師": "wizard", "戰士": "fighter", "盜賊": "rogue", "遊俠": "ranger",
+	"牧師": "cleric", "聖騎士": "paladin", "野蠻人": "barbarian", "吟遊詩人": "bard",
+	"德魯伊": "druid", "武僧": "monk", "術士": "sorcerer", "邪術師": "warlock",
+	"魔契師": "warlock", "旅人": "traveler",
+	"人類": "human", "精靈": "elf", "半精靈": "half-elf", "木精靈": "wood elf",
+	"高等精靈": "high elf", "卓爾": "drow", "矮人": "dwarf", "山地矮人": "mountain dwarf",
+	"半身人": "halfling", "龍裔": "dragonborn", "提夫林": "tiefling",
+	"侏儒": "gnome", "半獸人": "half-orc", "獸人": "orc",
+}
+
+func englishTerm(s string) string {
+	trimmed := strings.TrimSpace(s)
+	if en, ok := englishTerms[trimmed]; ok {
+		return en
 	}
-	return persist(st, sourcePath, prompt, api.ImageModel(), "Codex 角色圖片輸出是空檔案")
+	return trimmed
+}
+
+func truncateRunes(s string, max int) string {
+	runes := []rune(strings.TrimSpace(s))
+	if len(runes) <= max {
+		return string(runes)
+	}
+	return string(runes[:max])
+}
+
+func joinNonEmpty(parts []string, sep string) string {
+	kept := parts[:0]
+	for _, p := range parts {
+		if strings.TrimSpace(p) != "" {
+			kept = append(kept, p)
+		}
+	}
+	return strings.Join(kept, sep)
+}
+
+const (
+	sceneNegative = "text, watermark, logo, signature, border, frame, UI, dice, character sheet, " +
+		"closeup portrait, low quality, blurry, jpeg artifacts, deformed, extra limbs"
+	portraitNegative = "multiple people, two people, group, crowd, full body, text, watermark, logo, " +
+		"signature, border, frame, UI, dice, low quality, blurry, deformed, bad anatomy, bad hands, extra fingers, extra limbs"
+)
+
+// forgeScenePrompt builds the SD positive/negative prompt pair for a scene.
+func forgeScenePrompt(input SceneInput) (string, string) {
+	var classes []string
+	for _, p := range input.Players {
+		classes = append(classes, englishTerm(p.ClassName))
+	}
+	adventurers := ""
+	if len(classes) > 0 {
+		adventurers = "tiny distant adventurer figures (" + strings.Join(classes, ", ") + "), location is the focus"
+	}
+	positive := joinNonEmpty([]string{
+		"dark fantasy tabletop RPG environment concept art, wide establishing shot",
+		truncateRunes(input.Scene, 240),
+		truncateRunes(input.Narration, 300),
+		adventurers,
+		"painterly realism, cinematic practical lighting, muted charcoal and aged amber palette, atmospheric depth, highly detailed",
+	}, ", ")
+	return positive, sceneNegative
+}
+
+// forgeCharacterPrompt builds the SD positive/negative prompt pair for a
+// portrait.
+func forgeCharacterPrompt(input CharacterInput) (string, string) {
+	positive := joinNonEmpty([]string{
+		"fantasy character portrait, single character, waist-up, centered, face clearly visible",
+		strings.TrimSpace(englishTerm(input.Species) + " " + englishTerm(input.ClassName)),
+		truncateRunes(input.Background, 100),
+		truncateRunes(input.Appearance, 500),
+		"painterly realism, tactile costume detail, cinematic practical lighting, dark fantasy, restrained charcoal and aged amber palette, simple atmospheric background, highly detailed",
+	}, ", ")
+	return positive, portraitNegative
+}
+
+func (r *ForgeRenderer) render(ctx context.Context, positive, negative string, width, height int) (Rendered, error) {
+	data, err := r.Client.GenerateImage(ctx, forge.Txt2Img{
+		Prompt:         positive,
+		NegativePrompt: negative,
+		Width:          width,
+		Height:         height,
+	})
+	if err != nil {
+		return Rendered{}, err
+	}
+	return Rendered{
+		Data:   data,
+		Ext:    ".png",
+		Prompt: positive + "\nNegative prompt: " + negative,
+		Model:  r.Client.ModelLabel(),
+	}, nil
+}
+
+// RenderScene generates a 3:2 environment shot on the local GPU.
+func (r *ForgeRenderer) RenderScene(ctx context.Context, input SceneInput) (Rendered, error) {
+	positive, negative := forgeScenePrompt(input)
+	return r.render(ctx, positive, negative, sceneWidth, sceneHeight)
+}
+
+// RenderCharacter generates a square waist-up portrait on the local GPU.
+func (r *ForgeRenderer) RenderCharacter(ctx context.Context, input CharacterInput) (Rendered, error) {
+	positive, negative := forgeCharacterPrompt(input)
+	return r.render(ctx, positive, negative, portraitWidth, portraitHeight)
 }

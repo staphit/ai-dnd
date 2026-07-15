@@ -41,6 +41,19 @@ func TestNormalizeModelRejectsArbitraryArguments(t *testing.T) {
 	}
 }
 
+func TestNormalizeEffortValidatesAllowlist(t *testing.T) {
+	c := &Client{ConfiguredEffort: "medium"}
+	if got, err := c.NormalizeEffort(""); err != nil || got != "medium" {
+		t.Errorf("NormalizeEffort(\"\") = %q, %v; want medium, nil", got, err)
+	}
+	if got, err := c.NormalizeEffort("xhigh"); err != nil || got != "xhigh" {
+		t.Errorf("NormalizeEffort(xhigh) = %q, %v; want xhigh, nil", got, err)
+	}
+	if _, err := c.NormalizeEffort("--sandbox"); err == nil || !strings.Contains(err.Error(), "不支援") {
+		t.Errorf("expected 不支援 error, got %v", err)
+	}
+}
+
 func TestModelDisplayFallsBackToDefault(t *testing.T) {
 	if got := (&Client{ConfiguredModel: ""}).Model(); got != "Codex 預設模型" {
 		t.Errorf("Model() = %q, want 預設模型 fallback", got)

@@ -1,6 +1,6 @@
-import { lazy, Suspense, useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { BookOpenText, Compass, ImageSquare, Lightbulb, LockKey, MapTrifold, ShieldWarning, Sword, XCircle } from '@phosphor-icons/react';
+import { BookOpenText, Compass, Lightbulb, LockKey, MapTrifold, ShieldWarning, Sword, XCircle } from '@phosphor-icons/react';
 import { initialCampaign, demoResponses } from './data';
 import type { AiStatus, Campaign, CampaignSummary, CharacterSpell, CombatState, Combatant, MessageAudience, Page, PlayerCharacter, PlayerId, RequiredCheck, RestType, StoryEntry } from './types';
 import { Sidebar } from './components/Sidebar';
@@ -227,28 +227,53 @@ export default function App() {
     void advance({}, [...campaign.story, log], undefined, { outcome, summary });
   }
 
+  const localImages = (campaign.imageBackend || status?.imageBackend) === 'local';
+  const canGenerateImages = Boolean(status?.connected) || localImages;
+
+  const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  async function speakNarration(text: string) {
+    try {
+      const response = await fetch('/api/tts', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text }) });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || '語音合成失敗');
+      }
+      const url = URL.createObjectURL(await response.blob());
+      if (ttsAudioRef.current) {
+        ttsAudioRef.current.pause();
+        if (ttsAudioRef.current.src.startsWith('blob:')) URL.revokeObjectURL(ttsAudioRef.current.src);
+      }
+      const audio = new Audio(url);
+      ttsAudioRef.current = audio;
+      void audio.play();
+    } catch (caught) {
+      setNotice(`語音朗讀失敗：${caught instanceof Error ? caught.message : String(caught)}`);
+    }
+  }
+
   async function generateImage(narrationOverride?: string) {
-    if (!status?.connected || imageLoading) return;
+    if (!canGenerateImages || imageLoading) return;
     const narration = narrationOverride || latestDm?.text;
     if (!narration) return setImageError('目前沒有可供繪製的公開 DM 場景敘事。');
     setImageLoading(true); setImageError('');
     try {
-      const response = await fetch('/api/scene-image', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ campaign: { title: campaign.title, scene: campaign.scene }, narration, players: campaign.players }) });
+      const response = await fetch('/api/scene-image', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ imageBackend: campaign.imageBackend || '', campaign: { title: campaign.title, scene: campaign.scene }, narration, players: campaign.players }) });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || '場景插圖生成失敗');
       setCampaign((current) => {
-        const image = { url: data.url, scene: current.scene, createdAt: now(), model: data.model || status.imageModel || 'Codex Image' };
+        const image = { url: data.url, scene: current.scene, createdAt: now(), model: data.model || status?.imageModel || 'Codex Image' };
         return { ...current, sceneImage: image, sceneImages: [...(current.sceneImages || []), image].slice(-24) };
       });
     } catch (caught) { setImageError(caught instanceof Error ? caught.message : String(caught)); } finally { setImageLoading(false); }
   }
 
   async function generatePortrait(player: PlayerCharacter, appearance: string) {
-    if (!status?.connected) return setError('Codex 圖片服務尚未連線。');
+    if (!canGenerateImages) return setError('圖片服務尚未連線。');
     const description = appearance.trim();
     if (!description) return setError('請先輸入角色外觀描述。');
     try {
-      const response = await fetch('/api/character-image', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: player.name, species: player.species, className: player.className, background: player.background, appearance: description }) });
+      const response = await fetch('/api/character-image', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ imageBackend: campaign.imageBackend || '', name: player.name, species: player.species, className: player.className, background: player.background, appearance: description }) });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || '角色圖片生成失敗');
       updatePlayer({ ...player, appearance: description, portraitUrl: data.url });
@@ -312,7 +337,7 @@ export default function App() {
         nextStakes = demoIndex === 0 ? '若拖延到午夜，地下漲潮可能淹沒入口與伊薩克留下的線索。' : demoIndex === 1 ? '地圖即將燒毀，灰袍人也可能敲響鐘聲召來更多守衛。' : '狹窄階梯不利撤退；若沒有先安排隊形，隊伍可能在黑暗中被分割。';
         experienceAwards = campaign.players.map((player) => ({ playerId: player.id, amount: 75, reason: '推進禮拜堂調查並取得新線索' }));
       } else {
-        const response = await fetch('/api/dm', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ model: campaign.selectedModel || '', actions: isContinuation ? [] : createActionPayload(campaign.players, actions), resolution, combatConclusion, campaign: { title: campaign.title, scene: campaign.scene, objective: campaign.objective, objectiveContext: campaign.objectiveContext, stakes: campaign.stakes, round: campaign.round }, combat: combatConclusion && campaign.combat ? { ...campaign.combat, active: false } : campaign.combat, players: campaign.players, history }) });
+        const response = await fetch('/api/dm', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ model: campaign.selectedModel || '', effort: campaign.selectedEffort || '', actions: isContinuation ? [] : createActionPayload(campaign.players, actions), resolution, combatConclusion, campaign: { title: campaign.title, scene: campaign.scene, objective: campaign.objective, objectiveContext: campaign.objectiveContext, stakes: campaign.stakes, round: campaign.round }, combat: combatConclusion && campaign.combat ? { ...campaign.combat, active: false } : campaign.combat, players: campaign.players, history }) });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'AI DM 無法回應');
         text = data.text;
@@ -359,6 +384,7 @@ export default function App() {
         return { ...current, scene: nextScene || current.scene, objective: nextObjective || current.objective, objectiveContext: nextObjectiveContext || current.objectiveContext, stakes: nextStakes || current.stakes, round: current.round + (isContinuation ? 0 : 1), pending: {}, choices, requiredCheck, players: experiencedPlayers, combat, story: [...current.story, ...actionEntries, makeEntry('dm', text), ...privateMessages.map((message) => makeEntry('dm', message.text, message.playerId)), ...settled.logs.map((entry) => makeEntry('system', `自動結算：${entry}`)), ...experienceLogs] };
       });
       if ((campaign.autoSceneImages || combatStart?.starts) && text) void generateImage(text);
+      if (campaign.ttsEnabled && text) void speakNarration(text);
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : String(caught);
       if (resolution) {
@@ -420,7 +446,7 @@ export default function App() {
           <section className="scene-strip"><MapTrifold size={21} /><div><span>目前場景</span><strong>{campaign.scene}</strong></div><div className={`game-state ${campaign.combat?.active ? 'game-state-combat' : 'game-state-exploration'}`}>{campaign.combat?.active ? <Sword size={17} weight="fill" /> : <Compass size={17} />}<div><span>遊戲狀態</span><strong>{campaign.combat?.active ? `戰鬥中${currentCombatant ? `・${currentCombatant.name} 行動` : ''}` : '探索中'}</strong></div></div><div className="round-mark"><span>{campaign.combat?.active ? '戰鬥輪' : '探索回合'}</span><strong>{String(campaign.combat?.active ? campaign.combat.round : campaign.round).padStart(2, '0')}</strong></div></section>
           {status && !status.connected && !demoMode && <div className="model-notice"><ShieldWarning size={20} /><div><strong>本機 AI 尚未連線</strong><span>請先執行 codex login，或使用示範 DM。</span></div><MagneticButton variant="quiet" onClick={() => setDemoMode(true)}>使用示範 DM</MagneticButton></div>}
           {error && <div className="error-banner" role="alert"><XCircle size={19} /><div><strong>操作中斷</strong><span>{error}</span></div><button type="button" onClick={() => setError('')}><XCircle /></button></div>}
-          <SceneVisual image={campaign.sceneImage} images={campaign.sceneImages} scene={campaign.scene} loading={imageLoading} error={imageError} canGenerate={Boolean(status?.connected)} onGenerate={() => void generateImage()} onSelect={(image) => setCampaign((current) => ({ ...current, sceneImage: image }))} />
+          <SceneVisual image={campaign.sceneImage} images={campaign.sceneImages} scene={campaign.scene} loading={imageLoading} error={imageError} canGenerate={canGenerateImages} onGenerate={() => void generateImage()} onSelect={(image) => setCampaign((current) => ({ ...current, sceneImage: image }))} />
           <div className="viewer-switch"><LockKey /><span>訊息視角</span><select value={viewer} onChange={(event) => setViewer(event.target.value as MessageAudience)}><option value="public">公開訊息</option>{campaign.players.map((player) => <option key={player.id} value={player.id}>{player.name} 的私密訊息</option>)}</select></div>
           <StoryFeed story={campaign.story} players={campaign.players} loading={loading} viewer={viewer} />
           {activeRequiredCheck && <DiceTray players={campaign.players} requiredCheck={activeRequiredCheck} onRoll={({ total }) => { if (spellRoll) applySpellCast(spellRoll.casterId, spellRoll.spell, spellRoll.asRitual, spellRoll.targetId, total); }} onRequiredRoll={(roll) => { if (spellRoll) { setSpellRoll(null); return; } const check = campaign.requiredCheck; if (check) void advance({}, [...campaign.story, makeEntry('system', roll.text)], { ...check, ...roll }); }} onResult={addLog} />}
@@ -432,9 +458,11 @@ export default function App() {
         {page === 'settings' && <motion.main key="settings" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="single-page settings-page"><div className="page-intro"><p className="eyebrow">本機設定</p><h2>地城主與戰役</h2><p>所有切換操作都會先保存目前進度；匯入預設不切換。</p></div>
           <section className="settings-row"><div><strong>示範 DM</strong><span>完全不呼叫模型。</span></div><button type="button" className={`switch ${demoMode ? 'switch-on' : ''}`} onClick={() => setDemoMode((value) => !value)}><i /></button></section>
           <section className="settings-row model-selector"><div><strong>Codex 模型</strong><span>只影響之後的新 DM 請求；目前進度與既有訊息不會改變。</span></div><select value={campaign.selectedModel || ''} onChange={(event) => setCampaign((current) => ({ ...current, selectedModel: event.target.value }))}>{(status?.models || [{ id: '', label: 'Codex 預設（沿用目前設定）' }]).map((model) => <option key={model.id || 'default'} value={model.id}>{model.label}</option>)}</select></section>
+          <section className="settings-row model-selector"><div><strong>推理強度（effort）</strong><span>越高越深思但回應越慢；只影響之後的新 DM 請求。</span></div><select value={campaign.selectedEffort || ''} onChange={(event) => setCampaign((current) => ({ ...current, selectedEffort: event.target.value }))}>{(status?.efforts || [{ id: '', label: 'Codex 預設推理強度' }]).map((effort) => <option key={effort.id || 'default'} value={effort.id}>{effort.label}</option>)}</select></section>
           <section className="settings-row"><div><strong>Codex CLI</strong><span>{status?.connected ? `已登入／${status.model}` : status?.message || '正在檢查'}</span></div><ShieldWarning size={22} /></section>
-          <section className="settings-row"><div><strong>場景圖片</strong><span>{status?.imageModel || 'Codex $imagegen'}，由玩家手動觸發。</span></div><ImageSquare size={22} /></section>
+          <section className="settings-row model-selector"><div><strong>圖片生成引擎</strong><span>場景圖與角色肖像使用的後端；本地選項需先啟動 SD Forge（--api）。</span></div><select value={campaign.imageBackend || status?.imageBackend || 'codex'} onChange={(event) => setCampaign((current) => ({ ...current, imageBackend: event.target.value }))}>{(status?.imageBackends || [{ id: 'codex', label: status?.imageModel || 'Codex $imagegen' }]).map((backend) => <option key={backend.id} value={backend.id}>{backend.label}</option>)}</select></section>
           <section className="settings-row"><div><strong>每回合自動生成場景圖</strong><span>開啟後，每次 DM 完成公開敘事便自動生成並加入圖庫。</span></div><button type="button" className={`switch ${campaign.autoSceneImages ? 'switch-on' : ''}`} onClick={() => setCampaign((current) => ({ ...current, autoSceneImages: !current.autoSceneImages }))}><i /></button></section>
+          <section className="settings-row"><div><strong>語音朗讀 DM 敘事</strong><span>使用本地 GPT-SoVITS 朗讀每回合公開敘事；需先啟動 scripts/sovits.sh 並設定聲線。</span></div><button type="button" role="switch" aria-checked={Boolean(campaign.ttsEnabled)} aria-label="語音朗讀 DM 敘事" className={`switch ${campaign.ttsEnabled ? 'switch-on' : ''}`} onClick={() => setCampaign((current) => ({ ...current, ttsEnabled: !current.ttsEnabled }))}><i /></button></section>
           <section className="settings-row"><div><strong>角色屬性懸浮說明</strong><span>滑鼠停留或用鍵盤聚焦屬性時，顯示規則用途與計算方式。</span></div><button type="button" role="switch" aria-checked={campaign.showStatHints !== false} aria-label="角色屬性懸浮說明" className={`switch ${campaign.showStatHints !== false ? 'switch-on' : ''}`} onClick={() => setCampaign((current) => ({ ...current, showStatHints: current.showStatHints === false }))}><i /></button></section>
           <section className="settings-row"><div><strong>介面字型大小</strong><span>{Math.round((campaign.fontScale || 1) * 100)}%</span></div><div className="font-controls"><button type="button" onClick={() => setCampaign((current) => ({ ...current, fontScale: Math.max(.85, (current.fontScale || 1) - .1) }))}>A−</button><button type="button" onClick={() => setCampaign((current) => ({ ...current, fontScale: 1 }))}>重設</button><button type="button" onClick={() => setCampaign((current) => ({ ...current, fontScale: Math.min(1.25, (current.fontScale || 1) + .1) }))}>A＋</button></div></section>
           <CampaignManager campaign={campaign} campaigns={campaigns} onSwitch={switchCampaign} onNew={newCampaign} onDuplicate={() => { const copy = duplicateCampaign(campaign, initialCampaign); setCampaigns(listCampaigns(initialCampaign)); setNotice(`已建立「${copy.title}」，目前戰役未切換。`); }} onImport={importFile} />

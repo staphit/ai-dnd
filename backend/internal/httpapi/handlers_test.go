@@ -12,8 +12,10 @@ import (
 
 	"dndduet/internal/codex"
 	"dndduet/internal/httpapi"
+	"dndduet/internal/images"
 	"dndduet/internal/provider"
 	"dndduet/internal/store"
+	"dndduet/internal/tts"
 )
 
 const validTurnJSON = `{"narration":"隊伍推進，燭火搖曳。","scene":"禮拜堂","objective":"找到伊薩克","objectiveContext":"線索指向地下","stakes":"午夜漲潮","requiresCheck":false,"check":null,"choices":["搜索祭壇","檢查泥痕"],"effects":[],"privateMessages":[],"combat":{"starts":false,"firstTurn":"initiative","enemies":[]},"actionIssues":[],"experienceAwards":[]}`
@@ -37,7 +39,23 @@ func (f *fakeCodex) RunImageGeneration(context.Context, string, provider.ImageOp
 	return f.imagePath, nil
 }
 
-func newServer(t *testing.T, fake *fakeCodex) *httpapi.Server {
+// fakeRenderer is a stub local image backend.
+type fakeRenderer struct {
+	label string
+	calls int
+}
+
+func (f *fakeRenderer) Model() string { return f.label }
+func (f *fakeRenderer) RenderScene(context.Context, images.SceneInput) (images.Rendered, error) {
+	f.calls++
+	return images.Rendered{Data: []byte{1}, Ext: ".png", Prompt: "p", Model: f.label}, nil
+}
+func (f *fakeRenderer) RenderCharacter(context.Context, images.CharacterInput) (images.Rendered, error) {
+	f.calls++
+	return images.Rendered{Data: []byte{1}, Ext: ".png", Prompt: "p", Model: f.label}, nil
+}
+
+func newServerWithLocal(t *testing.T, fake *fakeCodex) (*httpapi.Server, *fakeRenderer) {
 	t.Helper()
 	dir := t.TempDir()
 	webDist := filepath.Join(dir, "web-dist")
@@ -52,13 +70,25 @@ func newServer(t *testing.T, fake *fakeCodex) *httpapi.Server {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { st.Close() })
+	local := &fakeRenderer{label: "SD Forge（test）"}
 	return &httpapi.Server{
 		Provider:    fake,
 		Store:       st,
 		WebDist:     webDist,
 		SchemaPath:  filepath.Join(dir, "schema.json"),
 		ProviderCWD: dir,
-	}
+		ImageRenderers: map[string]images.Renderer{
+			"codex": images.NewCodexRenderer(fake, dir),
+			"local": local,
+		},
+		DefaultImageBackend: "codex",
+	}, local
+}
+
+func newServer(t *testing.T, fake *fakeCodex) *httpapi.Server {
+	t.Helper()
+	srv, _ := newServerWithLocal(t, fake)
+	return srv
 }
 
 func configured() provider.Status {
@@ -97,8 +127,49 @@ func TestStatusEndpoint(t *testing.T) {
 	if len(models) != len(codex.ModelOptions) {
 		t.Errorf("models length = %d", len(models))
 	}
+	efforts, _ := resp["efforts"].([]any)
+	if len(efforts) != len(codex.EffortOptions) {
+		t.Errorf("efforts length = %d", len(efforts))
+	}
+	backends, _ := resp["imageBackends"].([]any)
+	if len(backends) != 2 {
+		t.Errorf("imageBackends length = %d, want 2", len(backends))
+	}
+	if resp["imageBackend"] != "codex" {
+		t.Errorf("imageBackend = %v", resp["imageBackend"])
+	}
 	if _, hasMessage := resp["message"]; hasMessage {
 		t.Error("message must be omitted when connected")
+	}
+}
+
+func TestSceneImageUsesLocalBackend(t *testing.T) {
+	fake := &fakeCodex{Client: &codex.Client{}, status: configured()}
+	srv, local := newServerWithLocal(t, fake)
+
+	body := `{"imageBackend":"local","campaign":{"title":"灰燼王冠","scene":"禮拜堂"},"narration":"燭火搖曳","players":[]}`
+	w := do(t, srv, http.MethodPost, "/api/scene-image", body)
+	if w.Code != 200 {
+		t.Fatalf("status %d body %s", w.Code, w.Body.String())
+	}
+	if local.calls != 1 {
+		t.Errorf("local renderer calls = %d, want 1", local.calls)
+	}
+	if fake.imgCalls != 0 {
+		t.Errorf("codex image calls = %d, want 0", fake.imgCalls)
+	}
+	var resp map[string]any
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	if resp["model"] != "SD Forge（test）" {
+		t.Errorf("model = %v", resp["model"])
+	}
+}
+
+func TestSceneImageRejectsUnknownBackend(t *testing.T) {
+	srv := newServer(t, &fakeCodex{Client: &codex.Client{}, status: configured()})
+	body := `{"imageBackend":"nope","campaign":{"title":"t","scene":"s"},"narration":"n"}`
+	if w := do(t, srv, http.MethodPost, "/api/scene-image", body); w.Code != 400 {
+		t.Errorf("status = %d, want 400", w.Code)
 	}
 }
 
@@ -229,6 +300,49 @@ func TestCharacterImageRejectsMissingFields(t *testing.T) {
 	w := do(t, srv, http.MethodPost, "/api/character-image", `{"name":"賽勒恩","appearance":""}`)
 	if w.Code != 400 {
 		t.Errorf("status = %d, want 400", w.Code)
+	}
+}
+
+func TestTTSEndpointSynthesizesNarration(t *testing.T) {
+	wav := []byte("RIFFdata")
+	var captured map[string]any
+	sovits := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		json.NewDecoder(r.Body).Decode(&captured)
+		w.Header().Set("content-type", "audio/wav")
+		w.Write(wav)
+	}))
+	defer sovits.Close()
+
+	srv := newServer(t, &fakeCodex{Client: &codex.Client{}, status: configured()})
+	srv.TTS = &tts.Client{BaseURL: sovits.URL, RefAudio: "/v.wav", PromptText: "p", PromptLang: "zh", TextLang: "zh"}
+
+	w := do(t, srv, http.MethodPost, "/api/tts", `{"text":"隊伍推進。\n\n可考慮：搜索祭壇"}`)
+	if w.Code != 200 {
+		t.Fatalf("status %d body %s", w.Code, w.Body.String())
+	}
+	if w.Header().Get("content-type") != "audio/wav" || w.Body.String() != string(wav) {
+		t.Errorf("audio response wrong: type %q len %d", w.Header().Get("content-type"), w.Body.Len())
+	}
+	// The meta choice block must be stripped before synthesis.
+	if captured["text"] != "隊伍推進。" {
+		t.Errorf("synthesized text = %v", captured["text"])
+	}
+}
+
+func TestTTSEndpointRejectsEmptyText(t *testing.T) {
+	srv := newServer(t, &fakeCodex{Client: &codex.Client{}, status: configured()})
+	srv.TTS = &tts.Client{BaseURL: "http://127.0.0.1:1", RefAudio: "/v.wav"}
+	if w := do(t, srv, http.MethodPost, "/api/tts", `{"text":"  "}`); w.Code != 400 {
+		t.Errorf("status = %d, want 400", w.Code)
+	}
+}
+
+func TestTTSEndpointReportsMissingVoiceConfig(t *testing.T) {
+	srv := newServer(t, &fakeCodex{Client: &codex.Client{}, status: configured()})
+	srv.TTS = &tts.Client{BaseURL: "http://127.0.0.1:1"}
+	w := do(t, srv, http.MethodPost, "/api/tts", `{"text":"隊伍推進。"}`)
+	if w.Code != 503 || !strings.Contains(w.Body.String(), "SOVITS_REF_AUDIO") {
+		t.Errorf("status %d body %s", w.Code, w.Body.String())
 	}
 }
 

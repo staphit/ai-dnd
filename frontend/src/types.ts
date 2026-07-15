@@ -195,6 +195,8 @@ export interface Campaign {
   objectiveContext: string;
   stakes: string;
   selectedModel?: string;
+  selectedEffort?: string;
+  imageBackend?: string;
   players: PlayerCharacter[];
   story: StoryEntry[];
   pending: Partial<Record<PlayerId, string>>;
@@ -203,6 +205,7 @@ export interface Campaign {
   fontScale?: number;
   showStatHints?: boolean;
   autoSceneImages?: boolean;
+  ttsEnabled?: boolean;
   dismissedTips?: string[];
   combat?: CombatState;
   sceneImage?: {
@@ -231,7 +234,10 @@ export interface AiStatus {
   provider: string;
   model: string | null;
   models?: Array<{ id: string; label: string }>;
+  efforts?: Array<{ id: string; label: string }>;
   imageModel?: string;
+  imageBackends?: Array<{ id: string; label: string }>;
+  imageBackend?: string;
   message?: string;
 }
 

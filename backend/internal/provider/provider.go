@@ -28,7 +28,9 @@ type StructuredOpts struct {
 	CWD        string
 	SchemaPath string
 	Model      string
-	Timeout    time.Duration
+	// Effort is the reasoning-effort id (empty keeps the provider default).
+	Effort  string
+	Timeout time.Duration
 }
 
 // ImageOpts configures an image-generation run.
@@ -45,6 +47,11 @@ type API interface {
 	// NormalizeModel validates a requested model id, returning the configured
 	// default for an empty request and an error for an unknown id.
 	NormalizeModel(value string) (string, error)
+	// NormalizeEffort validates a requested reasoning-effort id, returning the
+	// configured default for an empty request and an error for an unknown id.
+	NormalizeEffort(value string) (string, error)
+	// EffortOptions lists the selectable reasoning-effort levels.
+	EffortOptions() []ModelOption
 	// Model is the human-readable active model label.
 	Model() string
 	// ModelOptions lists the selectable models for this provider.

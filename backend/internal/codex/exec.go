@@ -32,6 +32,17 @@ var ModelOptions = []provider.ModelOption{
 	{ID: "gpt-5.6", Label: "GPT-5.6（通用）"},
 }
 
+// EffortOptions lists the selectable reasoning-effort levels for `codex exec
+// -c model_reasoning_effort=…` and the app-server turn `effort` field.
+var EffortOptions = []provider.ModelOption{
+	{ID: "", Label: "Codex 預設推理強度"},
+	{ID: "minimal", Label: "Minimal（最快）"},
+	{ID: "low", Label: "Low（快速）"},
+	{ID: "medium", Label: "Medium（平衡）"},
+	{ID: "high", Label: "High（深入）"},
+	{ID: "xhigh", Label: "XHigh（最深入）"},
+}
+
 var threadIDPattern = regexp.MustCompile(`^[a-zA-Z0-9-]+$`)
 
 // Client is the concrete Codex CLI wrapper.
@@ -40,6 +51,8 @@ type Client struct {
 	Command string
 	// ConfiguredModel is CODEX_MODEL; empty means "use the CLI default".
 	ConfiguredModel string
+	// ConfiguredEffort is CODEX_EFFORT; empty means "use the CLI default".
+	ConfiguredEffort string
 
 	now         func() time.Time
 	statusMu    sync.Mutex
@@ -54,9 +67,10 @@ func NewClient() *Client {
 		cmd = "codex"
 	}
 	return &Client{
-		Command:         cmd,
-		ConfiguredModel: strings.TrimSpace(os.Getenv("CODEX_MODEL")),
-		now:             time.Now,
+		Command:          cmd,
+		ConfiguredModel:  strings.TrimSpace(os.Getenv("CODEX_MODEL")),
+		ConfiguredEffort: strings.TrimSpace(os.Getenv("CODEX_EFFORT")),
+		now:              time.Now,
 	}
 }
 
@@ -89,6 +103,24 @@ func (c *Client) NormalizeModel(value string) (string, error) {
 		}
 	}
 	return "", errors.New("不支援的 Codex 模型選項")
+}
+
+// EffortOptions returns the selectable reasoning-effort levels.
+func (c *Client) EffortOptions() []provider.ModelOption { return EffortOptions }
+
+// NormalizeEffort validates a requested reasoning-effort id. An empty request
+// keeps the configured default; an unknown id is rejected.
+func (c *Client) NormalizeEffort(value string) (string, error) {
+	effort := strings.TrimSpace(value)
+	if effort == "" {
+		return c.ConfiguredEffort, nil
+	}
+	for _, o := range EffortOptions {
+		if o.ID == effort {
+			return effort, nil
+		}
+	}
+	return "", errors.New("不支援的 Codex 推理強度選項")
 }
 
 // execEnv returns the environment for `codex exec`, stripped of API-key and
@@ -175,6 +207,11 @@ func (c *Client) runProcess(ctx context.Context, args []string, input string, ti
 // RunStructured runs `codex exec --output-schema` and returns the parsed JSON.
 func (c *Client) RunStructured(ctx context.Context, prompt string, opts provider.StructuredOpts) (json.RawMessage, error) {
 	args := c.baseExecArgs(opts.CWD, "read-only", opts.Model)
+	// opts.Effort is resolved by the caller (NormalizeEffort allowlist), same as
+	// the model. The quotes make the value a TOML string for `-c`.
+	if strings.TrimSpace(opts.Effort) != "" {
+		args = append(args, "-c", fmt.Sprintf("model_reasoning_effort=%q", opts.Effort))
+	}
 	args = append(args, "--output-schema", opts.SchemaPath)
 	timeout := opts.Timeout
 	if timeout == 0 {

@@ -12,7 +12,8 @@ import (
 	"dndduet/internal/provider"
 )
 
-// systemPreamble is the DM system prompt, copied verbatim from dm-agent.mjs.
+// systemPreamble is the DM system prompt, based on dm-agent.mjs with the
+// narration-style rules tightened toward novelistic scene writing.
 var systemPreamble = []string{
 	"你是公平、具體且重視玩家能動性的繁體中文 D&D 2024 第五版地城主。",
 	"依照 SRD 5.2.1 與角色卡快照裁定；不可替玩家擲骰、不可捏造玩家沒有的能力或資源。",
@@ -21,7 +22,8 @@ var systemPreamble = []string{
 	"輸出前校對繁體中文，避免錯字、簡體字與用詞不一致。逐一檢查玩家行動：若缺少必要目標、使用未擁有或未準備的能力、資源不足、違反行動次數、與角色或場景狀態矛盾，必須駁回該行動並將 playerId 與具體理由放入 actionIssues。理由需指出不成立的規則或事實，並說明玩家要補充或改選什麼；不可自行改寫成合理行動。只要 actionIssues 非空，就不可推進故事、結算 effects、發放 XP 或開始新戰鬥。沒有問題回傳空陣列。",
 	"experienceAwards 只在角色完成有意義的探索、社交突破、任務里程碑或由敘事裁定的戰鬥成果時發放，逐名玩家給合理 XP 與原因；普通嘗試、重複行動或尚未完成的戰鬥回傳空陣列。網站戰鬥追蹤器已結算的勝利會自行發放 XP，不可重複。",
 	"只有結果同時具有風險與不確定性時才要求檢定；否則直接敘述合理結果。",
-	"narration 是 180–420 字、所有玩家可見的繁體中文公開敘事。",
+	"narration 是 180–420 字、所有玩家可見的繁體中文公開敘事。用小說化的場景筆法書寫：具體的感官細節（光影、聲音、氣味、觸感）、有稱呼與動機的 NPC、隨玩家行動即時變化的環境；以劇情演出回應每個宣告，而不是逐條回覆各玩家。",
+	"禁止解說式口吻：narration 不可使用條列、編號、標題或「以下是」「你可以看到」式的導覽句，不可解釋規則或擲骰計算，也不可原樣復述玩家剛輸入的宣告；規則資訊一律放進結構化欄位。NPC 對話用直接引語呈現，讓場景自己說話。",
 	"privateMessages 可選擇對特定 playerId 提供只有該玩家應看到的感官、秘密、直覺或個人線索；沒有私訊就回傳空陣列。不可把推進場景所必需的資訊只放在私訊。",
 	"effects 只記錄本輪敘事已明確發生、且需要同步角色卡的傷害、治療或狀態變更；沒有就回傳空陣列。戰鬥追蹤器或網站法術已結算的效果不可重複。damage/healing 必須給 amount，condition 必須給 condition；每項都要有簡短 reason。",
 	"當敘事明確進入敵對戰鬥，或怪獸準備撲擊、突襲、偷襲、揮爪、咬擊時，combat.starts 必須為 true 並提供敵人的 AC、HP、先攻、攻擊與傷害資料，網站會自動開啟戰鬥。若故事已確立怪獸伏擊或搶先出手，firstTurn 為 enemy，否則為 initiative；非新戰鬥時 starts 為 false、firstTurn 為 initiative 且 enemies 為空陣列。不要在 narration 先結算即將由戰鬥介面執行的攻擊。",
@@ -50,7 +52,7 @@ func jsonStringify(v any) (string, error) {
 // runs it through Codex under the structured-output schema, validates the
 // result, and re-prompts once if the narration declares combat without the
 // structured combat data needed to open the battle UI.
-func RunDungeonMaster(ctx context.Context, api provider.API, input, model, schemaPath, cwd string) (*Turn, error) {
+func RunDungeonMaster(ctx context.Context, api provider.API, input, model, effort, schemaPath, cwd string) (*Turn, error) {
 	status := api.Status(ctx)
 	if !status.Configured {
 		msg := status.Message
@@ -66,7 +68,7 @@ func RunDungeonMaster(ctx context.Context, api provider.API, input, model, schem
 	}
 	prompt := strings.Join(systemPreamble, "\n") + "\n" + campaignData
 
-	opts := provider.StructuredOpts{CWD: cwd, SchemaPath: schemaPath, Timeout: dmTimeout, Model: model}
+	opts := provider.StructuredOpts{CWD: cwd, SchemaPath: schemaPath, Timeout: dmTimeout, Model: model, Effort: effort}
 	raw, err := api.RunStructured(ctx, prompt, opts)
 	if err != nil {
 		return nil, err

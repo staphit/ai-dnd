@@ -1,6 +1,7 @@
 node_modules/
 .env
 out/
+vendor/
 *.vsix
 campaign-data/
 web-dist/

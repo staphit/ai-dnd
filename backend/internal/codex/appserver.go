@@ -137,7 +137,7 @@ func (a *AppServer) awaitResult(id int, timeout time.Duration) (json.RawMessage,
 
 // RunStructuredTurn opens a fresh thread, runs one schema-constrained turn, and
 // returns the final assistant message (the schema-conforming JSON).
-func (a *AppServer) RunStructuredTurn(ctx context.Context, prompt, model, schemaJSON string, timeout time.Duration) (json.RawMessage, error) {
+func (a *AppServer) RunStructuredTurn(ctx context.Context, prompt, model, effort, schemaJSON string, timeout time.Duration) (json.RawMessage, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
@@ -177,6 +177,9 @@ func (a *AppServer) RunStructuredTurn(ctx context.Context, prompt, model, schema
 	}
 	if model != "" {
 		params["model"] = model
+	}
+	if effort != "" {
+		params["effort"] = effort
 	}
 	turnReqID, err := a.send("turn/start", params)
 	if err != nil {
@@ -280,13 +283,13 @@ func NewAppServerClient(cwd string) *AppServerClient {
 }
 
 // RunStructured runs the turn over the persistent app-server connection. The
-// model is already resolved by handleDm, so it is used directly.
+// model and effort are already resolved by handleDm, so they are used directly.
 func (c *AppServerClient) RunStructured(ctx context.Context, prompt string, opts provider.StructuredOpts) (json.RawMessage, error) {
 	schemaBytes, err := os.ReadFile(opts.SchemaPath)
 	if err != nil {
 		return nil, err
 	}
-	return c.server.RunStructuredTurn(ctx, prompt, opts.Model, string(schemaBytes), opts.Timeout)
+	return c.server.RunStructuredTurn(ctx, prompt, opts.Model, opts.Effort, string(schemaBytes), opts.Timeout)
 }
 
 // Close releases the persistent process.

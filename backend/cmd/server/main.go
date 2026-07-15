@@ -16,9 +16,12 @@ import (
 	"time"
 
 	"dndduet/internal/codex"
+	"dndduet/internal/forge"
 	"dndduet/internal/httpapi"
+	"dndduet/internal/images"
 	"dndduet/internal/provider"
 	"dndduet/internal/store"
+	"dndduet/internal/tts"
 	schema "dndduet/schemas"
 )
 
@@ -65,13 +68,35 @@ func main() {
 		log.Fatalf("unknown CODEX_MODE %q (use \"app-server\" or \"exec\")", envOr("CODEX_MODE", "app-server"))
 	}
 
+	// IMAGE_BACKEND selects the default illustration backend; the frontend can
+	// override it per request:
+	//   codex (default) — Codex CLI's built-in image_gen tool (cloud)
+	//   local           — Stable Diffusion WebUI Forge on this machine (FORGE_*)
+	forgeClient := forge.NewClientFromEnv()
+	defaultImageBackend := strings.ToLower(envOr("IMAGE_BACKEND", "codex"))
+	switch defaultImageBackend {
+	case "codex":
+	case "local", "forge", "sd":
+		defaultImageBackend = "local"
+	default:
+		log.Fatalf("unknown IMAGE_BACKEND %q (use \"codex\" or \"local\")", envOr("IMAGE_BACKEND", "codex"))
+	}
+	log.Printf("圖片後端：預設 %s（本地 SD Forge：%s）", defaultImageBackend, forgeClient.BaseURL)
+
 	srv := &httpapi.Server{
 		Provider:    client,
 		Store:       db,
 		WebDist:     webDist,
 		SchemaPath:  schemaPath,
 		ProviderCWD: codexCWD,
+		ImageRenderers: map[string]images.Renderer{
+			"codex": images.NewCodexRenderer(client, codexCWD),
+			"local": images.NewForgeRenderer(forgeClient),
+		},
+		DefaultImageBackend: defaultImageBackend,
+		TTS:                 tts.NewClientFromEnv(),
 	}
+	log.Printf("語音朗讀：GPT-SoVITS %s（未啟動時 /api/tts 會回報連線錯誤）", srv.TTS.BaseURL)
 
 	addr := net.JoinHostPort("127.0.0.1", port)
 	httpServer := &http.Server{Addr: addr, Handler: srv.Router()}

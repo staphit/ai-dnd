@@ -14,8 +14,10 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"dndduet/internal/apperr"
+	"dndduet/internal/images"
 	"dndduet/internal/provider"
 	"dndduet/internal/store"
+	"dndduet/internal/tts"
 )
 
 const maxRequestBody = 1_000_000
@@ -27,6 +29,45 @@ type Server struct {
 	WebDist     string // absolute path to the built frontend
 	SchemaPath  string // absolute path to the DM output schema
 	ProviderCWD string // absolute working directory for the CLI's --cd flag
+
+	// ImageRenderers maps a backend id ("codex", "local") to its renderer; the
+	// request body's imageBackend field picks one per generation.
+	ImageRenderers map[string]images.Renderer
+	// DefaultImageBackend is used when a request omits imageBackend (IMAGE_BACKEND).
+	DefaultImageBackend string
+
+	// TTS reads DM narration aloud through a local GPT-SoVITS server; nil
+	// disables the /api/tts endpoint.
+	TTS *tts.Client
+}
+
+// imageBackendOrder fixes the /api/status listing order.
+var imageBackendOrder = []string{"codex", "local"}
+
+// imageBackendOptions lists the configured image backends for /api/status.
+func (s *Server) imageBackendOptions() []provider.ModelOption {
+	var opts []provider.ModelOption
+	for _, id := range imageBackendOrder {
+		if r, ok := s.ImageRenderers[id]; ok {
+			opts = append(opts, provider.ModelOption{ID: id, Label: r.Model()})
+		}
+	}
+	return opts
+}
+
+// imageRenderer resolves the requested backend id, falling back to the default.
+func (s *Server) imageRenderer(requested string) (images.Renderer, error) {
+	id := strings.TrimSpace(requested)
+	if id == "" {
+		id = s.DefaultImageBackend
+	}
+	if id == "" {
+		id = "codex"
+	}
+	if r, ok := s.ImageRenderers[id]; ok {
+		return r, nil
+	}
+	return nil, errors.New("不支援的圖片後端選項")
 }
 
 // Router wires the routes, falling through to the SPA for anything unmatched so
@@ -37,6 +78,7 @@ func (s *Server) Router() http.Handler {
 	r.Post("/api/dm", s.handleDm)
 	r.Post("/api/scene-image", s.handleSceneImage)
 	r.Post("/api/character-image", s.handleCharacterImage)
+	r.Post("/api/tts", s.handleTTS)
 	r.Get("/generated/*", s.serveGenerated)
 	r.NotFound(s.serveStatic)
 	r.MethodNotAllowed(s.serveStatic)

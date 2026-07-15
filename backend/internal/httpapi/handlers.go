@@ -11,26 +11,41 @@ import (
 	"dndduet/internal/images"
 	"dndduet/internal/jsutil"
 	"dndduet/internal/provider"
+	"dndduet/internal/tts"
 )
 
 type statusResponse struct {
-	Connected  bool                   `json:"connected"`
-	Provider   string                 `json:"provider"`
-	Model      string                 `json:"model"`
-	Models     []provider.ModelOption `json:"models"`
-	ImageModel string                 `json:"imageModel"`
-	Message    string                 `json:"message,omitempty"`
+	Connected     bool                   `json:"connected"`
+	Provider      string                 `json:"provider"`
+	Model         string                 `json:"model"`
+	Models        []provider.ModelOption `json:"models"`
+	Efforts       []provider.ModelOption `json:"efforts"`
+	ImageModel    string                 `json:"imageModel"`
+	ImageBackends []provider.ModelOption `json:"imageBackends"`
+	ImageBackend  string                 `json:"imageBackend"`
+	Message       string                 `json:"message,omitempty"`
 }
 
 func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 	status := s.Provider.Status(r.Context())
+	imageModel := s.Provider.ImageModel()
+	defaultBackend := s.DefaultImageBackend
+	if defaultBackend == "" {
+		defaultBackend = "codex"
+	}
+	if renderer, err := s.imageRenderer(""); err == nil {
+		imageModel = renderer.Model()
+	}
 	writeJSON(w, http.StatusOK, statusResponse{
-		Connected:  status.Configured,
-		Provider:   status.Provider,
-		Model:      status.Model,
-		Models:     s.Provider.ModelOptions(),
-		ImageModel: s.Provider.ImageModel(),
-		Message:    status.Message,
+		Connected:     status.Configured,
+		Provider:      status.Provider,
+		Model:         status.Model,
+		Models:        s.Provider.ModelOptions(),
+		Efforts:       s.Provider.EffortOptions(),
+		ImageModel:    imageModel,
+		ImageBackends: s.imageBackendOptions(),
+		ImageBackend:  defaultBackend,
+		Message:       status.Message,
 	})
 }
 
@@ -73,7 +88,13 @@ func (s *Server) handleDm(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, err, http.StatusServiceUnavailable)
 		return
 	}
-	output, err := dm.RunDungeonMaster(ctx, s.Provider, prompt, selectedModel, s.SchemaPath, s.ProviderCWD)
+	effortInput, _ := body["effort"].(string)
+	selectedEffort, err := s.Provider.NormalizeEffort(effortInput)
+	if err != nil {
+		writeErr(w, err, http.StatusServiceUnavailable)
+		return
+	}
+	output, err := dm.RunDungeonMaster(ctx, s.Provider, prompt, selectedModel, selectedEffort, s.SchemaPath, s.ProviderCWD)
 	if err != nil {
 		writeErr(w, err, http.StatusServiceUnavailable)
 		return
@@ -143,12 +164,17 @@ func (s *Server) handleSceneImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := images.GenerateScene(ctx, s.Provider, s.Store, images.SceneInput{
+	renderer, err := s.imageRenderer(jsutil.StrOr(jsutil.Get(body, "imageBackend"), ""))
+	if err != nil {
+		writeErr(w, err, http.StatusBadRequest)
+		return
+	}
+	result, err := images.GenerateScene(ctx, renderer, s.Store, images.SceneInput{
 		Title:     title,
 		Scene:     scene,
 		Narration: narration,
 		Players:   players,
-	}, s.ProviderCWD)
+	})
 	if err != nil {
 		writeErr(w, err, http.StatusServiceUnavailable)
 		return
@@ -177,10 +203,48 @@ func (s *Server) handleCharacterImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := images.GenerateCharacter(ctx, s.Provider, s.Store, input, s.ProviderCWD)
+	renderer, err := s.imageRenderer(jsutil.StrOr(jsutil.Get(body, "imageBackend"), ""))
+	if err != nil {
+		writeErr(w, err, http.StatusBadRequest)
+		return
+	}
+	result, err := images.GenerateCharacter(ctx, renderer, s.Store, input)
 	if err != nil {
 		writeErr(w, err, http.StatusServiceUnavailable)
 		return
 	}
 	writeJSON(w, http.StatusOK, result)
+}
+
+// handleTTS synthesizes narration audio through the local GPT-SoVITS server
+// and streams the clip back (audio/wav).
+func (s *Server) handleTTS(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 180*time.Second)
+	defer cancel()
+
+	body, err := readJSONBody(w, r)
+	if err != nil {
+		writeErr(w, err, http.StatusServiceUnavailable)
+		return
+	}
+	text := tts.PrepareText(jsutil.StrOr(jsutil.Get(body, "text"), ""))
+	text = jsutil.JSSlice(text, 2000)
+	if text == "" {
+		writeJSON(w, http.StatusBadRequest, errorBody{Error: "需要要朗讀的文字。"})
+		return
+	}
+	if s.TTS == nil {
+		writeJSON(w, http.StatusServiceUnavailable, errorBody{Error: "此伺服器未啟用語音朗讀。"})
+		return
+	}
+
+	audio, mime, err := s.TTS.Synthesize(ctx, text)
+	if err != nil {
+		writeErr(w, err, http.StatusServiceUnavailable)
+		return
+	}
+	w.Header().Set("content-type", mime)
+	w.Header().Set("cache-control", "no-store")
+	w.WriteHeader(http.StatusOK)
+	w.Write(audio)
 }
