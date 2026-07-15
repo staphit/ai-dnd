@@ -24,6 +24,8 @@ type fakeProvider struct {
 }
 
 func (f *fakeProvider) Status(context.Context) provider.Status   { return f.status }
+func (f *fakeProvider) Connect(context.Context, string) error    { return nil }
+func (f *fakeProvider) ConnectionState() provider.ConnState      { return provider.ConnState{Alive: true} }
 func (f *fakeProvider) NormalizeModel(v string) (string, error)  { return v, nil }
 func (f *fakeProvider) NormalizeEffort(v string) (string, error) { return v, nil }
 func (f *fakeProvider) EffortOptions() []provider.ModelOption    { return nil }

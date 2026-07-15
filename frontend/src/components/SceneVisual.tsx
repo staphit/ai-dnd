@@ -58,7 +58,7 @@ export function SceneVisual({ image, images = [], scene, loading, error, canGene
       </div>
       {images.length > 1 && <div className="scene-gallery" aria-label="過去場景圖片">{images.map((entry, index) => <button type="button" key={`${entry.url}-${index}`} className={entry.url === image?.url ? 'selected' : ''} onClick={() => onSelect(entry)}><img src={entry.url} alt={`${entry.scene}，${entry.createdAt}`} /><span>{entry.scene}</span></button>)}</div>}
       {error && <p className="image-error">{error}</p>}
-      {!canGenerate && !error && <p className="image-helper">設定 OpenAI API Key 後即可生成圖片。</p>}
+      {!canGenerate && !error && <p className="image-helper">先以 codex login 登入，或在設定改用本地 SD Forge，即可生成圖片。</p>}
     </section>
   );
 }

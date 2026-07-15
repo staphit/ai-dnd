@@ -41,7 +41,7 @@ func player(id, name, className string) map[string]any {
 
 func build(t *testing.T, body any) (string, error) {
 	t.Helper()
-	prompt, _, err := BuildDMRequest(decodeBody(t, body))
+	prompt, _, err := BuildDMRequest(decodeBody(t, body), false, "")
 	return prompt, err
 }
 

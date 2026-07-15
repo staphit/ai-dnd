@@ -175,7 +175,10 @@ func formatCLIError(stderr, fallback string) string {
 // allowlist, or it is the operator-configured CODEX_MODEL), so it is used
 // directly — re-validating here would reject a CODEX_MODEL outside the allowlist.
 func (c *Client) baseExecArgs(cwd, sandbox, model string) []string {
-	args := []string{"exec", "--ephemeral", "--color", "never", "--sandbox", sandbox, "--cd", cwd}
+	// --skip-git-repo-check lets exec run when cwd is not a git repo (e.g. a
+	// custom CODEX_CWD or memory compaction directory); without it codex refuses
+	// with "Not inside a trusted directory".
+	args := []string{"exec", "--ephemeral", "--color", "never", "--skip-git-repo-check", "--sandbox", sandbox, "--cd", cwd}
 	if strings.TrimSpace(model) != "" {
 		args = append(args, "--model", model)
 	}
@@ -226,6 +229,36 @@ func (c *Client) RunStructured(ctx context.Context, prompt string, opts provider
 		return nil, errors.New("Codex CLI 沒有回傳有效的結構化 JSON")
 	}
 	return json.RawMessage(trimmed), nil
+}
+
+// Connect is a no-op for the stateless exec provider: every turn spawns a fresh
+// `codex exec`, so there is no persistent connection to establish. It exists to
+// satisfy provider.API.
+func (c *Client) Connect(context.Context, string) error { return nil }
+
+// ConnectionState reports the exec provider as always ready and unbound: it is
+// stateless, so it never needs consent and never triggers delta mode.
+func (c *Client) ConnectionState() provider.ConnState {
+	return provider.ConnState{Alive: true, StoryID: ""}
+}
+
+// RunText runs `codex exec` (read-only, no output schema) and returns the
+// trimmed stdout. It is used off the DM connection for background memory
+// compaction, so it never touches the persistent app-server thread.
+func (c *Client) RunText(ctx context.Context, prompt string, opts provider.StructuredOpts) (string, error) {
+	args := c.baseExecArgs(opts.CWD, "read-only", opts.Model)
+	if strings.TrimSpace(opts.Effort) != "" {
+		args = append(args, "-c", fmt.Sprintf("model_reasoning_effort=%q", opts.Effort))
+	}
+	timeout := opts.Timeout
+	if timeout == 0 {
+		timeout = 180 * time.Second
+	}
+	stdout, _, err := c.runProcess(ctx, args, prompt, timeout, execEnv())
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(stdout), nil
 }
 
 func parseJSONLines(raw string) []map[string]any {

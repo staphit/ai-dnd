@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { BookOpenText, Compass, Lightbulb, LockKey, MapTrifold, ShieldWarning, Sword, XCircle } from '@phosphor-icons/react';
+import { BookOpenText, Compass, Lightbulb, LockKey, MapTrifold, Plugs, ShieldWarning, Sword, XCircle } from '@phosphor-icons/react';
 import { initialCampaign, storyPresets } from './data';
 import type { AiStatus, Campaign, CampaignSummary, CharacterSpell, Choice, CombatState, Combatant, MessageAudience, Page, PlayerCharacter, PlayerId, RequiredCheck, RestType, StoryEntry } from './types';
 import { Sidebar } from './components/Sidebar';
@@ -104,6 +104,13 @@ export default function App() {
   const [imageLoading, setImageLoading] = useState(false);
   const [imageError, setImageError] = useState('');
   const [spellRoll, setSpellRoll] = useState<{ check: RequiredCheck; casterId: PlayerId; spell: CharacterSpell; asRitual: boolean; targetId: string } | null>(null);
+  const [codexConn, setCodexConn] = useState<{ alive: boolean; storyId: string } | null>(null);
+  const [connecting, setConnecting] = useState(false);
+  const advancingRef = useRef(false);
+  // Holds the arguments of a turn that was rejected because the connection was
+  // not established, so connecting can replay it without the player re-entering
+  // their locked actions.
+  const retryTurnRef = useRef<null | { actions: Partial<Record<PlayerId, string>>; history: StoryEntry[]; resolution?: RequiredCheck & DiceRollResult; combatConclusion?: CombatConclusion }>(null);
 
   useEffect(() => {
     saveActiveCampaign(campaign, initialCampaign);
@@ -115,6 +122,43 @@ export default function App() {
     fetch('/api/status', { signal: controller.signal }).then((response) => response.json()).then((data: AiStatus) => setStatus(data)).catch(() => setStatus({ connected: false, provider: 'Codex CLI', model: null, message: '本機伺服器未啟動' }));
     return () => controller.abort();
   }, []);
+
+  // Refresh the codex connection binding on load and whenever the active story
+  // changes; switching stories invalidates the connection until the player
+  // re-consents to connect.
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch('/api/codex/connection', { signal: controller.signal })
+      .then((response) => response.json())
+      .then((data: { alive?: boolean; storyId?: string }) => setCodexConn({ alive: Boolean(data.alive), storyId: data.storyId || '' }))
+      .catch(() => {});
+    return () => controller.abort();
+  }, [campaign.id]);
+
+  const codexReady = !campaign.id || (Boolean(codexConn?.alive) && codexConn?.storyId === campaign.id);
+  const needsCodexConnect = !demoMode && !codexReady;
+
+  async function connectCodex() {
+    if (connecting) return;
+    setConnecting(true); setError('');
+    try {
+      const response = await fetch('/api/codex/connect', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ campaignId: campaign.id }) });
+      const data = await response.json().catch(() => ({} as { alive?: boolean; storyId?: string; error?: string }));
+      if (!response.ok) throw new Error(data.error || '連線失敗');
+      setCodexConn({ alive: Boolean(data.alive), storyId: data.storyId || '' });
+      setNotice('已連線 Codex，這個故事現在可以請 DM 裁定。');
+      // Replay a turn that was blocked by the consent gate, if any.
+      const retry = retryTurnRef.current;
+      retryTurnRef.current = null;
+      if (retry && data.alive) {
+        void advance(retry.actions, retry.history, retry.resolution, retry.combatConclusion);
+      }
+    } catch (caught) {
+      setError(`連線 Codex 失敗：${caught instanceof Error ? caught.message : String(caught)}`);
+    } finally {
+      setConnecting(false);
+    }
+  }
 
   const latestDm = useMemo(() => [...campaign.story].reverse().find((entry) => entry.speaker === 'dm' && (!entry.audience || entry.audience === 'public')), [campaign.story]);
   const visibleStory = useMemo(() => campaign.story.filter((entry) => !entry.audience || entry.audience === 'public' || entry.audience === viewer), [campaign.story, viewer]);
@@ -275,6 +319,11 @@ export default function App() {
         if (ttsAudioRef.current.src.startsWith('blob:')) URL.revokeObjectURL(ttsAudioRef.current.src);
       }
       const audio = new Audio(url);
+      // Revoke this clip's blob URL once it finishes or errors, so the final
+      // clip (which no later clip replaces) does not leak.
+      const revoke = () => URL.revokeObjectURL(url);
+      audio.addEventListener('ended', revoke, { once: true });
+      audio.addEventListener('error', revoke, { once: true });
       ttsAudioRef.current = audio;
       void audio.play();
     } catch (caught) {
@@ -289,7 +338,7 @@ export default function App() {
     setImageLoading(true); setImageError('');
     try {
       const response = await fetch('/api/scene-image', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ imageBackend: campaign.imageBackend || '', campaign: { title: campaign.title, scene: sceneOverride || campaign.scene }, narration, imagePrompt: imagePromptOverride ?? campaign.imagePrompt ?? '', players: campaign.players, forge: forgeDefaults ? forgeRequest(campaign.forgeSettings) : undefined }) });
-      const data = await response.json();
+      const data = await response.json().catch(() => ({} as { url?: string; model?: string; error?: string }));
       if (!response.ok) throw new Error(data.error || '場景插圖生成失敗');
       setCampaign((current) => {
         const image = { url: data.url, scene: current.scene, createdAt: now(), model: data.model || status?.imageModel || 'Codex Image' };
@@ -304,7 +353,7 @@ export default function App() {
     if (!description) return setError('請先輸入角色外觀描述。');
     try {
       const response = await fetch('/api/character-image', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ imageBackend: campaign.imageBackend || '', name: player.name, species: player.species, className: player.className, background: player.background, appearance: description }) });
-      const data = await response.json();
+      const data = await response.json().catch(() => ({} as { url?: string; error?: string }));
       if (!response.ok) throw new Error(data.error || '角色圖片生成失敗');
       updatePlayer({ ...player, appearance: description, portraitUrl: data.url });
       addLog(`${player.name}的角色外觀與肖像已更新。`);
@@ -312,7 +361,7 @@ export default function App() {
   }
 
   function submitAction(player: PlayerId, text: string) {
-    if (loading || campaign.pending[player]) return;
+    if (loading || advancingRef.current || campaign.pending[player]) return;
     const nextPending: Partial<Record<PlayerId, string>> = { ...campaign.pending, [player]: text };
     setCampaign((current) => ({ ...current, pending: nextPending }));
     if (areAllActionsReady(campaign.players, nextPending)) {
@@ -328,7 +377,7 @@ export default function App() {
 
   async function advance(actions: Partial<Record<PlayerId, string>>, history: StoryEntry[], resolution?: RequiredCheck & DiceRollResult, combatConclusion?: CombatConclusion) {
     const isContinuation = Boolean(resolution || combatConclusion);
-    setLoading(true); setError('');
+    setLoading(true); setError(''); advancingRef.current = true;
     if (resolution) setCampaign((current) => ({ ...current, requiredCheck: null }));
     try {
       let text: string;
@@ -369,9 +418,22 @@ export default function App() {
         nextStakes = storyPreset.stakes;
         experienceAwards = campaign.players.map((player) => ({ playerId: player.id, amount: 75, reason: `推進「${storyPreset.title}」並取得新線索` }));
       } else {
-        const response = await fetch('/api/dm', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ model: campaign.selectedModel || '', effort: campaign.selectedEffort || '', actions: isContinuation ? [] : createActionPayload(campaign.players, actions), resolution, combatConclusion, campaign: { title: campaign.title, scene: campaign.scene, objective: campaign.objective, objectiveContext: campaign.objectiveContext, stakes: campaign.stakes, round: campaign.round, choices: campaign.choices }, combat: combatConclusion && campaign.combat ? { ...campaign.combat, active: false } : campaign.combat, players: campaign.players, history }) });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'AI DM 無法回應');
+        const controller = new AbortController();
+        const timeout = window.setTimeout(() => controller.abort(), 220000);
+        let response: Response;
+        try {
+          response = await fetch('/api/dm', { method: 'POST', headers: { 'content-type': 'application/json' }, signal: controller.signal, body: JSON.stringify({ campaignId: campaign.id, model: campaign.selectedModel || '', effort: campaign.selectedEffort || '', actions: isContinuation ? [] : createActionPayload(campaign.players, actions), resolution, combatConclusion, campaign: { title: campaign.title, scene: campaign.scene, objective: campaign.objective, objectiveContext: campaign.objectiveContext, stakes: campaign.stakes, round: campaign.round, choices: campaign.choices }, combat: combatConclusion && campaign.combat ? { ...campaign.combat, active: false } : campaign.combat, players: campaign.players, history }) });
+        } finally {
+          window.clearTimeout(timeout);
+        }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const data: any = await response.json().catch(() => ({}));
+        if (response.status === 409 && data.needsConsent) {
+          setCodexConn({ alive: false, storyId: '' });
+          retryTurnRef.current = { actions, history, resolution, combatConclusion };
+          throw new Error(String(data.error || '這個故事尚未連線 Codex。') + '\n請按「連線 codex」後即會自動重試本回合。');
+        }
+        if (!response.ok) throw new Error(String(data.error || 'AI DM 無法回應'));
         text = data.text;
         nextScene = typeof data.scene === 'string' ? data.scene : undefined;
         nextImagePrompt = typeof data.imagePrompt === 'string' ? data.imagePrompt : undefined;
@@ -430,7 +492,7 @@ export default function App() {
       } else {
         setError(`${message}\n請修改或補充行動後重新提交；已鎖定內容仍保留。`);
       }
-    } finally { setLoading(false); }
+    } finally { setLoading(false); advancingRef.current = false; }
   }
 
   function resetCampaign() {
@@ -478,6 +540,7 @@ export default function App() {
         {page === 'table' && <motion.main key="table" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="table-layout"><div className="table-main">
           <section className="scene-strip"><MapTrifold size={21} /><div><span>目前場景</span><strong>{campaign.scene}</strong></div><div className={`game-state ${campaign.combat?.active ? 'game-state-combat' : 'game-state-exploration'}`}>{campaign.combat?.active ? <Sword size={17} weight="fill" /> : <Compass size={17} />}<div><span>遊戲狀態</span><strong>{campaign.combat?.active ? `戰鬥中${currentCombatant ? `・${currentCombatant.name} 行動` : ''}` : '探索中'}</strong></div></div><div className="round-mark"><span>{campaign.combat?.active ? '戰鬥輪' : '探索回合'}</span><strong>{String(campaign.combat?.active ? campaign.combat.round : campaign.round).padStart(2, '0')}</strong></div></section>
           {status && !status.connected && !demoMode && <div className="model-notice"><ShieldWarning size={20} /><div><strong>本機 AI 尚未連線</strong><span>請先執行 codex login，或使用示範 DM。</span></div><MagneticButton variant="quiet" onClick={() => setDemoMode(true)}>使用示範 DM</MagneticButton></div>}
+          {needsCodexConnect && status?.connected && <div className="model-notice"><Plugs size={20} /><div><strong>需要連線 Codex</strong><span>每個故事各自一條 Codex 連線；「{campaign.title}」要先連線後 DM 才會裁定。切換故事或連線中斷後都需要重新連線。</span></div><MagneticButton onClick={() => void connectCodex()} disabled={connecting}>{connecting ? '連線中…' : '連線 codex'}</MagneticButton></div>}
           {error && <div className="error-banner" role="alert"><XCircle size={19} /><div><strong>操作中斷</strong><span>{error}</span></div><button type="button" onClick={() => setError('')}><XCircle /></button></div>}
           <SceneVisual image={campaign.sceneImage} images={campaign.sceneImages} scene={campaign.scene} loading={imageLoading} error={imageError} canGenerate={canGenerateImages} onGenerate={() => void generateImage()} onSelect={(image) => setCampaign((current) => ({ ...current, sceneImage: image }))} />
           <div className="viewer-switch"><LockKey /><span>訊息視角</span><select value={viewer} onChange={(event) => setViewer(event.target.value as MessageAudience)}><option value="public">公開訊息</option>{campaign.players.map((player) => <option key={player.id} value={player.id}>{player.name} 的私密訊息</option>)}</select></div>

@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -20,6 +21,7 @@ import (
 	"dndduet/internal/forge"
 	"dndduet/internal/httpapi"
 	"dndduet/internal/images"
+	"dndduet/internal/memory"
 	"dndduet/internal/provider"
 	"dndduet/internal/store"
 	"dndduet/internal/tts"
@@ -75,15 +77,42 @@ func main() {
 	//                          turns over its persistent connection (long-lived)
 	//   exec                 — spawn `codex exec` per request (fallback)
 	var client provider.API
+	var mem *memory.Manager
 	switch strings.ToLower(envOr("CODEX_MODE", "app-server")) {
 	case "app-server", "appserver", "":
 		ac := codex.NewAppServerClient(codexCWD)
 		defer ac.Close()
 		client = ac
-		log.Printf("Codex 連線模式：app-server（長連線，常駐單一行程）")
+		log.Printf("Codex 連線模式：app-server（一故事一連線，需玩家同意連線）")
+
+		// Memory: raw turns in SQLite + a compacted Markdown file under the Codex
+		// CWD that the DM turn reads itself, so turns send only the delta.
+		memDir := filepath.Join(codexCWD, "campaign-data", "memory")
+		relDir, rerr := filepath.Rel(codexCWD, memDir)
+		if rerr != nil {
+			relDir = filepath.Join("campaign-data", "memory")
+		}
+		threshold := 20
+		if v, e := strconv.Atoi(envOr("MEMORY_COMPACT_THRESHOLD", "")); e == nil && v > 0 {
+			threshold = v
+		}
+		tailK := 40
+		if v, e := strconv.Atoi(envOr("MEMORY_TAIL", "")); e == nil && v > 0 {
+			tailK = v
+		}
+		summarizer := codex.NewClient()
+		runner := func(ctx context.Context, prompt string) (string, error) {
+			return summarizer.RunText(ctx, prompt, provider.StructuredOpts{CWD: codexCWD, Timeout: 150 * time.Second})
+		}
+		if m, merr := memory.New(db, memDir, relDir, runner, threshold, tailK); merr != nil {
+			log.Printf("記憶系統停用（無法建立記憶目錄 %s）：%v", memDir, merr)
+		} else {
+			mem = m
+			log.Printf("記憶系統：SQLite + 匯出檔 %s（compact 門檻 %d 事件）", relDir, threshold)
+		}
 	case "exec":
 		client = codex.NewClient()
-		log.Printf("Codex 連線模式：exec（每次請求 spawn）")
+		log.Printf("Codex 連線模式：exec（每次請求 spawn；完整脈絡，無記憶檔）")
 	default:
 		log.Fatalf("unknown CODEX_MODE %q (use \"app-server\" or \"exec\")", envOr("CODEX_MODE", "app-server"))
 	}
@@ -133,6 +162,7 @@ func main() {
 		ImageRenderers: imageRenderers,
 		DefaultImageBackend: defaultImageBackend,
 		TTS:                 tts.NewClientFromEnv(),
+		Memory:              mem,
 	}
 	log.Printf("語音朗讀：GPT-SoVITS %s（未啟動時 /api/tts 會回報連線錯誤）", srv.TTS.BaseURL)
 

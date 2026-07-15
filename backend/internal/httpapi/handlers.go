@@ -2,9 +2,11 @@ package httpapi
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -13,8 +15,62 @@ import (
 	"dndduet/internal/images"
 	"dndduet/internal/jsutil"
 	"dndduet/internal/provider"
+	"dndduet/internal/store"
 	"dndduet/internal/tts"
 )
+
+// storyIDPattern validates the untrusted campaign id. The frontend id format is
+// campaign-<ms>-<uuid> (campaign-storage.ts), which fits this superset.
+var storyIDPattern = regexp.MustCompile(`^[A-Za-z0-9._-]{1,128}$`)
+
+func sanitizeStoryID(v string) string {
+	v = strings.TrimSpace(v)
+	if storyIDPattern.MatchString(v) {
+		return v
+	}
+	return ""
+}
+
+type connectionBody struct {
+	Alive   bool   `json:"alive"`
+	StoryId string `json:"storyId"`
+}
+
+type needsConsentBody struct {
+	Error        string `json:"error"`
+	NeedsConsent bool   `json:"needsConsent"`
+}
+
+// handleCodexConnection reports the current persistent-connection binding.
+func (s *Server) handleCodexConnection(w http.ResponseWriter, r *http.Request) {
+	cs := s.Provider.ConnectionState()
+	writeJSON(w, http.StatusOK, connectionBody{Alive: cs.Alive, StoryId: cs.StoryID})
+}
+
+// handleCodexConnect establishes (or rebinds) the persistent connection to the
+// given story. This is the explicit player-consent action; it is the only path
+// that (re)creates a connection.
+func (s *Server) handleCodexConnect(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 60*time.Second)
+	defer cancel()
+
+	body, err := readJSONBody(w, r)
+	if err != nil {
+		writeErr(w, err, http.StatusServiceUnavailable)
+		return
+	}
+	storyID := sanitizeStoryID(jsutil.StrOr(jsutil.Get(body, "campaignId"), ""))
+	if storyID == "" {
+		writeJSON(w, http.StatusBadRequest, errorBody{Error: "缺少有效的 campaignId。"})
+		return
+	}
+	if err := s.Provider.Connect(ctx, storyID); err != nil {
+		writeErr(w, err, http.StatusServiceUnavailable)
+		return
+	}
+	cs := s.Provider.ConnectionState()
+	writeJSON(w, http.StatusOK, connectionBody{Alive: cs.Alive, StoryId: cs.StoryID})
+}
 
 type statusResponse struct {
 	ForgeDefaults map[string]images.ForgeOptions
@@ -80,7 +136,28 @@ func (s *Server) handleDm(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, err, http.StatusServiceUnavailable)
 		return
 	}
-	prompt, _, err := dm.BuildDMRequest(body)
+
+	storyID := sanitizeStoryID(jsutil.StrOr(jsutil.Get(body, "campaignId"), ""))
+	if storyID == "" {
+		writeJSON(w, http.StatusBadRequest, errorBody{Error: "缺少有效的 campaignId。"})
+		return
+	}
+
+	// Delta mode: only when a live connection is bound to this story and memory
+	// is enabled, so Codex has the persistent thread and can read the memory file
+	// for prior context. Otherwise fall back to the full-context prompt.
+	deltaMode := false
+	memRef := ""
+	if s.Memory != nil {
+		if cs := s.Provider.ConnectionState(); cs.Alive && cs.StoryID == storyID {
+			if err := s.Memory.Materialise(storyID); err == nil {
+				deltaMode = true
+				memRef = s.Memory.Ref(storyID)
+			}
+		}
+	}
+
+	prompt, players, err := dm.BuildDMRequest(body, deltaMode, memRef)
 	if err != nil {
 		writeErr(w, err, http.StatusServiceUnavailable)
 		return
@@ -99,11 +176,20 @@ func (s *Server) handleDm(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, err, http.StatusServiceUnavailable)
 		return
 	}
-	output, err := dm.RunDungeonMaster(ctx, s.Provider, prompt, selectedModel, selectedEffort, s.SchemaPath, s.ProviderCWD)
+	output, err := dm.RunDungeonMaster(ctx, s.Provider, prompt, selectedModel, selectedEffort, s.SchemaPath, s.ProviderCWD, storyID)
 	if err != nil {
 		log.Printf("[dm] generation failed: %v", err)
+		if errors.Is(err, provider.ErrNeedsConsent) {
+			writeJSON(w, http.StatusConflict, needsConsentBody{Error: err.Error(), NeedsConsent: true})
+			return
+		}
 		writeErr(w, err, http.StatusServiceUnavailable)
 		return
+	}
+
+	// Persist this turn to memory (raw events sync; compaction is async).
+	if s.Memory != nil {
+		s.recordMemory(storyID, body, players, output)
 	}
 
 	checkText := ""
@@ -197,6 +283,49 @@ func parseForgeOptions(body map[string]any, renderer images.Renderer) (*images.F
 	opts.Steps, opts.CFGScale = int(steps), cfg
 	opts.Width, opts.Height, opts.Seed = int(width), int(height), &seedValue
 	return &opts, nil
+}
+
+// recordMemory writes this turn's player actions and DM narration into the
+// story's memory log. Continuation turns (check resolution / combat conclusion)
+// carry no new player declaration, so only the narration is recorded.
+func (s *Server) recordMemory(storyID string, body map[string]any, players []dm.SanitizedPlayer, output *dm.Turn) {
+	round := 1
+	if f, ok := jsutil.Get(body, "campaign", "round").(float64); ok && f >= 1 {
+		round = int(f)
+	}
+	_, isRes := body["resolution"].(map[string]any)
+	_, isCombat := body["combatConclusion"].(map[string]any)
+	isContinuation := isRes || isCombat
+
+	var events []store.MemoryEvent
+	if !isContinuation {
+		actions := collectActions(body)
+		for _, p := range players {
+			if txt := strings.TrimSpace(actions[p.ID]); txt != "" {
+				events = append(events, store.MemoryEvent{Round: round, Role: "player", Text: p.Name + "：" + txt})
+			}
+		}
+	}
+	if txt := strings.TrimSpace(output.Narration); txt != "" {
+		events = append(events, store.MemoryEvent{Round: round, Role: "dm", Text: txt})
+	}
+	_ = s.Memory.Record(storyID, events)
+}
+
+// collectActions extracts playerId -> action text, accepting either the array or
+// object shape the frontend may send (mirrors dm.BuildDMRequest).
+func collectActions(body map[string]any) map[string]string {
+	out := map[string]string{}
+	if arr, ok := jsutil.AsSlice(jsutil.Get(body, "actions")); ok {
+		for _, a := range arr {
+			out[jsutil.StrOr(jsutil.Get(a, "playerId"), "")] = jsutil.StrOr(jsutil.Get(a, "text"), "")
+		}
+	} else if m, ok := jsutil.Get(body, "actions").(map[string]any); ok {
+		for pid, v := range m {
+			out[pid] = jsutil.StrOr(v, "")
+		}
+	}
+	return out
 }
 
 func (s *Server) handleSceneImage(w http.ResponseWriter, r *http.Request) {

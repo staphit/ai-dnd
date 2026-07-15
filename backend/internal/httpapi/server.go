@@ -19,6 +19,7 @@ import (
 
 	"dndduet/internal/apperr"
 	"dndduet/internal/images"
+	"dndduet/internal/memory"
 	"dndduet/internal/provider"
 	"dndduet/internal/store"
 	"dndduet/internal/tts"
@@ -47,6 +48,10 @@ type Server struct {
 	// imgGate serialises image generation: at most one at a time, with a
 	// minimum gap between runs, so a busy local GPU isn't flooded.
 	imgGate imageGate
+
+	// Memory persists per-story narrative memory and materialises the file the
+	// DM turn's Codex reads; nil disables the memory pipeline (full-context mode).
+	Memory *memory.Manager
 }
 
 // imageGateMinGap is the minimum spacing between image generations.
@@ -129,6 +134,8 @@ func (s *Server) Router() http.Handler {
 	r := chi.NewRouter()
 	r.Use(requestLogger)
 	r.Get("/api/status", s.handleStatus)
+	r.Get("/api/codex/connection", s.handleCodexConnection)
+	r.Post("/api/codex/connect", s.handleCodexConnect)
 	r.Post("/api/dm", s.handleDm)
 	r.Post("/api/scene-image", s.handleSceneImage)
 	r.Post("/api/character-image", s.handleCharacterImage)
