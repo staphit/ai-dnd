@@ -4,6 +4,7 @@
   "properties": {
     "narration": { "type": "string", "minLength": 1, "maxLength": 2000 },
     "scene": { "type": "string", "minLength": 1, "maxLength": 240 },
+    "imagePrompt": { "type": "string", "minLength": 1, "maxLength": 600 },
     "objective": { "type": "string", "minLength": 1, "maxLength": 240 },
     "objectiveContext": { "type": "string", "minLength": 1, "maxLength": 600 },
     "stakes": { "type": "string", "minLength": 1, "maxLength": 300 },
@@ -27,9 +28,17 @@
     },
     "choices": {
       "type": "array",
-      "items": { "type": "string", "minLength": 1, "maxLength": 240 },
+      "items": {
+        "type": "object",
+        "properties": {
+          "text": { "type": "string", "minLength": 1, "maxLength": 240 },
+          "playerId": { "type": "string", "pattern": "^player[1-4]$" }
+        },
+        "required": ["text", "playerId"],
+        "additionalProperties": false
+      },
       "minItems": 1,
-      "maxItems": 3
+      "maxItems": 8
     },
     "effects": {
       "type": "array",
@@ -125,6 +134,6 @@
       }
     }
   },
-  "required": ["narration", "scene", "objective", "objectiveContext", "stakes", "requiresCheck", "check", "choices", "effects", "combat", "privateMessages", "actionIssues", "experienceAwards"],
+  "required": ["narration", "scene", "imagePrompt", "objective", "objectiveContext", "stakes", "requiresCheck", "check", "choices", "effects", "combat", "privateMessages", "actionIssues", "experienceAwards"],
   "additionalProperties": false
 }

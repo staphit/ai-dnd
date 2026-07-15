@@ -2,6 +2,8 @@ package httpapi
 
 import (
 	"context"
+	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -15,6 +17,7 @@ import (
 )
 
 type statusResponse struct {
+	ForgeDefaults map[string]images.ForgeOptions
 	Connected     bool                   `json:"connected"`
 	Provider      string                 `json:"provider"`
 	Model         string                 `json:"model"`
@@ -37,6 +40,7 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 		imageModel = renderer.Model()
 	}
 	writeJSON(w, http.StatusOK, statusResponse{
+		ForgeDefaults: s.forgeDefaults(),
 		Connected:     status.Configured,
 		Provider:      status.Provider,
 		Model:         status.Model,
@@ -52,10 +56,11 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 type dmResponse struct {
 	Text             string               `json:"text"`
 	Scene            string               `json:"scene"`
+	ImagePrompt      string               `json:"imagePrompt"`
 	Objective        string               `json:"objective"`
 	ObjectiveContext string               `json:"objectiveContext"`
 	Stakes           string               `json:"stakes"`
-	Choices          []string             `json:"choices"`
+	Choices          []dm.Choice          `json:"choices"`
 	RequiresCheck    bool                 `json:"requiresCheck"`
 	Check            *dm.Check            `json:"check"`
 	PrivateMessages  []dm.PrivateMessage  `json:"privateMessages"`
@@ -96,6 +101,7 @@ func (s *Server) handleDm(w http.ResponseWriter, r *http.Request) {
 	}
 	output, err := dm.RunDungeonMaster(ctx, s.Provider, prompt, selectedModel, selectedEffort, s.SchemaPath, s.ProviderCWD)
 	if err != nil {
+		log.Printf("[dm] generation failed: %v", err)
 		writeErr(w, err, http.StatusServiceUnavailable)
 		return
 	}
@@ -106,7 +112,11 @@ func (s *Server) handleDm(w http.ResponseWriter, r *http.Request) {
 	}
 	choiceText := ""
 	if len(output.Choices) > 0 {
-		choiceText = "\n\n可考慮：" + strings.Join(output.Choices, "／")
+		texts := make([]string, len(output.Choices))
+		for i, c := range output.Choices {
+			texts[i] = c.Text
+		}
+		choiceText = "\n\n可考慮：" + strings.Join(texts, "／")
 	}
 
 	status := s.Provider.Status(ctx)
@@ -118,6 +128,7 @@ func (s *Server) handleDm(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, dmResponse{
 		Text:             output.Narration + checkText + choiceText,
 		Scene:            output.Scene,
+		ImagePrompt:      output.ImagePrompt,
 		Objective:        output.Objective,
 		ObjectiveContext: output.ObjectiveContext,
 		Stakes:           output.Stakes,
@@ -133,7 +144,68 @@ func (s *Server) handleDm(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func parseForgeOptions(body map[string]any, renderer images.Renderer) (*images.ForgeOptions, error) {
+	raw := jsutil.AsMap(body[`forge`])
+	enabled, _ := raw[`enabled`].(bool)
+	if !enabled {
+		return nil, nil
+	}
+	configurable, ok := renderer.(interface{ SceneDefaults() images.ForgeOptions })
+	if !ok {
+		return nil, nil
+	}
+	opts := configurable.SceneDefaults()
+	if value, ok := raw[`positivePrompt`].(string); ok {
+		opts.PositivePrompt = strings.TrimSpace(value)
+	}
+	if value, ok := raw[`negativePrompt`].(string); ok {
+		opts.NegativePrompt = strings.TrimSpace(value)
+	}
+	if value, ok := raw[`sampler`].(string); ok && len(strings.TrimSpace(value)) > 0 {
+		opts.Sampler = jsutil.JSSlice(strings.TrimSpace(value), 80)
+	}
+	if value, ok := raw[`scheduler`].(string); ok && len(strings.TrimSpace(value)) > 0 {
+		opts.Scheduler = jsutil.JSSlice(strings.TrimSpace(value), 80)
+	}
+	number := func(key string, fallback float64) float64 {
+		if value, ok := raw[key].(float64); ok {
+			return value
+		}
+		return fallback
+	}
+	steps := number(`steps`, float64(opts.Steps))
+	cfg := number(`cfgScale`, opts.CFGScale)
+	width := number(`width`, float64(opts.Width))
+	height := number(`height`, float64(opts.Height))
+	seed := number(`seed`, -1)
+	if steps < 1 || steps > 150 || steps != float64(int(steps)) {
+		return nil, fmt.Errorf(`Forge steps 必須是 1–150 的整數`)
+	}
+	if cfg <= 1 || cfg > 30 {
+		return nil, fmt.Errorf(`Forge CFG 必須大於 1 且不超過 30，negative prompt 才會生效`)
+	}
+	if width < 256 || width > 2048 || width != float64(int(width)) || int(width)%8 != 0 {
+		return nil, fmt.Errorf(`Forge 寬度必須是 256–2048 間且可被 8 整除`)
+	}
+	if height < 256 || height > 2048 || height != float64(int(height)) || int(height)%8 != 0 {
+		return nil, fmt.Errorf(`Forge 高度必須是 256–2048 間且可被 8 整除`)
+	}
+	if seed < -1 || seed > 2147483647 || seed != float64(int64(seed)) {
+		return nil, fmt.Errorf(`Forge seed 必須是 -1 或 0–2147483647 的整數`)
+	}
+	seedValue := int64(seed)
+	opts.Steps, opts.CFGScale = int(steps), cfg
+	opts.Width, opts.Height, opts.Seed = int(width), int(height), &seedValue
+	return &opts, nil
+}
+
 func (s *Server) handleSceneImage(w http.ResponseWriter, r *http.Request) {
+	if err := s.imgGate.acquire(imageGateMinGap); err != nil {
+		writeJSON(w, http.StatusTooManyRequests, errorBody{Error: err.Error()})
+		return
+	}
+	defer s.imgGate.release()
+
 	ctx, cancel := context.WithTimeout(r.Context(), 450*time.Second)
 	defer cancel()
 
@@ -145,6 +217,9 @@ func (s *Server) handleSceneImage(w http.ResponseWriter, r *http.Request) {
 	title := jsutil.JSSlice(strings.TrimSpace(jsutil.StrOr(jsutil.Get(body, "campaign", "title"), "")), 180)
 	scene := jsutil.JSSlice(strings.TrimSpace(jsutil.StrOr(jsutil.Get(body, "campaign", "scene"), "")), 240)
 	narration := jsutil.JSSlice(strings.TrimSpace(jsutil.StrOr(jsutil.Get(body, "narration"), "")), 5000)
+	// The DM agent's ready-made English SD prompt for this scene; when present
+	// the image backend uses it directly instead of translating again.
+	imagePrompt := jsutil.JSSlice(strings.TrimSpace(jsutil.StrOr(jsutil.Get(body, "imagePrompt"), "")), 600)
 
 	var players []images.ScenePlayer
 	if arr, ok := jsutil.AsSlice(jsutil.Get(body, "players")); ok {
@@ -153,8 +228,10 @@ func (s *Server) handleSceneImage(w http.ResponseWriter, r *http.Request) {
 		}
 		for _, p := range arr {
 			players = append(players, images.ScenePlayer{
-				Name:      jsutil.JSSlice(jsutil.StrOr(jsutil.Get(p, "name"), "冒險者"), 100),
-				ClassName: jsutil.JSSlice(jsutil.StrOr(jsutil.Get(p, "className"), "旅人"), 100),
+				Name:       jsutil.JSSlice(jsutil.StrOr(jsutil.Get(p, "name"), "冒險者"), 100),
+				ClassName:  jsutil.JSSlice(jsutil.StrOr(jsutil.Get(p, "className"), "旅人"), 100),
+				Species:    jsutil.JSSlice(jsutil.StrOr(jsutil.Get(p, "species"), ""), 100),
+				Appearance: jsutil.JSSlice(jsutil.StrOr(jsutil.Get(p, "appearance"), ""), 500),
 			})
 		}
 	}
@@ -169,11 +246,18 @@ func (s *Server) handleSceneImage(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, err, http.StatusBadRequest)
 		return
 	}
+	forgeOptions, err := parseForgeOptions(body, renderer)
+	if err != nil {
+		writeErr(w, err, http.StatusBadRequest)
+		return
+	}
 	result, err := images.GenerateScene(ctx, renderer, s.Store, images.SceneInput{
-		Title:     title,
-		Scene:     scene,
-		Narration: narration,
-		Players:   players,
+		Title:       title,
+		Scene:       scene,
+		Narration:   narration,
+		ImagePrompt: imagePrompt,
+		Players:     players,
+		Forge:       forgeOptions,
 	})
 	if err != nil {
 		writeErr(w, err, http.StatusServiceUnavailable)
@@ -183,6 +267,12 @@ func (s *Server) handleSceneImage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleCharacterImage(w http.ResponseWriter, r *http.Request) {
+	if err := s.imgGate.acquire(imageGateMinGap); err != nil {
+		writeJSON(w, http.StatusTooManyRequests, errorBody{Error: err.Error()})
+		return
+	}
+	defer s.imgGate.release()
+
 	ctx, cancel := context.WithTimeout(r.Context(), 450*time.Second)
 	defer cancel()
 

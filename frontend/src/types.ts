@@ -119,6 +119,13 @@ export interface RequiredCheck {
   modifier?: number;
 }
 
+// A DM-suggested next action. playerId ties it to the character it suits;
+// an absent playerId means it applies to the whole party.
+export interface Choice {
+  text: string;
+  playerId?: PlayerId;
+}
+
 export interface PlayerCharacter {
   id: PlayerId;
   name: string;
@@ -182,11 +189,25 @@ export interface CombatState {
   turnEconomy?: Record<string, { actionUsed: boolean; bonusActionUsed: boolean; reactionUsed: boolean }>;
 }
 
+export interface ForgeSettings {
+  Enabled: boolean;
+  PositivePrompt: string;
+  NegativePrompt: string;
+  Steps: number;
+  CFGScale: number;
+  Sampler: string;
+  Scheduler: string;
+  Seed: number;
+  Width: number;
+  Height: number;
+}
+
 export interface Campaign {
   schemaVersion?: number;
   id?: string;
   updatedAt?: string;
   setupComplete: boolean;
+  storyId?: string;
   title: string;
   chapter: string;
   scene: string;
@@ -196,11 +217,15 @@ export interface Campaign {
   stakes: string;
   selectedModel?: string;
   selectedEffort?: string;
-  imageBackend?: string;
+	imageBackend?: string;
+  forgeSettings?: ForgeSettings;
   players: PlayerCharacter[];
   story: StoryEntry[];
   pending: Partial<Record<PlayerId, string>>;
-  choices?: string[];
+  choices?: Choice[];
+  // English SD prompt for the current scene, produced by the DM agent and
+  // reused by scene-image generation.
+  imagePrompt?: string;
   requiredCheck?: RequiredCheck | null;
   fontScale?: number;
   showStatHints?: boolean;
@@ -230,6 +255,7 @@ export interface CampaignSummary {
 }
 
 export interface AiStatus {
+  ForgeDefaults?: Record<string, Omit<ForgeSettings, 'Enabled'>>;
   connected: boolean;
   provider: string;
   model: string | null;

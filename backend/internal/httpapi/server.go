@@ -7,9 +7,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
@@ -39,10 +43,47 @@ type Server struct {
 	// TTS reads DM narration aloud through a local GPT-SoVITS server; nil
 	// disables the /api/tts endpoint.
 	TTS *tts.Client
+
+	// imgGate serialises image generation: at most one at a time, with a
+	// minimum gap between runs, so a busy local GPU isn't flooded.
+	imgGate imageGate
+}
+
+// imageGateMinGap is the minimum spacing between image generations.
+const imageGateMinGap = 5 * time.Second
+
+// imageGate serialises image generation across requests.
+type imageGate struct {
+	mu       sync.Mutex
+	busy     bool
+	lastDone time.Time
+}
+
+// acquire reserves the single image slot or returns a user-facing error when
+// one is already running or the last one finished less than minGap ago.
+func (g *imageGate) acquire(minGap time.Duration) error {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	if g.busy {
+		return errors.New("目前已有一張圖片正在生成，請等它完成再試。")
+	}
+	if wait := minGap - time.Since(g.lastDone); wait > 0 {
+		return fmt.Errorf("圖片生成間隔太短，請於 %.0f 秒後再試。", wait.Seconds()+0.5)
+	}
+	g.busy = true
+	return nil
+}
+
+// release frees the slot and records the completion time.
+func (g *imageGate) release() {
+	g.mu.Lock()
+	g.busy = false
+	g.lastDone = time.Now()
+	g.mu.Unlock()
 }
 
 // imageBackendOrder fixes the /api/status listing order.
-var imageBackendOrder = []string{"codex", "local"}
+var imageBackendOrder = []string{"codex", "local", "local2"}
 
 // imageBackendOptions lists the configured image backends for /api/status.
 func (s *Server) imageBackendOptions() []provider.ModelOption {
@@ -53,6 +94,18 @@ func (s *Server) imageBackendOptions() []provider.ModelOption {
 		}
 	}
 	return opts
+}
+
+// forgeDefaults exposes presets only for local renderers. External image
+// providers never receive or advertise these parameters.
+func (s *Server) forgeDefaults() map[string]images.ForgeOptions {
+	defaults := make(map[string]images.ForgeOptions)
+	for id, renderer := range s.ImageRenderers {
+		if configurable, ok := renderer.(interface{ SceneDefaults() images.ForgeOptions }); ok {
+			defaults[id] = configurable.SceneDefaults()
+		}
+	}
+	return defaults
 }
 
 // imageRenderer resolves the requested backend id, falling back to the default.
@@ -74,6 +127,7 @@ func (s *Server) imageRenderer(requested string) (images.Renderer, error) {
 // the behaviour matches the original method+URL dispatch.
 func (s *Server) Router() http.Handler {
 	r := chi.NewRouter()
+	r.Use(requestLogger)
 	r.Get("/api/status", s.handleStatus)
 	r.Post("/api/dm", s.handleDm)
 	r.Post("/api/scene-image", s.handleSceneImage)
@@ -83,6 +137,31 @@ func (s *Server) Router() http.Handler {
 	r.NotFound(s.serveStatic)
 	r.MethodNotAllowed(s.serveStatic)
 	return r
+}
+
+// statusRecorder captures the response status code for the access log.
+type statusRecorder struct {
+	http.ResponseWriter
+	status int
+}
+
+func (r *statusRecorder) WriteHeader(code int) {
+	r.status = code
+	r.ResponseWriter.WriteHeader(code)
+}
+
+// requestLogger logs one line per HTTP request (method, path, status,
+// duration) via the standard logger, which the server tees to the log file.
+// Static asset noise is skipped; API and generated-image routes are kept.
+func requestLogger(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
+		next.ServeHTTP(rec, r)
+		if strings.HasPrefix(r.URL.Path, "/api/") || strings.HasPrefix(r.URL.Path, "/generated/") {
+			log.Printf("[http] %s %s %d %s", r.Method, r.URL.Path, rec.status, time.Since(start).Round(time.Millisecond))
+		}
+	})
 }
 
 func writeJSON(w http.ResponseWriter, status int, body any) {

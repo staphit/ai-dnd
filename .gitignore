@@ -12,3 +12,7 @@ backend/bin/
 *.db
 *.db-shm
 *.db-wal
+
+# Server logs
+logs/
+*.log

@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { ArrowCounterClockwise, ArrowRight, CheckCircle } from '@phosphor-icons/react';
 import { MagneticButton } from './MagneticButton';
-import type { PlayerId } from '../types';
+import type { Choice, PlayerId } from '../types';
 
 interface ActionComposerProps {
   player: PlayerId;
@@ -10,7 +10,7 @@ interface ActionComposerProps {
   pending?: string;
   disabled: boolean;
   partySize: number;
-  choices?: string[];
+  choices?: Choice[];
   resourceSummary?: string;
   onSubmit: (player: PlayerId, text: string) => void;
   onUnlock: (player: PlayerId) => void;
@@ -51,7 +51,7 @@ export function ActionComposer({ player, name, className, pending, disabled, par
             disabled={disabled}
             aria-describedby={`${player}-helper ${player}-error`}
           />
-          {choices.length > 0 && <div className="action-choices" aria-label="地城主建議選項">{choices.map((choice) => <button type="button" key={choice} onClick={() => setText(choice)}>{choice}</button>)}</div>}
+          {choices.length > 0 && <div className="action-choices" aria-label="地城主建議選項">{choices.map((choice) => <button type="button" key={choice.text} onClick={() => setText(choice.text)}>{choice.text}</button>)}</div>}
           <div className="input-foot">
             <small id={`${player}-helper`}>可留白表示不行動；全隊 {partySize} 位玩家提交後推進</small>
             <span>{text.length}/2000</span>

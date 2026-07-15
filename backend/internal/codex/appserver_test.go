@@ -2,6 +2,7 @@ package codex
 
 import (
 	"encoding/json"
+	"errors"
 	"strings"
 	"testing"
 )
@@ -39,5 +40,20 @@ func TestAppServerClientImplementsAPI(t *testing.T) {
 	}
 	if got, _ := c.NormalizeModel("gpt-5.6-terra"); got != "gpt-5.6-terra" {
 		t.Errorf("AppServerClient should delegate NormalizeModel")
+	}
+}
+
+func TestAppServerResetClearsFailedConnectionState(t *testing.T) {
+	a := NewAppServer("codex", "/tmp")
+	a.started = true
+	a.initErr = errors.New("failed")
+	a.nextID = 42
+	a.incoming = make(chan rpcMessage, 1)
+
+	if err := a.Reset(); err != nil {
+		t.Fatalf("Reset() error = %v", err)
+	}
+	if a.started || a.initErr != nil || a.nextID != 0 || a.incoming != nil {
+		t.Fatalf("Reset() did not clear state: %#v", a)
 	}
 }

@@ -158,7 +158,10 @@ func newForgeServer(t *testing.T, respond func(w http.ResponseWriter)) (*httptes
 }
 
 func forgeClientFor(url string) *forge.Client {
-	return &forge.Client{BaseURL: url, Checkpoint: "juggernautXL", Steps: 6, CFGScale: 1.5, Sampler: "Euler", Scheduler: "SGM Uniform"}
+	return &forge.Client{
+		BaseURL: url, Checkpoint: "juggernautXL", Steps: 6, CFGScale: 1.5, Sampler: "Euler", Scheduler: "SGM Uniform",
+		SceneWidth: 1216, SceneHeight: 832, PortraitWidth: 1024, PortraitHeight: 1024,
+	}
 }
 
 func TestForgeSceneGeneratesAndStores(t *testing.T) {
@@ -168,7 +171,7 @@ func TestForgeSceneGeneratesAndStores(t *testing.T) {
 	})
 	dir := t.TempDir()
 	st := newStore(t, dir)
-	renderer := images.NewForgeRenderer(forgeClientFor(srv.URL))
+	renderer := images.NewForgeRenderer(forgeClientFor(srv.URL), nil)
 
 	res, err := images.GenerateScene(context.Background(), renderer, st, images.SceneInput{
 		Title: "T", Scene: "廢棄禮拜堂", Narration: "燭火搖曳",
@@ -184,7 +187,7 @@ func TestForgeSceneGeneratesAndStores(t *testing.T) {
 		t.Errorf("model = %q", res.Model)
 	}
 	prompt, _ := (*captured)["prompt"].(string)
-	if !strings.Contains(prompt, "廢棄禮拜堂") || !strings.Contains(prompt, "wizard") {
+	if !strings.Contains(prompt, "廢棄禮拜堂") || !strings.Contains(prompt, "photorealistic") {
 		t.Errorf("prompt = %q", prompt)
 	}
 	if neg, _ := (*captured)["negative_prompt"].(string); !strings.Contains(neg, "watermark") {
@@ -206,13 +209,71 @@ func TestForgeSceneGeneratesAndStores(t *testing.T) {
 	}
 }
 
+func TestForgeSceneAppliesPlayerOptionsAndKeepsNegativeActive(t *testing.T) {
+	srv, captured := newForgeServer(t, func(w http.ResponseWriter) {
+		json.NewEncoder(w).Encode(map[string]any{`images`: []string{base64.StdEncoding.EncodeToString([]byte{1})}})
+	})
+	renderer := images.NewForgeRenderer(forgeClientFor(srv.URL), nil)
+	seed := int64(42)
+	_, err := renderer.RenderScene(context.Background(), images.SceneInput{
+		Title: `T`, Scene: `S`, Narration: `N`,
+		Forge: &images.ForgeOptions{
+			PositivePrompt: `exact positive`, NegativePrompt: `no dragons`,
+			Steps: 3, CFGScale: 1, Sampler: `DDIM`, Scheduler: `Karras`,
+			Seed: &seed, Width: 640, Height: 512,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	checks := map[string]any{
+		`prompt`: `exact positive`, `negative_prompt`: `no dragons`,
+		`steps`: float64(3), `cfg_scale`: float64(2),
+		`sampler_name`: `DDIM`, `scheduler`: `Karras`,
+		`seed`: float64(42), `width`: float64(640), `height`: float64(512),
+	}
+	for key, want := range checks {
+		if got := (*captured)[key]; got != want {
+			t.Errorf(`%s = %v, want %v`, key, got, want)
+		}
+	}
+}
+
+func TestForgeSceneAlwaysIncludesCustomPlayerAppearance(t *testing.T) {
+	srv, captured := newForgeServer(t, func(w http.ResponseWriter) {
+		json.NewEncoder(w).Encode(map[string]any{`images`: []string{base64.StdEncoding.EncodeToString([]byte{1})}})
+	})
+	renderer := images.NewForgeRenderer(forgeClientFor(srv.URL), nil)
+
+	_, err := renderer.RenderScene(context.Background(), images.SceneInput{
+		Title: `T`, Scene: `S`, Narration: `N`,
+		ImagePrompt: `moonlit ruined chapel`,
+		Players: []images.ScenePlayer{{
+			Name: `Private Player Name`, Species: `human`, ClassName: `druid`,
+			Appearance: `silver braided hair, emerald eyes, scar across left cheek`,
+		}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	prompt, _ := (*captured)[`prompt`].(string)
+	for _, want := range []string{`human druid`, `silver braided hair`, `emerald eyes`, `scar across left cheek`, `moonlit ruined chapel`} {
+		if !strings.Contains(prompt, want) {
+			t.Errorf(`prompt missing %q: %q`, want, prompt)
+		}
+	}
+	if strings.Contains(prompt, `Private Player Name`) {
+		t.Errorf(`prompt leaked player name: %q`, prompt)
+	}
+}
+
 func TestForgeCharacterUsesSquarePortrait(t *testing.T) {
 	srv, captured := newForgeServer(t, func(w http.ResponseWriter) {
 		json.NewEncoder(w).Encode(map[string]any{"images": []string{base64.StdEncoding.EncodeToString([]byte{1})}})
 	})
 	dir := t.TempDir()
 	st := newStore(t, dir)
-	renderer := images.NewForgeRenderer(forgeClientFor(srv.URL))
+	renderer := images.NewForgeRenderer(forgeClientFor(srv.URL), nil)
 
 	_, err := images.GenerateCharacter(context.Background(), renderer, st, images.CharacterInput{
 		Name: "賽勒恩", Species: "精靈", ClassName: "遊俠", Background: "獵人", Appearance: "灰斗篷",
@@ -236,7 +297,7 @@ func TestForgeErrorsSurfaceMessage(t *testing.T) {
 	})
 	dir := t.TempDir()
 	st := newStore(t, dir)
-	renderer := images.NewForgeRenderer(forgeClientFor(srv.URL))
+	renderer := images.NewForgeRenderer(forgeClientFor(srv.URL), nil)
 
 	_, err := images.GenerateScene(context.Background(), renderer, st, images.SceneInput{Title: "T", Scene: "S", Narration: "N"})
 	if err == nil || !strings.Contains(err.Error(), "HTTP 500") || !strings.Contains(err.Error(), "CUDA out of memory") {
@@ -247,7 +308,7 @@ func TestForgeErrorsSurfaceMessage(t *testing.T) {
 func TestForgeUnreachableGivesFriendlyError(t *testing.T) {
 	dir := t.TempDir()
 	st := newStore(t, dir)
-	renderer := images.NewForgeRenderer(&forge.Client{BaseURL: "http://127.0.0.1:1"})
+	renderer := images.NewForgeRenderer(&forge.Client{BaseURL: "http://127.0.0.1:1"}, nil)
 
 	_, err := images.GenerateScene(context.Background(), renderer, st, images.SceneInput{Title: "T", Scene: "S", Narration: "N"})
 	if err == nil || !strings.Contains(err.Error(), "無法連線本地 SD Forge") {

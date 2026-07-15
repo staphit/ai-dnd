@@ -41,18 +41,25 @@ func (f *fakeCodex) RunImageGeneration(context.Context, string, provider.ImageOp
 
 // fakeRenderer is a stub local image backend.
 type fakeRenderer struct {
-	label string
-	calls int
+	label      string
+	calls      int
+	sceneInput images.SceneInput
 }
 
 func (f *fakeRenderer) Model() string { return f.label }
-func (f *fakeRenderer) RenderScene(context.Context, images.SceneInput) (images.Rendered, error) {
+func (f *fakeRenderer) RenderScene(_ context.Context, input images.SceneInput) (images.Rendered, error) {
 	f.calls++
+	f.sceneInput = input
 	return images.Rendered{Data: []byte{1}, Ext: ".png", Prompt: "p", Model: f.label}, nil
 }
 func (f *fakeRenderer) RenderCharacter(context.Context, images.CharacterInput) (images.Rendered, error) {
 	f.calls++
 	return images.Rendered{Data: []byte{1}, Ext: ".png", Prompt: "p", Model: f.label}, nil
+}
+
+func (f *fakeRenderer) SceneDefaults() images.ForgeOptions {
+	seed := int64(-1)
+	return images.ForgeOptions{NegativePrompt: `default negative`, Steps: 8, CFGScale: 2, Sampler: `DDIM`, Scheduler: `Karras`, Seed: &seed, Width: 768, Height: 512}
 }
 
 func newServerWithLocal(t *testing.T, fake *fakeCodex) (*httpapi.Server, *fakeRenderer) {
@@ -162,6 +169,24 @@ func TestSceneImageUsesLocalBackend(t *testing.T) {
 	json.Unmarshal(w.Body.Bytes(), &resp)
 	if resp["model"] != "SD Forge（test）" {
 		t.Errorf("model = %v", resp["model"])
+	}
+}
+
+func TestSceneImagePassesEnabledForgeOptions(t *testing.T) {
+	srv, local := newServerWithLocal(t, &fakeCodex{Client: &codex.Client{}, status: configured()})
+	payload, _ := json.Marshal(map[string]any{
+		`imageBackend`: `local`,
+		`campaign`:     map[string]any{`title`: `t`, `scene`: `s`},
+		`narration`:    `n`,
+		`forge`:        map[string]any{`enabled`: true, `positivePrompt`: `exact`, `negativePrompt`: `no dragons`, `steps`: 4, `cfgScale`: 2.5, `sampler`: `Euler`, `scheduler`: `Automatic`, `seed`: 7, `width`: 640, `height`: 512},
+	})
+	w := do(t, srv, http.MethodPost, `/api/scene-image`, string(payload))
+	if w.Code != http.StatusOK {
+		t.Fatalf(`status %d: %s`, w.Code, w.Body.String())
+	}
+	got := local.sceneInput.Forge
+	if got == nil || got.PositivePrompt != `exact` || got.NegativePrompt != `no dragons` || got.CFGScale != 2.5 || got.Seed == nil || *got.Seed != 7 {
+		t.Fatalf(`forge options = %#v`, got)
 	}
 }
 

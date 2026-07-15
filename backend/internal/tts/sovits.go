@@ -11,10 +11,22 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 )
+
+// logPrompts mirrors the LOG_PROMPTS toggle used by the dm/forge packages;
+// read at call time since .env loads in main() after package init.
+func logPrompts() bool {
+	switch strings.ToLower(strings.TrimSpace(os.Getenv("LOG_PROMPTS"))) {
+	case "1", "true", "yes", "on":
+		return true
+	}
+	return false
+}
 
 // Client holds the connection and voice settings for one GPT-SoVITS server.
 type Client struct {
@@ -26,18 +38,25 @@ type Client struct {
 	PromptText string
 	PromptLang string
 	TextLang   string
+	// Speed is api_v2's speed_factor: 1.0 is normal, >1 faster, <1 slower.
+	Speed float64
 
 	HTTP *http.Client
 }
 
 // NewClientFromEnv builds a Client from SOVITS_* environment variables.
 func NewClientFromEnv() *Client {
+	speed := 1.0
+	if v, err := strconv.ParseFloat(envOr("SOVITS_SPEED", ""), 64); err == nil && v > 0 {
+		speed = v
+	}
 	return &Client{
 		BaseURL:    strings.TrimRight(envOr("SOVITS_URL", "http://127.0.0.1:9880"), "/"),
 		RefAudio:   strings.TrimSpace(os.Getenv("SOVITS_REF_AUDIO")),
 		PromptText: strings.TrimSpace(os.Getenv("SOVITS_PROMPT_TEXT")),
 		PromptLang: envOr("SOVITS_PROMPT_LANG", "zh"),
 		TextLang:   envOr("SOVITS_TEXT_LANG", "zh"),
+		Speed:      speed,
 		HTTP:       &http.Client{},
 	}
 }
@@ -63,6 +82,9 @@ func (c *Client) Synthesize(ctx context.Context, text string) ([]byte, string, e
 	if err := c.Configured(); err != nil {
 		return nil, "", err
 	}
+	if logPrompts() {
+		log.Printf("[tts] lang=%s speed=%.2f text: %s", c.TextLang, c.Speed, text)
+	}
 	payload := map[string]any{
 		"text":              text,
 		"text_lang":         c.TextLang,
@@ -73,6 +95,7 @@ func (c *Client) Synthesize(ctx context.Context, text string) ([]byte, string, e
 		"batch_size":        1,
 		"media_type":        "wav",
 		"streaming_mode":    false,
+		"speed_factor":      c.Speed,
 	}
 	body, err := json.Marshal(payload)
 	if err != nil {

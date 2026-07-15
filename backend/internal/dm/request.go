@@ -291,6 +291,17 @@ func BuildDMRequest(body map[string]any) (string, []SanitizedPlayer, error) {
 		}
 	}
 
+	prevChoices := ""
+	if raw, ok := asSlice(get(body, "campaign", "choices")); ok {
+		var cs []string
+		for _, c := range raw {
+			if s, ok := c.(string); ok && strings.TrimSpace(s) != "" {
+				cs = append(cs, strings.TrimSpace(s))
+			}
+		}
+		prevChoices = strings.Join(cs, "；")
+	}
+
 	lines := []string{
 		"規則版本：2024 第五版／SRD 5.2.1。角色卡快照與戰鬥追蹤器是本輪裁定的事實來源。",
 		"戰役：" + jsSlice(strOr(get(body, "campaign", "title"), "灰燼王冠"), 180),
@@ -299,6 +310,7 @@ func BuildDMRequest(body map[string]any) (string, []SanitizedPlayer, error) {
 		"任務背景：" + jsSlice(strOr(get(body, "campaign", "objectiveContext"), "尚未確定"), 600),
 		"風險：" + jsSlice(strOr(get(body, "campaign", "stakes"), "尚未確定"), 300),
 		"回合：" + numStr(get(body, "campaign", "round"), 1),
+		"上一回合你提供的選項（玩家若照著宣告就必須接受，不可再以能力或資源理由駁回）：" + firstNonEmpty(jsSlice(prevChoices, 400), "（無）"),
 		combat,
 		"",
 		"最近紀錄：",

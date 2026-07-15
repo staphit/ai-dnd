@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -22,18 +23,44 @@ import (
 	"dndduet/internal/store"
 )
 
-// ScenePlayer is the minimal character description used in scene prompts.
+// ScenePlayer is the character description used in scene prompts. Species and
+// Appearance keep the party's look consistent across scene illustrations.
 type ScenePlayer struct {
-	Name      string
-	ClassName string
+	Name       string
+	ClassName  string
+	Species    string
+	Appearance string
 }
+
+// ForgeOptions are optional, validated per-request overrides. A nil pointer
+// means the player left custom Forge controls disabled.
+type ForgeOptions struct {
+	PositivePrompt string
+	NegativePrompt string
+	Steps          int
+	CFGScale       float64
+	Sampler        string
+	Scheduler      string
+	Seed           *int64
+	Width          int
+	Height         int
+}
+
+// defaultAppearance anchors a party member whose player left appearance blank,
+// so scene images don't render a wildly different figure each time.
+const defaultAppearance = "身著磨損旅行裝束、披風與皮甲的冒險者"
 
 // SceneInput describes a scene to illustrate.
 type SceneInput struct {
 	Title     string
 	Scene     string
 	Narration string
-	Players   []ScenePlayer
+	// ImagePrompt is the DM agent's ready-made English SD prompt for this
+	// scene. When set, the Forge renderer uses it directly and skips the
+	// separate translation call.
+	ImagePrompt string
+	Players     []ScenePlayer
+	Forge       *ForgeOptions
 }
 
 // CharacterInput describes a character portrait to generate.
@@ -293,25 +320,98 @@ func (r *CodexRenderer) RenderCharacter(ctx context.Context, input CharacterInpu
 // ForgeRenderer generates images on a local Stable Diffusion WebUI Forge
 // server. SDXL checkpoints are trained on English tags, so the prompt is an
 // English descriptor list; well-known Chinese class/species names are mapped
-// and everything else is passed through as-is.
+// via englishTerms, and free-text fields (scene, narration, appearance) go
+// through Translator when configured — CLIP mostly ignores untranslated
+// Chinese sentences, which otherwise makes generated images drift from the
+// actual story.
 type ForgeRenderer struct {
-	Client *forge.Client
+	Client     *forge.Client
+	Translator *PromptTranslator
 }
 
-// NewForgeRenderer wraps a Forge client.
-func NewForgeRenderer(c *forge.Client) *ForgeRenderer { return &ForgeRenderer{Client: c} }
+// NewForgeRenderer wraps a Forge client. translator may be nil, in which case
+// free-text fields are passed through untranslated (the pre-translation
+// behavior).
+func NewForgeRenderer(c *forge.Client, translator *PromptTranslator) *ForgeRenderer {
+	return &ForgeRenderer{Client: c, Translator: translator}
+}
+
+// PromptTranslator condenses Chinese story text into English SD visual tags
+// via Codex, so local SDXL checkpoints (English-only CLIP) actually respond
+// to it.
+type PromptTranslator struct {
+	API        provider.API
+	CWD        string
+	SchemaPath string
+	// Effort is the reasoning-effort id for the translation call; this is a
+	// small task, so a light effort keeps image generation latency down.
+	Effort string
+}
+
+type imagePromptTags struct {
+	Tags string `json:"tags"`
+}
+
+// logPrompts mirrors the LOG_PROMPTS toggle used by the dm/forge/tts packages;
+// read at call time since .env loads in main() after package init.
+func logPrompts() bool {
+	switch strings.ToLower(strings.TrimSpace(os.Getenv("LOG_PROMPTS"))) {
+	case "1", "true", "yes", "on":
+		return true
+	}
+	return false
+}
+
+// translate turns the Chinese scene text into a detailed English SD prompt via
+// the AI agent. On any failure (unconfigured, Codex error, bad JSON) it falls
+// back to returning zh unchanged so a hiccup never blocks generation — and it
+// logs the failure so the fallback isn't silent (a Chinese prompt otherwise
+// looks like a bug in the image, not a translation miss).
+func (t *PromptTranslator) translate(ctx context.Context, zh string) string {
+	zh = strings.TrimSpace(zh)
+	if t == nil || zh == "" {
+		return zh
+	}
+	prompt := "你是 Stable Diffusion 提示詞工程師。把下面整段繁體中文場景敘事仔細轉換成一段英文提示詞，用來生成寫實插圖。要求：涵蓋地點、建築與環境、光線與時間、氛圍、關鍵物件、人物的種族職業與外觀、正在發生的動作；用逗號分隔的具體英文視覺詞彙（約 20–40 個詞），由主體到細節排列；不要翻譯或音譯人名（人名直接省略）；不要解釋、不要中文、只回傳 tags 欄位。\n\n場景敘事：\n" + truncateRunes(zh, 800)
+	raw, err := t.API.RunStructured(ctx, prompt, provider.StructuredOpts{
+		CWD:        t.CWD,
+		SchemaPath: t.SchemaPath,
+		Effort:     t.Effort,
+		Timeout:    120 * time.Second,
+	})
+	if err != nil {
+		log.Printf("[translate] failed, falling back to raw Chinese prompt: %v", err)
+		return zh
+	}
+	var parsed imagePromptTags
+	if err := json.Unmarshal(raw, &parsed); err != nil || strings.TrimSpace(parsed.Tags) == "" {
+		log.Printf("[translate] empty/invalid tags (%q), falling back: %v", string(raw), err)
+		return zh
+	}
+	if logPrompts() {
+		log.Printf("[translate] %q -> %q", truncateRunes(zh, 80), parsed.Tags)
+	}
+	return strings.TrimSpace(parsed.Tags)
+}
 
 // Model returns the Forge backend label.
 func (r *ForgeRenderer) Model() string { return r.Client.ModelLabel() }
 
-// SDXL native resolution buckets: near-3:2 landscape for scenes, square for
-// portraits.
-const (
-	sceneWidth     = 1216
-	sceneHeight    = 832
-	portraitWidth  = 1024
-	portraitHeight = 1024
-)
+// SceneDefaults exposes the active server preset to the local-only UI.
+func (r *ForgeRenderer) SceneDefaults() ForgeOptions {
+	seed := int64(-1)
+	cfg := r.Client.CFGScale
+	if cfg <= 1 {
+		// The built-in scene negative must remain active even for Turbo presets.
+		cfg = 2
+	}
+	return ForgeOptions{
+		NegativePrompt: sceneNegative,
+		Steps:          r.Client.Steps, CFGScale: cfg,
+		Sampler: r.Client.Sampler, Scheduler: r.Client.Scheduler, Seed: &seed,
+		Width: r.Client.SceneWidth, Height: r.Client.SceneHeight,
+	}
+}
 
 // englishTerms maps the class/species names the UI ships with to English tags
 // CLIP understands; unknown values pass through unchanged.
@@ -352,53 +452,129 @@ func joinNonEmpty(parts []string, sep string) string {
 	return strings.Join(kept, sep)
 }
 
+// Negatives steer toward photorealism (banning illustration/anime/3d looks)
+// and away from artefacts. "crowd, extra people, duplicate" curb SDXL's
+// tendency to spawn stray figures the story never mentioned. The realistic*
+// prefix is shared; scene/portrait add their own framing bans.
 const (
-	sceneNegative = "text, watermark, logo, signature, border, frame, UI, dice, character sheet, " +
-		"closeup portrait, low quality, blurry, jpeg artifacts, deformed, extra limbs"
-	portraitNegative = "multiple people, two people, group, crowd, full body, text, watermark, logo, " +
-		"signature, border, frame, UI, dice, low quality, blurry, deformed, bad anatomy, bad hands, extra fingers, extra limbs"
+	realisticNegative = "cartoon, anime, illustration, painting, drawing, sketch, cel shading, " +
+		"concept art, 3d render, cgi, video game screenshot, oversaturated, " +
+		"text, watermark, logo, signature, border, frame, UI, dice, character sheet, " +
+		"low quality, blurry, jpeg artifacts, deformed, extra limbs"
+	sceneNegative = realisticNegative + ", closeup portrait, crowd, extra people, " +
+		"duplicate people, cloned figures"
+	portraitNegative = realisticNegative + ", multiple people, two people, group, crowd, " +
+		"full body, bad anatomy, bad hands, extra fingers"
+)
+
+// realisticSceneStyle / realisticPortraitStyle intentionally omit any fixed
+// colour/lighting palette: the scene's own lighting words (from the
+// translated text) must win, otherwise a hardcoded "amber palette" paints
+// sunlight into caves the story says are pitch dark.
+const (
+	realisticSceneStyle    = "photorealistic, cinematic film still, realistic materials and textures, natural lighting consistent with the scene, atmospheric depth, sharp focus, highly detailed"
+	realisticPortraitStyle = "photorealistic, cinematic portrait photography, realistic skin and fabric texture, lighting consistent with the setting, sharp focus, highly detailed"
 )
 
 // forgeScenePrompt builds the SD positive/negative prompt pair for a scene.
-func forgeScenePrompt(input SceneInput) (string, string) {
-	var classes []string
-	for _, p := range input.Players {
-		classes = append(classes, englishTerm(p.ClassName))
+// The DM agent supplies a ready-made English SD prompt (input.ImagePrompt); we
+// use it directly. Only when it's absent (first scene, demo, or a manual
+// regenerate before any DM turn) do we fall back to translating the Chinese
+// scene text — folding in the party's species/class/appearance (with a default
+// for blanks) and an explicit member count so figures stay consistent.
+func (r *ForgeRenderer) sceneCharacterAppearance(ctx context.Context, players []ScenePlayer) string {
+	if len(players) == 0 {
+		return ``
 	}
-	adventurers := ""
-	if len(classes) > 0 {
-		adventurers = "tiny distant adventurer figures (" + strings.Join(classes, ", ") + "), location is the focus"
+	ordinals := []string{`first adventurer`, `second adventurer`, `third adventurer`, `fourth adventurer`}
+	members := make([]string, 0, len(players))
+	for i, p := range players {
+		look := strings.TrimSpace(p.Appearance)
+		if look == `` {
+			look = defaultAppearance
+		}
+		role := strings.TrimSpace(strings.Join([]string{englishTerm(p.Species), englishTerm(p.ClassName)}, ` `))
+		label := `adventurer`
+		if i < len(ordinals) {
+			label = ordinals[i]
+		}
+		members = append(members, label+`: `+joinNonEmpty([]string{role, truncateRunes(look, 240)}, `, `))
+	}
+	plural := ``
+	if len(players) != 1 {
+		plural = `s`
+	}
+	source := fmt.Sprintf(`exactly %d adventurer%s visible; character appearance continuity: %s`,
+		len(players), plural, strings.Join(members, `; `))
+	return r.Translator.translate(ctx, source)
+}
+
+func (r *ForgeRenderer) forgeScenePrompt(ctx context.Context, input SceneInput) (string, string) {
+	appearance := r.sceneCharacterAppearance(ctx, input.Players)
+	if input.Forge != nil && len(strings.TrimSpace(input.Forge.PositivePrompt)) > 0 {
+		positive := joinNonEmpty([]string{strings.TrimSpace(input.Forge.PositivePrompt), truncateRunes(appearance, 500)}, `, `)
+		return positive, input.Forge.NegativePrompt
+	}
+	visual := strings.TrimSpace(input.ImagePrompt)
+	if visual == "" {
+		var members []string
+		for _, p := range input.Players {
+			look := strings.TrimSpace(p.Appearance)
+			if look == "" {
+				look = defaultAppearance
+			}
+			desc := joinNonEmpty([]string{strings.TrimSpace(p.Species), strings.TrimSpace(p.ClassName)}, "")
+			members = append(members, joinNonEmpty([]string{desc, look}, "，"))
+		}
+		party := ""
+		if len(members) > 0 {
+			party = fmt.Sprintf("畫面中有 %d 名冒險者：%s", len(members), strings.Join(members, "；"))
+		}
+		sceneText := joinNonEmpty([]string{input.Scene, input.Narration, party}, "。")
+		visual = r.Translator.translate(ctx, sceneText)
 	}
 	positive := joinNonEmpty([]string{
-		"dark fantasy tabletop RPG environment concept art, wide establishing shot",
-		truncateRunes(input.Scene, 240),
-		truncateRunes(input.Narration, 300),
-		adventurers,
-		"painterly realism, cinematic practical lighting, muted charcoal and aged amber palette, atmospheric depth, highly detailed",
+		"photorealistic fantasy environment, wide establishing shot",
+		truncateRunes(appearance, 500),
+		truncateRunes(visual, 500),
+		realisticSceneStyle,
 	}, ", ")
-	return positive, sceneNegative
+	negative := sceneNegative
+	if input.Forge != nil {
+		negative = input.Forge.NegativePrompt
+	}
+	return positive, negative
 }
 
 // forgeCharacterPrompt builds the SD positive/negative prompt pair for a
-// portrait.
-func forgeCharacterPrompt(input CharacterInput) (string, string) {
+// portrait. Background/Appearance go through Translator for the same reason.
+func (r *ForgeRenderer) forgeCharacterPrompt(ctx context.Context, input CharacterInput) (string, string) {
+	visualText := joinNonEmpty([]string{input.Background, input.Appearance}, "。")
+	visual := r.Translator.translate(ctx, visualText)
 	positive := joinNonEmpty([]string{
-		"fantasy character portrait, single character, waist-up, centered, face clearly visible",
+		"photorealistic fantasy character portrait, single character, waist-up, centered, face clearly visible",
 		strings.TrimSpace(englishTerm(input.Species) + " " + englishTerm(input.ClassName)),
-		truncateRunes(input.Background, 100),
-		truncateRunes(input.Appearance, 500),
-		"painterly realism, tactile costume detail, cinematic practical lighting, dark fantasy, restrained charcoal and aged amber palette, simple atmospheric background, highly detailed",
+		truncateRunes(visual, 500),
+		realisticPortraitStyle,
 	}, ", ")
 	return positive, portraitNegative
 }
 
-func (r *ForgeRenderer) render(ctx context.Context, positive, negative string, width, height int) (Rendered, error) {
-	data, err := r.Client.GenerateImage(ctx, forge.Txt2Img{
+func (r *ForgeRenderer) render(ctx context.Context, positive, negative string, width, height int, options *ForgeOptions) (Rendered, error) {
+	req := forge.Txt2Img{
 		Prompt:         positive,
 		NegativePrompt: negative,
 		Width:          width,
 		Height:         height,
-	})
+	}
+	if options != nil {
+		req.Steps = options.Steps
+		req.CFGScale = options.CFGScale
+		req.Sampler = options.Sampler
+		req.Scheduler = options.Scheduler
+		req.Seed = options.Seed
+	}
+	data, err := r.Client.GenerateImage(ctx, req)
 	if err != nil {
 		return Rendered{}, err
 	}
@@ -412,12 +588,16 @@ func (r *ForgeRenderer) render(ctx context.Context, positive, negative string, w
 
 // RenderScene generates a 3:2 environment shot on the local GPU.
 func (r *ForgeRenderer) RenderScene(ctx context.Context, input SceneInput) (Rendered, error) {
-	positive, negative := forgeScenePrompt(input)
-	return r.render(ctx, positive, negative, sceneWidth, sceneHeight)
+	positive, negative := r.forgeScenePrompt(ctx, input)
+	width, height := r.Client.SceneWidth, r.Client.SceneHeight
+	if input.Forge != nil {
+		width, height = input.Forge.Width, input.Forge.Height
+	}
+	return r.render(ctx, positive, negative, width, height, input.Forge)
 }
 
 // RenderCharacter generates a square waist-up portrait on the local GPU.
 func (r *ForgeRenderer) RenderCharacter(ctx context.Context, input CharacterInput) (Rendered, error) {
-	positive, negative := forgeCharacterPrompt(input)
-	return r.render(ctx, positive, negative, portraitWidth, portraitHeight)
+	positive, negative := r.forgeCharacterPrompt(ctx, input)
+	return r.render(ctx, positive, negative, r.Client.PortraitWidth, r.Client.PortraitHeight, nil)
 }

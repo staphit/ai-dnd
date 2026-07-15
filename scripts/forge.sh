@@ -9,6 +9,10 @@
 #
 # First run installs Forge's own Python venv and torch; that is slow once.
 set -euo pipefail
+# Keep the window open if double-clicked and setup hasn't run yet, so the
+# error is readable instead of flashing shut. Once the server starts below
+# via exec, this trap no longer applies — the server owns the window.
+trap 'read -n 1 -s -r -p "Press any key to close..."; echo' EXIT
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 FORGE_DIR="$ROOT/vendor/stable-diffusion-webui-forge"
 PORT="${FORGE_PORT:-7860}"

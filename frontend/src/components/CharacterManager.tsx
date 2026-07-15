@@ -21,10 +21,11 @@ function CharacterEditor({ player, showStatHints, onUpdate, onLog, onGeneratePor
   const [appearance, setAppearance] = useState(player.appearance || '');
   const [portraitLoading, setPortraitLoading] = useState(false);
   const experience = experienceToNextLevel(player);
-  useEffect(() => { setSpecies(player.species); setBackground(player.background); }, [player]);
+  useEffect(() => { setSpecies(player.species); setBackground(player.background); setAppearance(player.appearance || ``); }, [player]);
 
   function saveProfile() {
-    onUpdate(customizeCharacter(player, { species: species.trim(), background: background.trim() }));
+    const updated = customizeCharacter(player, { species: species.trim(), background: background.trim() });
+    onUpdate({ ...updated, appearance: appearance.trim() });
     onLog(`${player.name}的種族與背景已更新。`);
   }
 

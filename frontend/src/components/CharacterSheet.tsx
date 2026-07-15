@@ -23,6 +23,8 @@ function signed(value: number) {
 
 export function CharacterSheet({ player, showStatHints = true, combatActive = false, open, onClose, spellTargets, onResourceChange, onCastSpell, onRest }: CharacterSheetProps) {
   const [spellTarget, setSpellTarget] = useState<Record<string, string>>({});
+  // Free-text location for spells cast at the scene rather than a combatant.
+  const [sceneTarget, setSceneTarget] = useState<Record<string, string>>({});
   const spellGroups = player.spellcasting
     ? [...new Set(player.spellcasting.spells.map((spell) => spell.level))].sort((a, b) => a - b)
     : [];
@@ -138,6 +140,8 @@ export function CharacterSheet({ player, showStatHints = true, combatActive = fa
                               ? spellTargets.filter((entry) => entry.side === 'enemy')
                               : [...spellTargets, { id: 'scene', name: '目前場景／指定位置', side: 'party' as const }];
                         const selectedTarget = spellTarget[spell.id] || ((spell.effect?.target === 'self' || /自身/.test(spell.range)) ? player.id : undefined);
+                        const isSceneTarget = selectedTarget === 'scene';
+                        const resolvedTarget = isSceneTarget ? (sceneTarget[spell.id]?.trim() || 'scene') : selectedTarget;
                         return (
                           <article key={spell.id} className={!canCastNormally ? 'spell-unprepared' : ''}>
                             <div className="spell-name"><BookOpenText /><span><strong>{spell.name}</strong><small>{spell.englishName}・{spell.school}{spell.alwaysPrepared ? '・常備' : !spell.prepared ? '・未準備' : ''}</small></span></div>
@@ -145,8 +149,9 @@ export function CharacterSheet({ player, showStatHints = true, combatActive = fa
                             <p>{spell.description}</p>
                             <div className="spell-actions">
                               <select aria-label={`${spell.name}目標`} value={selectedTarget || ''} onChange={(event) => setSpellTarget((current) => ({ ...current, [spell.id]: event.target.value }))}><option value="" disabled>必須指定目標</option>{candidates.map((target) => <option key={target.id} value={target.id}>{target.name}</option>)}</select>
-                              {canCastNormally && <button type="button" onClick={() => onCastSpell(player.id, spell, false, selectedTarget)} disabled={!hasSlot || !selectedTarget}>施放並鎖定行動</button>}
-                              {canRitual && <button type="button" className="ritual-button" disabled={!selectedTarget} onClick={() => onCastSpell(player.id, spell, true, selectedTarget)}>儀式並鎖定</button>}
+                              {isSceneTarget && <input className="spell-scene-target" aria-label={`${spell.name}施法位置`} placeholder="輸入施法位置／區域（例：洞穴深處的祭壇）" value={sceneTarget[spell.id] || ''} onChange={(event) => setSceneTarget((current) => ({ ...current, [spell.id]: event.target.value }))} />}
+                              {canCastNormally && <button type="button" onClick={() => onCastSpell(player.id, spell, false, resolvedTarget)} disabled={!hasSlot || !selectedTarget}>施放並鎖定行動</button>}
+                              {canRitual && <button type="button" className="ritual-button" disabled={!selectedTarget} onClick={() => onCastSpell(player.id, spell, true, resolvedTarget)}>儀式並鎖定</button>}
                             </div>
                           </article>
                         );

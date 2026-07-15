@@ -38,6 +38,21 @@ describe('PartySetup', () => {
     expect(setup.players[2].resources.some((entry: { id: string }) => entry.id === 'wild_shape')).toBe(true);
   });
 
+  it('uses the selected story preset when the adventure starts', async () => {
+    const user = userEvent.setup();
+    const onComplete = vi.fn();
+    render(<PartySetup initialTitle='灰燼王冠' initialPlayers={initialPlayers} onComplete={onComplete} />);
+
+    await user.click(screen.getByRole('button', { name: /血月特快車/ }));
+    expect(screen.getByDisplayValue('血月特快車')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /開始冒險/ }));
+
+    expect(onComplete).toHaveBeenCalledWith(expect.objectContaining({
+      title: '血月特快車',
+      storyId: 'blood-moon-express',
+    }));
+  });
+
   it('rejects duplicate character names', async () => {
     const user = userEvent.setup();
     const onComplete = vi.fn();

@@ -56,6 +56,13 @@ type ActionIssue struct {
 	Message  string `json:"message"`
 }
 
+// Choice is one suggested next action, tied to the player it suits so the
+// UI shows a barbarian only barbarian-appropriate suggestions.
+type Choice struct {
+	Text     string `json:"text"`
+	PlayerID string `json:"playerId"`
+}
+
 // ExperienceAward grants XP to a player.
 type ExperienceAward struct {
 	PlayerID string `json:"playerId"`
@@ -67,12 +74,13 @@ type ExperienceAward struct {
 type Turn struct {
 	Narration        string
 	Scene            string
+	ImagePrompt      string
 	Objective        string
 	ObjectiveContext string
 	Stakes           string
 	RequiresCheck    bool
 	Check            *Check
-	Choices          []string
+	Choices          []Choice
 	Effects          []Effect
 	PrivateMessages  []PrivateMessage
 	Combat           Combat
@@ -152,9 +160,15 @@ func validateDMTurn(raw json.RawMessage) (*Turn, error) {
 		return nil, errors.New("Codex DM 要求檢定但沒有提供檢定內容")
 	}
 
+	// imagePrompt is the DM-produced English SD prompt for the scene. Not
+	// hard-required here so a model that omits it still yields a playable turn;
+	// image generation falls back when it's empty.
+	imagePrompt, _ := nonEmptyString(v["imagePrompt"])
+
 	turn := &Turn{
 		Narration:        narration,
 		Scene:            scene,
+		ImagePrompt:      imagePrompt,
 		Objective:        objective,
 		ObjectiveContext: objectiveContext,
 		Stakes:           stakes,
@@ -173,9 +187,22 @@ func validateDMTurn(raw json.RawMessage) (*Turn, error) {
 		}
 	}
 
-	turn.Choices = make([]string, 0, len(choicesRaw))
+	// Accept both the structured {text, playerId} form and a bare string
+	// (legacy / when the model omits the tag), so parsing never fails on a
+	// plain suggestion; untagged choices apply to the whole party.
+	turn.Choices = make([]Choice, 0, len(choicesRaw))
 	for _, c := range choicesRaw {
-		turn.Choices = append(turn.Choices, strOf(c))
+		if m := asMap(c); m != nil {
+			text := strOf(m["text"])
+			if text == "" {
+				continue
+			}
+			turn.Choices = append(turn.Choices, Choice{Text: text, PlayerID: strOf(m["playerId"])})
+			continue
+		}
+		if s := strOf(c); s != "" {
+			turn.Choices = append(turn.Choices, Choice{Text: s})
+		}
 	}
 
 	turn.Effects = []Effect{}

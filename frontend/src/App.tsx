@@ -1,8 +1,8 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { BookOpenText, Compass, Lightbulb, LockKey, MapTrifold, ShieldWarning, Sword, XCircle } from '@phosphor-icons/react';
-import { initialCampaign, demoResponses } from './data';
-import type { AiStatus, Campaign, CampaignSummary, CharacterSpell, CombatState, Combatant, MessageAudience, Page, PlayerCharacter, PlayerId, RequiredCheck, RestType, StoryEntry } from './types';
+import { initialCampaign, storyPresets } from './data';
+import type { AiStatus, Campaign, CampaignSummary, CharacterSpell, Choice, CombatState, Combatant, MessageAudience, Page, PlayerCharacter, PlayerId, RequiredCheck, RestType, StoryEntry } from './types';
 import { Sidebar } from './components/Sidebar';
 import { Topbar } from './components/Topbar';
 import { StoryFeed } from './components/StoryFeed';
@@ -37,6 +37,22 @@ function makeEntry(speaker: StoryEntry['speaker'], text: string, audience: Messa
   return { id: `${Date.now()}-${crypto.randomUUID()}`, speaker, text, time: now(), audience };
 }
 
+function forgeRequest(settings: Campaign['forgeSettings']) {
+  if (!settings?.Enabled) return undefined;
+  return {
+    enabled: true,
+    positivePrompt: settings.PositivePrompt,
+    negativePrompt: settings.NegativePrompt,
+    steps: settings.Steps,
+    cfgScale: settings.CFGScale,
+    sampler: settings.Sampler,
+    scheduler: settings.Scheduler,
+    seed: settings.Seed,
+    width: settings.Width,
+    height: settings.Height,
+  };
+}
+
 function migrateCampaign(stored: Campaign): Campaign {
   const players = Array.isArray(stored.players) && stored.players.length > 0
     ? stored.players.slice(0, 4).map((player, index) => {
@@ -56,10 +72,13 @@ function migrateCampaign(stored: Campaign): Campaign {
     ...stored,
     schemaVersion: 3,
     setupComplete: stored.setupComplete === true,
+    storyId: stored.storyId || storyPresets.find((story) => story.title === stored.title)?.id || initialCampaign.storyId,
     players,
     story: Array.isArray(stored.story) ? stored.story.map((entry) => ({ ...entry, audience: entry.audience || 'public' })) : initialCampaign.story,
     pending: stored.pending || {},
-    choices: Array.isArray(stored.choices) ? stored.choices : [],
+    // Tolerate campaigns saved before choices carried a playerId: a bare
+    // string becomes a party-wide (untagged) choice.
+    choices: Array.isArray(stored.choices) ? stored.choices.map((c) => (typeof c === 'string' ? { text: c } : c)) : [],
     requiredCheck: stored.requiredCheck || null,
     sceneImages: Array.isArray(stored.sceneImages) ? stored.sceneImages : stored.sceneImage ? [stored.sceneImage] : [],
     fontScale: Math.max(.85, Math.min(1.25, Number(stored.fontScale || 1))),
@@ -102,6 +121,9 @@ export default function App() {
   const appStyle = { '--font-scale': String(campaign.fontScale || 1) } as CSSProperties;
   const activeRequiredCheck = spellRoll?.check || campaign.requiredCheck;
   const currentCombatant = campaign.combat?.active ? campaign.combat.combatants[campaign.combat.turnIndex] : undefined;
+  const selectedImageBackend = campaign.imageBackend || status?.imageBackend || 'codex';
+  const forgeDefaults = status?.ForgeDefaults?.[selectedImageBackend];
+  const forgeSettings = campaign.forgeSettings || (forgeDefaults ? { ...forgeDefaults, Enabled: false } : undefined);
   const contextualTip = [
     activeRequiredCheck && { id: 'required-roll', title: '先完成必要擲骰', text: '骰盤已自動選好 d20、角色加值與目標 DC。按下擲骰後，結果會寫入故事紀錄並解鎖下一步。' },
     currentCombatant && { id: currentCombatant.side === 'enemy' ? 'enemy-turn' : 'combat-turn', title: currentCombatant.side === 'enemy' ? '現在是怪獸回合' : `現在是 ${currentCombatant.name} 的回合`, text: currentCombatant.side === 'enemy' ? '在戰鬥區替怪獸選擇一名玩家作為目標，按「攻擊並結算」；系統會自動判斷命中與傷害。' : '在戰鬥區選擇攻擊或法術與目標。完成後系統會自動移到下一位。' },
@@ -112,6 +134,14 @@ export default function App() {
 
   function dismissTip(id: string) {
     setCampaign((current) => ({ ...current, dismissedTips: [...new Set([...(current.dismissedTips || []), id])] }));
+  }
+
+  function updateForgeSettings(patch: Partial<NonNullable<Campaign['forgeSettings']>>) {
+    setCampaign((current) => {
+      const defaults = status?.ForgeDefaults?.[current.imageBackend || status?.imageBackend || ''];
+      const base = current.forgeSettings || (defaults ? { ...defaults, Enabled: false } : undefined);
+      return base ? { ...current, forgeSettings: { ...base, ...patch } } : current;
+    });
   }
 
   function updatePlayer(updated: PlayerCharacter) {
@@ -227,7 +257,7 @@ export default function App() {
     void advance({}, [...campaign.story, log], undefined, { outcome, summary });
   }
 
-  const localImages = (campaign.imageBackend || status?.imageBackend) === 'local';
+  const localImages = (campaign.imageBackend || status?.imageBackend || '').startsWith('local');
   const canGenerateImages = Boolean(status?.connected) || localImages;
 
   const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -252,13 +282,13 @@ export default function App() {
     }
   }
 
-  async function generateImage(narrationOverride?: string) {
+  async function generateImage(narrationOverride?: string, imagePromptOverride?: string, sceneOverride?: string) {
     if (!canGenerateImages || imageLoading) return;
     const narration = narrationOverride || latestDm?.text;
     if (!narration) return setImageError('目前沒有可供繪製的公開 DM 場景敘事。');
     setImageLoading(true); setImageError('');
     try {
-      const response = await fetch('/api/scene-image', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ imageBackend: campaign.imageBackend || '', campaign: { title: campaign.title, scene: campaign.scene }, narration, players: campaign.players }) });
+      const response = await fetch('/api/scene-image', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ imageBackend: campaign.imageBackend || '', campaign: { title: campaign.title, scene: sceneOverride || campaign.scene }, narration, imagePrompt: imagePromptOverride ?? campaign.imagePrompt ?? '', players: campaign.players, forge: forgeDefaults ? forgeRequest(campaign.forgeSettings) : undefined }) });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || '場景插圖生成失敗');
       setCampaign((current) => {
@@ -303,13 +333,14 @@ export default function App() {
     try {
       let text: string;
       let nextScene: string | undefined;
+      let nextImagePrompt: string | undefined;
       let nextObjective: string | undefined;
       let nextObjectiveContext: string | undefined;
       let nextStakes: string | undefined;
       let privateMessages: Array<{ playerId: PlayerId; text: string }> = [];
       let effects: DmEffect[] = [];
       let experienceAwards: Array<{ playerId: PlayerId; amount: number; reason: string }> = [];
-      let choices: string[] = [];
+      let choices: Choice[] = [];
       let requiredCheck: Campaign['requiredCheck'] = null;
       let combatStart: { starts: boolean; firstTurn?: 'initiative' | 'enemy'; enemies: Array<Omit<Combatant, 'id' | 'side' | 'initiative' | 'maxHp' | 'defeated'>> } | undefined;
       if (demoMode && combatConclusion) {
@@ -319,36 +350,38 @@ export default function App() {
           : combatConclusion.outcome === 'defeat'
             ? '戰線徹底崩解，眾人已無法繼續正面抵抗。敵人掌握了現場，但故事並未在此終止；倖存者、俘虜或外力將決定隊伍必須面對的新局勢。'
             : '雙方脫離交戰距離，兵刃聲逐漸被急促呼吸取代。這場戰鬥沒有以徹底勝負收場，撤退路線、傷勢與敵人的下一步成了眼前最迫切的問題。';
-        choices = combatConclusion.outcome === 'victory' ? ['檢查戰場與敵人', '先救治傷者', '繼續追查線索'] : ['確認隊伍傷勢', '尋找安全退路', '觀察敵人動向'];
+        choices = (combatConclusion.outcome === 'victory' ? ['檢查戰場與敵人', '先救治傷者', '繼續追查線索'] : ['確認隊伍傷勢', '尋找安全退路', '觀察敵人動向']).map((text) => ({ text }));
       } else if (demoMode && resolution) {
         await new Promise((resolve) => window.setTimeout(resolve, 350));
         text = resolution.success
           ? `${resolution.character}的${resolution.ability}（${resolution.skill}）檢定成功。${resolution.reason}的風險被穩穩克服，眼前的阻礙讓開，並露出足以讓隊伍繼續判斷的新線索。局勢已向前推進，不需要重複宣告剛才的行動。`
           : `${resolution.character}的${resolution.ability}（${resolution.skill}）檢定失敗。${resolution.reason}帶來了立即而具體的代價，但故事沒有停住；隊伍仍可依照眼前出現的新局勢決定下一步。`;
-        choices = resolution.success ? ['檢查新出現的線索', '趁局勢有利繼續前進'] : ['處理失敗造成的後果', '改用另一條路徑'];
+        choices = (resolution.success ? ['檢查新出現的線索', '趁局勢有利繼續前進'] : ['處理失敗造成的後果', '改用另一條路徑']).map((text) => ({ text }));
       } else if (demoMode) {
         await new Promise((resolve) => window.setTimeout(resolve, 500));
-        const demoIndex = (campaign.round - 1) % demoResponses.length;
-        text = demoResponses[demoIndex];
-        choices = demoIndex === 0 ? ['尋找祭壇機關', '移動祭壇', '先觀察泥痕'] : demoIndex === 1 ? ['搶救燃燒的地圖', '追趕灰袍人', '封鎖鐘塔出口'] : ['由斥候先下階梯', '檢查羅盤的魔法', '在入口設置防線'];
-        requiredCheck = demoIndex === 0 ? { character: campaign.players[0]?.name || '冒險者', ability: '力量', skill: '運動', dc: 13, reason: '祭壇沉重且卡在石槽中，強行移動有失手風險。' } : null;
-        nextObjective = demoIndex === 0 ? '找出祭壇下方敲擊聲的來源' : demoIndex === 1 ? '在地圖燒毀前取得線索，或攔下逃往鐘塔的灰袍人' : '沿暗門階梯尋找伊薩克並確認下方威脅';
-        nextObjectiveContext = demoIndex === 0 ? '伊薩克最後的地圖指向這座禮拜堂；新鮮泥痕與河底淤泥的氣味顯示，有東西剛從祭壇附近被拖入地下。' : demoIndex === 1 ? '藏在壁龕後的灰袍人攜帶伊薩克的染血地圖，暴露後焚毀證據並逃往鐘塔；樓梯間另有鎖鏈聲逼近。' : '祭壇下的暗門已開啟，伊薩克的羅盤留在第一級階梯，指針卻異常指向隊伍中央；下方同時傳來潮水與呼吸聲。';
-        nextStakes = demoIndex === 0 ? '若拖延到午夜，地下漲潮可能淹沒入口與伊薩克留下的線索。' : demoIndex === 1 ? '地圖即將燒毀，灰袍人也可能敲響鐘聲召來更多守衛。' : '狹窄階梯不利撤退；若沒有先安排隊形，隊伍可能在黑暗中被分割。';
-        experienceAwards = campaign.players.map((player) => ({ playerId: player.id, amount: 75, reason: '推進禮拜堂調查並取得新線索' }));
+        const storyPreset = storyPresets.find((story) => story.id === campaign.storyId) || storyPresets[0];
+        const demoBeat = storyPreset.demoBeats[(campaign.round - 1) % storyPreset.demoBeats.length];
+        text = demoBeat.text;
+        choices = demoBeat.choices.map((text) => ({ text }));
+        requiredCheck = demoBeat.check ? { character: campaign.players[0]?.name || '冒險者', ...demoBeat.check } : null;
+        nextObjective = demoBeat.objective;
+        nextObjectiveContext = demoBeat.objectiveContext;
+        nextStakes = storyPreset.stakes;
+        experienceAwards = campaign.players.map((player) => ({ playerId: player.id, amount: 75, reason: `推進「${storyPreset.title}」並取得新線索` }));
       } else {
-        const response = await fetch('/api/dm', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ model: campaign.selectedModel || '', effort: campaign.selectedEffort || '', actions: isContinuation ? [] : createActionPayload(campaign.players, actions), resolution, combatConclusion, campaign: { title: campaign.title, scene: campaign.scene, objective: campaign.objective, objectiveContext: campaign.objectiveContext, stakes: campaign.stakes, round: campaign.round }, combat: combatConclusion && campaign.combat ? { ...campaign.combat, active: false } : campaign.combat, players: campaign.players, history }) });
+        const response = await fetch('/api/dm', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ model: campaign.selectedModel || '', effort: campaign.selectedEffort || '', actions: isContinuation ? [] : createActionPayload(campaign.players, actions), resolution, combatConclusion, campaign: { title: campaign.title, scene: campaign.scene, objective: campaign.objective, objectiveContext: campaign.objectiveContext, stakes: campaign.stakes, round: campaign.round, choices: campaign.choices }, combat: combatConclusion && campaign.combat ? { ...campaign.combat, active: false } : campaign.combat, players: campaign.players, history }) });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'AI DM 無法回應');
         text = data.text;
         nextScene = typeof data.scene === 'string' ? data.scene : undefined;
+        nextImagePrompt = typeof data.imagePrompt === 'string' ? data.imagePrompt : undefined;
         nextObjective = typeof data.objective === 'string' ? data.objective : undefined;
         nextObjectiveContext = typeof data.objectiveContext === 'string' ? data.objectiveContext : undefined;
         nextStakes = typeof data.stakes === 'string' ? data.stakes : undefined;
         privateMessages = Array.isArray(data.privateMessages) ? data.privateMessages : [];
         effects = !combatConclusion && Array.isArray(data.effects) ? data.effects : [];
         experienceAwards = !combatConclusion && Array.isArray(data.experienceAwards) ? data.experienceAwards : [];
-        choices = Array.isArray(data.choices) ? data.choices.slice(0, 3) : [];
+        choices = Array.isArray(data.choices) ? data.choices.slice(0, 8).map((c: Choice | string) => (typeof c === 'string' ? { text: c } : c)) : [];
         requiredCheck = data.requiresCheck && data.check ? data.check : null;
         combatStart = !combatConclusion && data.combat?.starts && Array.isArray(data.combat.enemies) ? data.combat : undefined;
         const actionIssues = Array.isArray(data.actionIssues) ? data.actionIssues.filter((entry: { playerId?: string; message?: string }) => /^player[1-4]$/.test(entry.playerId || '') && entry.message) : [];
@@ -381,9 +414,9 @@ export default function App() {
         }
         const actionEntries = isContinuation ? [] : current.players.map((entry) => makeEntry(entry.id, actions[entry.id] || '本回合不行動，保持警戒。'));
         const experienceLogs = experienceAwards.filter((award) => award.amount > 0).map((award) => makeEntry('system', `${experiencedPlayers.find((player) => player.id === award.playerId)?.name || award.playerId}獲得 ${award.amount} XP：${award.reason}`));
-        return { ...current, scene: nextScene || current.scene, objective: nextObjective || current.objective, objectiveContext: nextObjectiveContext || current.objectiveContext, stakes: nextStakes || current.stakes, round: current.round + (isContinuation ? 0 : 1), pending: {}, choices, requiredCheck, players: experiencedPlayers, combat, story: [...current.story, ...actionEntries, makeEntry('dm', text), ...privateMessages.map((message) => makeEntry('dm', message.text, message.playerId)), ...settled.logs.map((entry) => makeEntry('system', `自動結算：${entry}`)), ...experienceLogs] };
+        return { ...current, scene: nextScene || current.scene, imagePrompt: nextImagePrompt || current.imagePrompt, objective: nextObjective || current.objective, objectiveContext: nextObjectiveContext || current.objectiveContext, stakes: nextStakes || current.stakes, round: current.round + (isContinuation ? 0 : 1), pending: {}, choices, requiredCheck, players: experiencedPlayers, combat, story: [...current.story, ...actionEntries, makeEntry('dm', text), ...privateMessages.map((message) => makeEntry('dm', message.text, message.playerId)), ...settled.logs.map((entry) => makeEntry('system', `自動結算：${entry}`)), ...experienceLogs] };
       });
-      if ((campaign.autoSceneImages || combatStart?.starts) && text) void generateImage(text);
+      if ((campaign.autoSceneImages || combatStart?.starts) && text) void generateImage(text, nextImagePrompt, nextScene);
       if (campaign.ttsEnabled && text) void speakNarration(text);
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : String(caught);
@@ -422,9 +455,9 @@ export default function App() {
     catch (caught) { setError(caught instanceof Error ? caught.message : String(caught)); }
   }
 
-  function completeSetup(setup: { title: string; players: PlayerCharacter[] }) {
-    const names = setup.players.map((player) => player.name).join('、');
-    setCampaign((current) => ({ ...current, setupComplete: true, title: setup.title, chapter: '第一章／沉鐘之夜', scene: '下城區・無燈禮拜堂', round: 1, objective: '在午夜鐘響前找到失蹤的製圖師伊薩克', objectiveContext: '製圖師伊薩克在調查下城區失蹤事件後失去音訊。他最後留下的地圖指向無燈禮拜堂，而祭壇下方傳來不自然的敲擊聲。', stakes: '午夜鐘響後，地下水道會漲潮，伊薩克留下的線索可能被淹沒，失蹤者也將更難救回。', players: setup.players, story: [makeEntry('dm', `禮拜堂的門在${names}身後闔上。沒有風，燭火卻同時朝祭壇偏斜；祭壇後方傳來三下緩慢的敲擊聲。`), makeEntry('system', `隊伍已建立，共 ${setup.players.length} 位冒險者。`)], pending: {}, combat: undefined }));
+  function completeSetup(setup: { title: string; players: PlayerCharacter[]; storyId: string }) {
+    const storyPreset = storyPresets.find((story) => story.id === setup.storyId) || storyPresets[0];
+    setCampaign((current) => ({ ...current, setupComplete: true, storyId: storyPreset.id, title: setup.title, chapter: storyPreset.chapter, scene: storyPreset.scene, round: 1, objective: storyPreset.objective, objectiveContext: storyPreset.objectiveContext, stakes: storyPreset.stakes, players: setup.players, story: [makeEntry('dm', storyPreset.opening), makeEntry('system', `隊伍已建立，共 ${setup.players.length} 位冒險者。目前目標：${storyPreset.objective}。`)], pending: {}, choices: [], requiredCheck: null, combat: undefined }));
     setPage('table'); setError('');
   }
 
@@ -451,7 +484,7 @@ export default function App() {
           <StoryFeed story={campaign.story} players={campaign.players} loading={loading} viewer={viewer} />
           {activeRequiredCheck && <DiceTray players={campaign.players} requiredCheck={activeRequiredCheck} onRoll={({ total }) => { if (spellRoll) applySpellCast(spellRoll.casterId, spellRoll.spell, spellRoll.asRitual, spellRoll.targetId, total); }} onRequiredRoll={(roll) => { if (spellRoll) { setSpellRoll(null); return; } const check = campaign.requiredCheck; if (check) void advance({}, [...campaign.story, makeEntry('system', roll.text)], { ...check, ...roll }); }} onResult={addLog} />}
           {campaign.combat?.active && <section className="inline-combat"><div className="section-heading"><div><p className="eyebrow">戰鬥進行中</p><h2>先攻與回合操作</h2></div></div><CombatTracker players={campaign.players} combat={campaign.combat} onChange={changeCombat} onEnd={endCombat} onLog={addLog} /></section>}
-          <div className={`composer-grid party-${campaign.players.length}`}>{campaign.players.map((player) => <section className="player-console" key={player.id} aria-label={`${player.name}玩家操作區`}><CharacterPanel player={player} showStatHints={campaign.showStatHints !== false} combatActive={campaign.combat?.active === true} pending={campaign.pending[player.id]} actionDisabled={loading || Boolean(activeRequiredCheck)} partySize={campaign.players.length} choices={campaign.choices} resourceSummary={player.spellcasting ? player.spellcasting.slots.map((slot) => `${slot.level}環 ${slot.current}/${slot.max}`).join('、') : player.resources.slice(0, 3).map((resource) => `${resource.name} ${resource.current}/${resource.max}`).join('、')} onSubmitAction={submitAction} onUnlockAction={unlockAction} spellTargets={[...campaign.players.map((entry) => ({ id: entry.id, name: entry.name, side: 'party' as const })), ...(campaign.combat?.active ? campaign.combat.combatants.filter((entry) => entry.side === 'enemy' && !entry.defeated).map((entry) => ({ id: entry.id, name: entry.name, side: 'enemy' as const })) : [])]} onResourceChange={changeClassResource} onCastSpell={castSpell} onRest={rest} onGeneratePortrait={generatePortrait} /></section>)}</div>
+          <div className={`composer-grid party-${campaign.players.length}`}>{campaign.players.map((player) => <section className="player-console" key={player.id} aria-label={`${player.name}玩家操作區`}><CharacterPanel player={player} showStatHints={campaign.showStatHints !== false} combatActive={campaign.combat?.active === true} pending={campaign.pending[player.id]} actionDisabled={loading || Boolean(activeRequiredCheck)} partySize={campaign.players.length} choices={(campaign.choices || []).filter((choice) => !choice.playerId || choice.playerId === player.id)} resourceSummary={player.spellcasting ? player.spellcasting.slots.map((slot) => `${slot.level}環 ${slot.current}/${slot.max}`).join('、') : player.resources.slice(0, 3).map((resource) => `${resource.name} ${resource.current}/${resource.max}`).join('、')} onSubmitAction={submitAction} onUnlockAction={unlockAction} spellTargets={[...campaign.players.map((entry) => ({ id: entry.id, name: entry.name, side: 'party' as const })), ...(campaign.combat?.active ? campaign.combat.combatants.filter((entry) => entry.side === 'enemy' && !entry.defeated).map((entry) => ({ id: entry.id, name: entry.name, side: 'enemy' as const })) : [])]} onResourceChange={changeClassResource} onCastSpell={castSpell} onRest={rest} onGeneratePortrait={generatePortrait} /></section>)}</div>
         </div><aside className="table-rail"><section className="objective"><p className="eyebrow">任務摘要</p><strong>{campaign.objective}</strong><p className="objective-context">{campaign.objectiveContext}</p><div className="objective-stakes"><span>風險</span><p>{campaign.stakes}</p></div><small>{campaign.combat?.active ? `戰鬥第 ${campaign.combat.round} 輪（戰鬥操作已顯示於主畫面）` : '探索進行中'}</small></section></aside></motion.main>}
         {page === 'characters' && <motion.div key="characters" initial={{ opacity: 0 }} animate={{ opacity: 1 }}><Suspense fallback={<main className="single-page lazy-page-loading" role="status"><span>正在載入角色成長資料…</span></main>}><CharacterManager players={campaign.players} showStatHints={campaign.showStatHints !== false} onUpdate={updatePlayer} onLog={addLog} onGeneratePortrait={generatePortrait} /></Suspense></motion.div>}
         {page === 'journal' && <motion.main key="journal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="single-page"><div className="page-intro"><p className="eyebrow">戰役記憶</p><h2>{campaign.title}</h2><p>公開與私密訊息都包含在本機存檔與匯出檔中。</p></div><div className="journal-list">{visibleStory.map((entry, index) => <article key={entry.id} className={entry.audience && entry.audience !== 'public' ? 'journal-private' : ''}><span>{String(index + 1).padStart(2, '0')}</span><div><small>{entry.time}／{speakerLabel(entry)}</small><p>{entry.text}</p></div></article>)}</div></motion.main>}
@@ -467,6 +500,23 @@ export default function App() {
           <section className="settings-row"><div><strong>介面字型大小</strong><span>{Math.round((campaign.fontScale || 1) * 100)}%</span></div><div className="font-controls"><button type="button" onClick={() => setCampaign((current) => ({ ...current, fontScale: Math.max(.85, (current.fontScale || 1) - .1) }))}>A−</button><button type="button" onClick={() => setCampaign((current) => ({ ...current, fontScale: 1 }))}>重設</button><button type="button" onClick={() => setCampaign((current) => ({ ...current, fontScale: Math.min(1.25, (current.fontScale || 1) + .1) }))}>A＋</button></div></section>
           <CampaignManager campaign={campaign} campaigns={campaigns} onSwitch={switchCampaign} onNew={newCampaign} onDuplicate={() => { const copy = duplicateCampaign(campaign, initialCampaign); setCampaigns(listCampaigns(initialCampaign)); setNotice(`已建立「${copy.title}」，目前戰役未切換。`); }} onImport={importFile} />
           <section className="settings-danger"><div><strong>重設目前戰役</strong><span>只重設目前選取的戰役，不影響其他存檔。</span></div><MagneticButton variant="quiet" onClick={resetCampaign}>重設目前戰役</MagneticButton></section>
+          {forgeDefaults && forgeSettings && <>
+            <section className='settings-row'><div><strong>自訂 Forge 場景圖參數</strong><span>僅本地 Forge 使用；關閉時完全沿用伺服器 preset。開啟後 negative prompt 會強制使用 CFG &gt; 1。</span></div><button type='button' role='switch' aria-checked={forgeSettings.Enabled} aria-label='自訂 Forge 場景圖參數' className={'switch ' + (forgeSettings.Enabled ? 'switch-on' : '')} onClick={() => updateForgeSettings({ Enabled: !forgeSettings.Enabled })}><i /></button></section>
+            {forgeSettings.Enabled && <section className='forge-settings' aria-label='Forge 場景圖參數'>
+              <label className='forge-prompt'><span>Positive prompt</span><textarea rows={4} value={forgeSettings.PositivePrompt} placeholder='留空時使用 DM 產生的場景提示詞與寫實場景前後綴' onChange={(event) => updateForgeSettings({ PositivePrompt: event.target.value })} /></label>
+              <label className='forge-prompt'><span>Negative prompt</span><textarea rows={4} value={forgeSettings.NegativePrompt} onChange={(event) => updateForgeSettings({ NegativePrompt: event.target.value })} /></label>
+              <div className='forge-grid'>
+                <label><span>Steps</span><input type='number' min={1} max={150} step={1} value={forgeSettings.Steps} onChange={(event) => updateForgeSettings({ Steps: Number(event.target.value) })} /></label>
+                <label><span>CFG scale</span><input type='number' min={1.1} max={30} step={0.1} value={forgeSettings.CFGScale} onChange={(event) => updateForgeSettings({ CFGScale: Number(event.target.value) })} /></label>
+                <label><span>Seed</span><input type='number' min={-1} max={2147483647} step={1} value={forgeSettings.Seed} onChange={(event) => updateForgeSettings({ Seed: Number(event.target.value) })} /></label>
+                <label><span>Sampler</span><input type='text' value={forgeSettings.Sampler} onChange={(event) => updateForgeSettings({ Sampler: event.target.value })} /></label>
+                <label><span>Scheduler</span><input type='text' value={forgeSettings.Scheduler} onChange={(event) => updateForgeSettings({ Scheduler: event.target.value })} /></label>
+                <label><span>寬度</span><input type='number' min={256} max={2048} step={8} value={forgeSettings.Width} onChange={(event) => updateForgeSettings({ Width: Number(event.target.value) })} /></label>
+                <label><span>高度</span><input type='number' min={256} max={2048} step={8} value={forgeSettings.Height} onChange={(event) => updateForgeSettings({ Height: Number(event.target.value) })} /></label>
+              </div>
+              <p>Seed 設為 -1 會每次隨機；固定 seed 才能與 Forge WebUI 重現相同構圖。Positive 留空時，系統仍使用本回合 DM prompt。</p>
+            </section>}
+          </>}
         </motion.main>}
       </AnimatePresence>
       <footer><span>{campaign.scene}</span><span>{latestDm ? `最後裁定 ${latestDm.time}` : '等待第一個裁定'}</span></footer>

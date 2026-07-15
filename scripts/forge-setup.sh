@@ -4,12 +4,18 @@
 #
 #   scripts/forge-setup.sh                  # clone only, pick a model later
 #   scripts/forge-setup.sh --model juggernaut   # + JuggernautXL v9 (quality, ~7 GB)
-#   scripts/forge-setup.sh --model lightning    # + DreamShaperXL Lightning (fast, ~7 GB)
+#   scripts/forge-setup.sh --model turbo        # + SD Turbo (low VRAM, ~5 GB)
+#   scripts/forge-setup.sh --model hyper        # + Hyper-SD15 LoRA (epiCRealism from Civitai, lowest VRAM)
 #
-# Windows: clone the same repo anywhere, put the checkpoint in
-# models/Stable-diffusion, and add `set COMMANDLINE_ARGS=--api` to
-# webui-user.bat instead of using these scripts.
+# Windows: this script (clone + checkpoint download) works fine from
+# git-bash. Only scripts/forge.sh (the launcher) does not — Forge's own
+# webui.sh can't activate a native Windows venv. Start the server by
+# double-clicking vendor/stable-diffusion-webui-forge/webui-user.bat instead
+# (add `set COMMANDLINE_ARGS=--api` in it first).
 set -euo pipefail
+# Keep the window open when double-clicked from a file manager so errors are
+# readable instead of flashing shut.
+trap 'read -n 1 -s -r -p "Press any key to close..."; echo' EXIT
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 FORGE_DIR="$ROOT/vendor/stable-diffusion-webui-forge"
 FORGE_REPO="https://github.com/lllyasviel/stable-diffusion-webui-forge.git"
@@ -31,7 +37,8 @@ else
 fi
 
 MODELS_DIR="$FORGE_DIR/models/Stable-diffusion"
-mkdir -p "$MODELS_DIR"
+LORA_DIR="$FORGE_DIR/models/Lora"
+mkdir -p "$MODELS_DIR" "$LORA_DIR"
 
 download() { # url, filename
   local url="$1" file="$MODELS_DIR/$2"
@@ -39,6 +46,16 @@ download() { # url, filename
     echo "==> Checkpoint already present: $2"
   else
     echo "==> Downloading $2 (several GB, resumable)"
+    curl -L --fail --retry 3 -C - -o "$file" "$url"
+  fi
+}
+
+download_lora() { # url, filename
+  local url="$1" file="$LORA_DIR/$2"
+  if [ -f "$file" ]; then
+    echo "==> LoRA already present: $2"
+  else
+    echo "==> Downloading LoRA $2 (resumable)"
     curl -L --fail --retry 3 -C - -o "$file" "$url"
   fi
 }
@@ -56,16 +73,41 @@ case "$MODEL" in
     echo "    FORGE_CHECKPOINT=Juggernaut-XL_v9_RunDiffusionPhoto_v2.safetensors"
     echo "    FORGE_PRESET=quality"
     ;;
-  lightning)
+  turbo)
     download \
-      "https://huggingface.co/Lykon/dreamshaper-xl-lightning/resolve/main/DreamShaperXL_Lightning.safetensors" \
-      "DreamShaperXL_Lightning.safetensors"
-    echo "==> backend/.env suggestion:"
-    echo "    FORGE_CHECKPOINT=DreamShaperXL_Lightning.safetensors"
-    echo "    FORGE_PRESET=lightning"
+      "https://huggingface.co/stabilityai/sd-turbo/resolve/main/sd_turbo.safetensors" \
+      "sd_turbo.safetensors"
+    echo "==> backend/.env suggestion (low VRAM, e.g. running alongside TTS):"
+    echo "    FORGE_CHECKPOINT=sd_turbo.safetensors"
+    echo "    FORGE_PRESET=turbo"
+    ;;
+  hyper)
+    # Hyper-SD 8-step LoRA (ByteDance, reliable on HF); run it at 6–8 steps.
+    download_lora \
+      "https://huggingface.co/ByteDance/Hyper-SD/resolve/main/Hyper-SD15-8steps-lora.safetensors" \
+      "Hyper-SD15-8steps-lora.safetensors"
+    # ADetailer extension for face fixing (downloads its YOLO models on first run).
+    ADETAILER_DIR="$FORGE_DIR/extensions/adetailer"
+    if [ -d "$ADETAILER_DIR/.git" ]; then
+      echo "==> ADetailer extension already installed."
+    else
+      echo "==> Installing ADetailer extension"
+      git clone --depth 1 "https://github.com/Bing-su/adetailer.git" "$ADETAILER_DIR"
+    fi
+    echo "==> LoRA + ADetailer installed. Two files you must fetch manually from"
+    echo "    Civitai (login required) and drop in place:"
+    echo "    1. epiCRealism (SD1.5) -> $MODELS_DIR"
+    echo "       https://civitai.com/models/25694"
+    echo "    2. add_detail / Detail Tweaker LoRA -> $LORA_DIR (save as add_detail.safetensors)"
+    echo "       https://civitai.com/models/58390"
+    echo "==> backend/.env suggestion (finer detail, uses spare VRAM):"
+    echo "    FORGE_CHECKPOINT=<the epiCRealism file name you saved>"
+    echo "    FORGE_PRESET=hyper"
+    echo "    FORGE_LORA=<lora:Hyper-SD15-8steps-lora:1>, <lora:add_detail:0.6>"
+    echo "    FORGE_ADETAILER=face_yolov8n.pt"
     ;;
   *)
-    echo "unknown --model $MODEL (use juggernaut | lightning | none)" >&2
+    echo "unknown --model $MODEL (use juggernaut | turbo | hyper | none)" >&2
     exit 1
     ;;
 esac

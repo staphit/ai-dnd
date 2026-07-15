@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"os/exec"
 	"sync"
@@ -60,15 +61,15 @@ func (a *AppServer) send(method string, params any) (int, error) {
 	return id, nil
 }
 
-func (a *AppServer) readLoop(stdout io.Reader) {
+func (a *AppServer) readLoop(stdout io.Reader, incoming chan rpcMessage) {
 	dec := json.NewDecoder(stdout)
 	for {
 		var msg rpcMessage
 		if err := dec.Decode(&msg); err != nil {
-			close(a.incoming)
+			close(incoming)
 			return
 		}
-		a.incoming <- msg
+		incoming <- msg
 	}
 }
 
@@ -99,8 +100,9 @@ func (a *AppServer) ensureStarted() error {
 	}
 	a.cmd = cmd
 	a.stdin = stdin
-	a.incoming = make(chan rpcMessage, 256)
-	go a.readLoop(stdout)
+	incoming := make(chan rpcMessage, 256)
+	a.incoming = incoming
+	go a.readLoop(stdout, incoming)
 
 	id, err := a.send("initialize", map[string]any{"clientInfo": map[string]any{"name": "dnd-duet", "version": "0.1.0"}})
 	if err != nil {
@@ -255,15 +257,35 @@ func appServerErrorMessage(raw json.RawMessage) string {
 	return string(raw)
 }
 
-// Close terminates the app-server process.
-func (a *AppServer) Close() error {
+// resetLocked terminates the current process and clears all connection state.
+// Caller must hold a.mu.
+func (a *AppServer) resetLocked() error {
+	if a.stdin != nil {
+		_ = a.stdin.Close()
+	}
+	var err error
+	if a.cmd != nil && a.cmd.Process != nil {
+		err = a.cmd.Process.Kill()
+		_ = a.cmd.Wait()
+	}
+	a.cmd = nil
+	a.stdin = nil
+	a.incoming = nil
+	a.nextID = 0
+	a.started = false
+	a.initErr = nil
+	return err
+}
+
+// Reset discards a failed app-server connection so the next turn starts clean.
+func (a *AppServer) Reset() error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	if a.cmd != nil && a.cmd.Process != nil {
-		return a.cmd.Process.Kill()
-	}
-	return nil
+	return a.resetLocked()
 }
+
+// Close terminates the app-server process.
+func (a *AppServer) Close() error { return a.Reset() }
 
 // AppServerClient adapts an AppServer to provider.API. It runs DM turns over the
 // persistent connection and delegates everything else (image generation, status,
@@ -289,7 +311,17 @@ func (c *AppServerClient) RunStructured(ctx context.Context, prompt string, opts
 	if err != nil {
 		return nil, err
 	}
-	return c.server.RunStructuredTurn(ctx, prompt, opts.Model, opts.Effort, string(schemaBytes), opts.Timeout)
+	raw, appErr := c.server.RunStructuredTurn(ctx, prompt, opts.Model, opts.Effort, string(schemaBytes), opts.Timeout)
+	if appErr == nil {
+		return raw, nil
+	}
+	_ = c.server.Reset()
+	log.Printf("[codex] app-server turn failed; retrying once with codex exec: %v", appErr)
+	raw, execErr := c.Client.RunStructured(ctx, prompt, opts)
+	if execErr != nil {
+		return nil, fmt.Errorf("app-server failed: %v; codex exec fallback failed: %w", appErr, execErr)
+	}
+	return raw, nil
 }
 
 // Close releases the persistent process.

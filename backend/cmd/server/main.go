@@ -5,6 +5,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -32,6 +33,21 @@ func main() {
 
 	port := envOr("PORT", "4318")
 
+	// Tee all log output to a file as well as the console, so prompt logs
+	// (LOG_PROMPTS) and errors survive after the window closes. LOG_FILE
+	// overrides the default location; empty disables file logging.
+	logPath := envOr("LOG_FILE", filepath.Join(repoRoot, "logs", "server.log"))
+	if logPath != "" {
+		if err := os.MkdirAll(filepath.Dir(logPath), 0o755); err != nil {
+			log.Printf("cannot create log directory %s: %v (console only)", filepath.Dir(logPath), err)
+		} else if f, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644); err != nil {
+			log.Printf("cannot open log file %s: %v (console only)", logPath, err)
+		} else {
+			log.SetOutput(io.MultiWriter(os.Stderr, f))
+			log.Printf("logging to %s", logPath)
+		}
+	}
+
 	webDist := absOr(envOr("WEB_DIST", filepath.Join(repoRoot, "web-dist")))
 	dataDir := absOr(envOr("DND_DATA_DIR", filepath.Join(repoRoot, "campaign-data")))
 	codexCWD := absOr(envOr("CODEX_CWD", repoRoot))
@@ -42,6 +58,10 @@ func main() {
 	schemaPath, err := schema.WriteTempFile()
 	if err != nil {
 		log.Fatalf("cannot materialise DM schema: %v", err)
+	}
+	imagePromptSchemaPath, err := schema.WriteImagePromptTempFile()
+	if err != nil {
+		log.Fatalf("cannot materialise image-prompt schema: %v", err)
 	}
 
 	db, err := store.Open(filepath.Join(dataDir, "dnd-duet.db"))
@@ -73,6 +93,9 @@ func main() {
 	//   codex (default) — Codex CLI's built-in image_gen tool (cloud)
 	//   local           — Stable Diffusion WebUI Forge on this machine (FORGE_*)
 	forgeClient := forge.NewClientFromEnv()
+	// Optional second local checkpoint (e.g. a fast turbo one alongside the
+	// main quality/lightning one) via FORGE_CHECKPOINT_2/FORGE_PRESET_2.
+	forgeClient2 := forge.NewClientFromEnvVariant("2")
 	defaultImageBackend := strings.ToLower(envOr("IMAGE_BACKEND", "codex"))
 	switch defaultImageBackend {
 	case "codex":
@@ -83,16 +106,31 @@ func main() {
 	}
 	log.Printf("圖片後端：預設 %s（本地 SD Forge：%s）", defaultImageBackend, forgeClient.BaseURL)
 
+	// Condenses Chinese scene/narration text into English SD tags for the
+	// local Forge renderers, since their CLIP encoder is English-only.
+	promptTranslator := &images.PromptTranslator{
+		API:        client,
+		CWD:        codexCWD,
+		SchemaPath: imagePromptSchemaPath,
+		Effort:     "low",
+	}
+
+	imageRenderers := map[string]images.Renderer{
+		"codex": images.NewCodexRenderer(client, codexCWD),
+		"local": images.NewForgeRenderer(forgeClient, promptTranslator),
+	}
+	if forgeClient2 != nil {
+		imageRenderers["local2"] = images.NewForgeRenderer(forgeClient2, promptTranslator)
+		log.Printf("圖片後端：額外本地選項 local2（%s）", forgeClient2.Checkpoint)
+	}
+
 	srv := &httpapi.Server{
 		Provider:    client,
 		Store:       db,
 		WebDist:     webDist,
 		SchemaPath:  schemaPath,
 		ProviderCWD: codexCWD,
-		ImageRenderers: map[string]images.Renderer{
-			"codex": images.NewCodexRenderer(client, codexCWD),
-			"local": images.NewForgeRenderer(forgeClient),
-		},
+		ImageRenderers: imageRenderers,
 		DefaultImageBackend: defaultImageBackend,
 		TTS:                 tts.NewClientFromEnv(),
 	}

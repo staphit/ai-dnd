@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { BookOpenText, MagicWand, Shield, Sword } from '@phosphor-icons/react';
-import type { CharacterSpell, PlayerCharacter, PlayerId, RestType } from '../types';
+import type { CharacterSpell, Choice, PlayerCharacter, PlayerId, RestType } from '../types';
 import { abilityLabels, abilityModifier } from '../rules/characters';
 import { experienceToNextLevel } from '../rules/advancement';
 import { ActionComposer } from './ActionComposer';
@@ -20,7 +20,7 @@ interface CharacterPanelProps {
   pending?: string;
   actionDisabled: boolean;
   partySize: number;
-  choices?: string[];
+  choices?: Choice[];
   resourceSummary?: string;
   onSubmitAction: (player: PlayerId, text: string) => void;
   onUnlockAction: (player: PlayerId) => void;
@@ -44,6 +44,8 @@ export function CharacterPanel({ player, showStatHints = true, combatActive = fa
   const [sheetOpen, setSheetOpen] = useState(false);
   const [tab, setTab] = useState<QuickTab>('action');
   const [spellTarget, setSpellTarget] = useState<Record<string, string>>({});
+  // Free-text location for spells cast at the scene rather than a combatant.
+  const [sceneTarget, setSceneTarget] = useState<Record<string, string>>({});
   const [appearance, setAppearance] = useState(player.appearance || '');
   const [portraitLoading, setPortraitLoading] = useState(false);
   const hpRatio = Math.max(0, Math.min(100, (player.hp / player.maxHp) * 100));
@@ -101,7 +103,11 @@ export function CharacterPanel({ player, showStatHints = true, combatActive = fa
                     : [...spellTargets, { id: 'scene', name: '目前場景／指定位置', side: 'party' as const }];
               const selectedTarget = spellTarget[spell.id] || ((spell.effect?.target === 'self' || /自身/.test(spell.range)) ? player.id : undefined);
               const rollRule = spell.effect?.attackRoll ? '・施放後擲法術攻擊 d20' : spell.effect?.saveAbility ? `・目標進行${abilityLabels[spell.effect.saveAbility]}豁免` : spell.effect?.automaticHit ? '・自動命中' : '';
-              return <article key={spell.id} className={!canCast ? 'disabled' : ''}><div><strong>{spell.name}</strong><small>{spell.level === 0 ? '戲法' : `${spell.level} 環`}・{spell.castingTime}・{spell.range}{rollRule}{!canCast ? '・未準備' : ''}</small><p>{spell.description}</p></div><div><select aria-label={`${spell.name}目標`} value={selectedTarget || ''} onChange={(event) => setSpellTarget((current) => ({ ...current, [spell.id]: event.target.value }))}><option value="" disabled>必須指定目標</option>{targets.map((target) => <option key={target.id} value={target.id}>{target.name}</option>)}</select>{canCast && <button type="button" disabled={!hasSlot || !selectedTarget} onClick={() => onCastSpell(player.id, spell, false, selectedTarget)}>施放並鎖定行動</button>}{canRitual && <button type="button" className="quiet" disabled={!selectedTarget} onClick={() => onCastSpell(player.id, spell, true, selectedTarget)}>儀式並鎖定</button>}</div></article>;
+              // Scene-target spells let the player type the exact spot; empty
+              // text falls back to the generic "目前場景" marker.
+              const isSceneTarget = selectedTarget === 'scene';
+              const resolvedTarget = isSceneTarget ? (sceneTarget[spell.id]?.trim() || 'scene') : selectedTarget;
+              return <article key={spell.id} className={!canCast ? 'disabled' : ''}><div><strong>{spell.name}</strong><small>{spell.level === 0 ? '戲法' : `${spell.level} 環`}・{spell.castingTime}・{spell.range}{rollRule}{!canCast ? '・未準備' : ''}</small><p>{spell.description}</p></div><div><select aria-label={`${spell.name}目標`} value={selectedTarget || ''} onChange={(event) => setSpellTarget((current) => ({ ...current, [spell.id]: event.target.value }))}><option value="" disabled>必須指定目標</option>{targets.map((target) => <option key={target.id} value={target.id}>{target.name}</option>)}</select>{isSceneTarget && <input className="spell-scene-target" aria-label={`${spell.name}施法位置`} placeholder="輸入施法位置／區域（例：洞穴深處的祭壇）" value={sceneTarget[spell.id] || ''} onChange={(event) => setSceneTarget((current) => ({ ...current, [spell.id]: event.target.value }))} />}{canCast && <button type="button" disabled={!hasSlot || !selectedTarget} onClick={() => onCastSpell(player.id, spell, false, resolvedTarget)}>施放並鎖定行動</button>}{canRitual && <button type="button" className="quiet" disabled={!selectedTarget} onClick={() => onCastSpell(player.id, spell, true, resolvedTarget)}>儀式並鎖定</button>}</div></article>;
             })}</div>
           </> : <p className="quick-empty">這名角色沒有法術。</p>}
           {player.resources.length > 0 && <div className="quick-resources">{player.resources.map((resource) => <div key={resource.id}><span><strong>{resource.name}</strong><small>{resource.description}</small></span><b>{resource.current}/{resource.max}</b><button type="button" disabled={resource.current === 0} onClick={() => onResourceChange(player.id, resource.id, -1)}>使用</button></div>)}</div>}
