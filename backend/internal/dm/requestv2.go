@@ -43,6 +43,7 @@ type TurnInputV2 struct {
 	Conclusion       *ConclusionV2
 	DeltaMode        bool
 	MemRef           string
+	RulesRef         string
 }
 
 // BuildDMRequestV2 renders the slim server-built DM prompt: campaign meta,
@@ -71,6 +72,11 @@ func BuildDMRequestV2(in TurnInputV2) string {
 	}
 
 	if in.DeltaMode {
+		if in.RulesRef != "" {
+			lines = append(lines,
+				"完整 DM 守則與隊伍靜態資料（種族、背景、職業能力、全部法術、裝備）位於守則檔 `"+in.RulesRef+"`。每次裁定前先讀取並遵守。",
+			)
+		}
 		ref := in.MemRef
 		if ref == "" {
 			ref = "（記憶檔）"

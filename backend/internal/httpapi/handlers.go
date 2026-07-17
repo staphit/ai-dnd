@@ -191,13 +191,19 @@ func (s *Server) handleDm(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Delta mode: only when a live connection is bound to this story and memory
-	// is enabled, so Codex has the persistent thread and can read the memory file
-	// for prior context. Otherwise fall back to the full-context prompt.
+	// is enabled, so Codex has the persistent thread and can read the memory +
+	// rules files for prior context and the full ruleset. Otherwise fall back
+	// to the full inline preamble.
 	if s.Memory != nil {
 		if cs := s.Provider.ConnectionState(); cs.Alive && cs.StoryID == storyID {
 			if err := s.Memory.Materialise(storyID); err == nil {
 				prepared.Input.DeltaMode = true
 				prepared.Input.MemRef = s.Memory.Ref(storyID)
+				if dossier, err := s.Game.BuildRulesDossier(storyID); err == nil {
+					if err := s.Memory.MaterialiseRules(storyID, dossier); err == nil {
+						prepared.Input.RulesRef = s.Memory.RulesRef(storyID)
+					}
+				}
 			}
 		}
 	}
@@ -213,7 +219,10 @@ func (s *Server) handleDm(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, err, http.StatusServiceUnavailable)
 		return
 	}
-	output, err := dm.RunDungeonMaster(ctx, s.Provider, prompt, selectedModel, selectedEffort, s.SchemaPath, s.ProviderCWD, storyID)
+	// The mini-preamble is safe only when the full ruleset is readable from
+	// the rules file (delta mode); otherwise the complete preamble ships inline.
+	slim := prepared.Input.DeltaMode && prepared.Input.RulesRef != ""
+	output, err := dm.RunDungeonMaster(ctx, s.Provider, prompt, selectedModel, selectedEffort, s.SchemaPath, s.ProviderCWD, storyID, slim)
 	if err != nil {
 		log.Printf("[dm] generation failed: %v", err)
 		if errors.Is(err, provider.ErrNeedsConsent) {
