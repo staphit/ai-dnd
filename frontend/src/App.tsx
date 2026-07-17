@@ -645,6 +645,9 @@ export default function App() {
   async function advance(input: AdvanceInput) {
     const campaignId = campaign.id;
     if (!campaignId) return;
+    // Re-entry guard: a double-fired dice roll or double submit must not send
+    // two DM turns for the same round.
+    if (advancingRef.current) return;
     const previousCheck = campaign.requiredCheck || null;
     const combatWasActive = campaign.combat?.active === true;
     setLoading(true); setError(''); advancingRef.current = true;
@@ -705,6 +708,14 @@ export default function App() {
         }
         if (latest) setCampaign(latest);
         showRejection(issues, (latest || campaign).players);
+        return;
+      }
+      // Stale dice tray: the server says there is no pending check (it was
+      // already resolved — duplicate roll or another window). Adopt server
+      // truth and close the tray instead of restoring it forever.
+      if (input.checkRoll && caught instanceof ApiError && caught.status === 400) {
+        try { setCampaign(await api.getCampaign(campaignId)); } catch { /* keep local view */ }
+        setError('');
         return;
       }
       const msg = message(caught);
