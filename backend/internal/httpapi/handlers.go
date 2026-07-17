@@ -2,6 +2,8 @@ package httpapi
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -11,6 +13,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/go-chi/chi/v5"
 
 	"dndduet/internal/dm"
 	"dndduet/internal/game"
@@ -34,8 +38,10 @@ func sanitizeStoryID(v string) string {
 }
 
 type connectionBody struct {
-	Alive   bool   `json:"alive"`
-	StoryId string `json:"storyId"`
+	Alive      bool   `json:"alive"`
+	StoryId    string `json:"storyId"`
+	ImageAlive bool   `json:"imageAlive"` // dedicated GPT image connection (max 2 per story)
+	DmProvider string `json:"dmProvider,omitempty"`
 }
 
 type needsConsentBody struct {
@@ -43,10 +49,32 @@ type needsConsentBody struct {
 	NeedsConsent bool   `json:"needsConsent"`
 }
 
+// imageConnectionReporter is implemented by providers that own a second
+// app-server process for GPT image generation (story + image ≤ 2).
+type imageConnectionReporter interface {
+	ImageConnectionState() provider.ConnState
+}
+
+func connectionSnapshot(p provider.API) connectionBody {
+	cs := p.ConnectionState()
+	body := connectionBody{Alive: cs.Alive, StoryId: cs.StoryID}
+	if reporter, ok := p.(imageConnectionReporter); ok {
+		ics := reporter.ImageConnectionState()
+		body.ImageAlive = ics.Alive && ics.StoryID != "" && ics.StoryID == cs.StoryID
+	}
+	return body
+}
+
 // handleCodexConnection reports the current persistent-connection binding.
 func (s *Server) handleCodexConnection(w http.ResponseWriter, r *http.Request) {
-	cs := s.Provider.ConnectionState()
-	writeJSON(w, http.StatusOK, connectionBody{Alive: cs.Alive, StoryId: cs.StoryID})
+	id, api := s.pickDM(r.URL.Query().Get("dmProvider"))
+	if api == nil {
+		writeJSON(w, http.StatusOK, connectionBody{DmProvider: id})
+		return
+	}
+	snap := connectionSnapshot(api)
+	snap.DmProvider = id
+	writeJSON(w, http.StatusOK, snap)
 }
 
 // handleCodexConnect establishes (or rebinds) the persistent connection to the
@@ -66,30 +94,61 @@ func (s *Server) handleCodexConnect(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, errorBody{Error: "缺少有效的 campaignId。"})
 		return
 	}
-	if err := s.Provider.Connect(ctx, storyID); err != nil {
+	dmID, api := s.pickDM(jsutil.StrOr(jsutil.Get(body, "dmProvider"), ""))
+	if api == nil {
+		writeJSON(w, http.StatusServiceUnavailable, errorBody{Error: "沒有可用的 DM 資料源。"})
+		return
+	}
+	if err := api.Connect(ctx, storyID); err != nil {
+		logHandlerErr("codex/connect", err, "story="+storyID+" dm="+dmID+" | tip: Codex→codex login；Grok→grok login 或 XAI_API_KEY")
 		writeErr(w, err, http.StatusServiceUnavailable)
 		return
 	}
-	cs := s.Provider.ConnectionState()
-	writeJSON(w, http.StatusOK, connectionBody{Alive: cs.Alive, StoryId: cs.StoryID})
+	// Fresh multi-turn session: next DM turn must re-send full rules.
+	if s.Prompt != nil {
+		s.Prompt.Reset(storyID)
+	}
+	snap := connectionSnapshot(api)
+	snap.DmProvider = dmID
+	log.Printf("[codex/connect] ok story=%s dm=%s imageAlive=%v", snap.StoryId, dmID, snap.ImageAlive)
+	writeJSON(w, http.StatusOK, snap)
+}
+
+// dmProviderStatus is one selectable storyteller backend for the settings UI.
+type dmProviderStatus struct {
+	ID        string                 `json:"id"`
+	Label     string                 `json:"label"`
+	Connected bool                   `json:"connected"`
+	Model     string                 `json:"model"`
+	Models    []provider.ModelOption `json:"models"`
+	Efforts   []provider.ModelOption `json:"efforts"`
+	Message   string                 `json:"message,omitempty"`
 }
 
 type statusResponse struct {
-	ForgeDefaults map[string]images.ForgeOptions
-	Connected     bool                   `json:"connected"`
-	Provider      string                 `json:"provider"`
-	Model         string                 `json:"model"`
-	Models        []provider.ModelOption `json:"models"`
-	Efforts       []provider.ModelOption `json:"efforts"`
-	ImageModel    string                 `json:"imageModel"`
-	ImageBackends []provider.ModelOption `json:"imageBackends"`
-	ImageBackend  string                 `json:"imageBackend"`
-	Message       string                 `json:"message,omitempty"`
+	ForgeDefaults map[string]images.ForgeOptions `json:"ForgeDefaults,omitempty"`
+	Connected     bool                           `json:"connected"`
+	Provider      string                         `json:"provider"`
+	Model         string                         `json:"model"`
+	Models        []provider.ModelOption         `json:"models"`
+	Efforts       []provider.ModelOption         `json:"efforts"`
+	ImageModel    string                         `json:"imageModel"`
+	ImageBackends []provider.ModelOption         `json:"imageBackends"`
+	ImageBackend  string                         `json:"imageBackend"`
+	Message       string                         `json:"message,omitempty"`
+	DmProvider    string                         `json:"dmProvider"`
+	DmProviders   []dmProviderStatus             `json:"dmProviders"`
 }
 
 func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
-	status := s.Provider.Status(r.Context())
-	imageModel := s.Provider.ImageModel()
+	reqProvider := r.URL.Query().Get("dmProvider")
+	dmID, api := s.pickDM(reqProvider)
+	if api == nil {
+		writeJSON(w, http.StatusServiceUnavailable, errorBody{Error: "沒有可用的 DM 資料源。"})
+		return
+	}
+	status := api.Status(r.Context())
+	imageModel := api.ImageModel()
 	defaultBackend := s.DefaultImageBackend
 	if defaultBackend == "" {
 		defaultBackend = "codex"
@@ -97,18 +156,59 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 	if renderer, err := s.imageRenderer(""); err == nil {
 		imageModel = renderer.Model()
 	}
+
+	var dmProviders []dmProviderStatus
+	order := []string{"codex", "grok"}
+	seen := map[string]bool{}
+	for _, id := range order {
+		p, ok := s.Providers[id]
+		if !ok || p == nil {
+			continue
+		}
+		seen[id] = true
+		st := p.Status(r.Context())
+		label := st.Provider
+		if label == "" {
+			label = id
+		}
+		dmProviders = append(dmProviders, dmProviderStatus{
+			ID: id, Label: label, Connected: st.Configured, Model: st.Model,
+			Models: p.ModelOptions(), Efforts: p.EffortOptions(), Message: st.Message,
+		})
+	}
+	for id, p := range s.Providers {
+		if seen[id] || p == nil {
+			continue
+		}
+		st := p.Status(r.Context())
+		dmProviders = append(dmProviders, dmProviderStatus{
+			ID: id, Label: st.Provider, Connected: st.Configured, Model: st.Model,
+			Models: p.ModelOptions(), Efforts: p.EffortOptions(), Message: st.Message,
+		})
+	}
+
 	writeJSON(w, http.StatusOK, statusResponse{
 		ForgeDefaults: s.forgeDefaults(),
 		Connected:     status.Configured,
 		Provider:      status.Provider,
 		Model:         status.Model,
-		Models:        s.Provider.ModelOptions(),
-		Efforts:       s.Provider.EffortOptions(),
+		Models:        api.ModelOptions(),
+		Efforts:       api.EffortOptions(),
 		ImageModel:    imageModel,
 		ImageBackends: s.imageBackendOptions(),
 		ImageBackend:  defaultBackend,
 		Message:       status.Message,
+		DmProvider:    dmID,
+		DmProviders:   dmProviders,
 	})
+}
+
+// sceneSlotPayload is the client-facing scene-image placeholder returned with each DM turn.
+type sceneSlotPayload struct {
+	ID          string `json:"id"`
+	Scene       string `json:"scene"`
+	ImagePrompt string `json:"imagePrompt"`
+	CreatedAt   int64  `json:"createdAt"`
 }
 
 type dmResponse struct {
@@ -120,15 +220,17 @@ type dmResponse struct {
 	PrivateMessages []dm.PrivateMessage `json:"privateMessages"`
 	ActionIssues    []game.ActionIssue  `json:"actionIssues"`
 	Model           string              `json:"model"`
+	SceneSlot       *sceneSlotPayload   `json:"sceneSlot,omitempty"`
 }
 
 // dmRequest is the slim /api/dm body: everything else (characters, combat,
 // history, campaign meta) now comes from the server's own store.
 type dmRequest struct {
-	CampaignID string `json:"campaignId"`
-	Model      string `json:"model"`
-	Effort     string `json:"effort"`
-	Actions    []struct {
+	CampaignID  string `json:"campaignId"`
+	Model       string `json:"model"`
+	Effort      string `json:"effort"`
+	DmProvider  string `json:"dmProvider"`
+	Actions     []struct {
 		PlayerID string `json:"playerId"`
 		Text     string `json:"text"`
 	} `json:"actions"`
@@ -162,6 +264,12 @@ func (s *Server) handleDm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	dmID, api := s.pickDM(req.DmProvider)
+	if api == nil {
+		writeJSON(w, http.StatusServiceUnavailable, errorBody{Error: "沒有可用的 DM 資料源。"})
+		return
+	}
+
 	// Prepare the turn from server-authoritative state. Mechanical validation
 	// failures return 422 without ever calling the AI.
 	var prepared game.PreparedDMTurn
@@ -190,12 +298,15 @@ func (s *Server) handleDm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Delta mode: only when a live connection is bound to this story and memory
-	// is enabled, so Codex has the persistent thread and can read the memory +
-	// rules files for prior context and the full ruleset. Otherwise fall back
-	// to the full inline preamble.
+	// Codex app-server with a live thread: materialise memory + rules files for
+	// delta mode. Grok / unbound / exec: inject rendered memory into the prompt
+	// body (they cannot read sandbox files).
+	cs := api.ConnectionState()
+	threadAlive := cs.Alive && cs.StoryID == storyID
+	useFileDelta := dmID == "codex" && threadAlive && s.Memory != nil
+	memoryInline := ""
 	if s.Memory != nil {
-		if cs := s.Provider.ConnectionState(); cs.Alive && cs.StoryID == storyID {
+		if useFileDelta {
 			if err := s.Memory.Materialise(storyID); err == nil {
 				prepared.Input.DeltaMode = true
 				prepared.Input.MemRef = s.Memory.Ref(storyID)
@@ -204,33 +315,74 @@ func (s *Server) handleDm(w http.ResponseWriter, r *http.Request) {
 						prepared.Input.RulesRef = s.Memory.RulesRef(storyID)
 					}
 				}
+			} else {
+				log.Printf("[dm] memory materialise failed story=%s: %v", storyID, err)
+			}
+		} else {
+			if text, rerr := s.Memory.Render(storyID); rerr != nil {
+				log.Printf("[dm] memory render failed story=%s dm=%s: %v", storyID, dmID, rerr)
+			} else if strings.TrimSpace(text) != "" {
+				memoryInline = text
 			}
 		}
 	}
 
-	prompt := dm.BuildDMRequestV2(prepared.Input)
-	selectedModel, err := s.Provider.NormalizeModel(req.Model)
+	// Prompt-session: after Connect, first turn sends full rules; later turns
+	// use compact rules (Grok multi-turn / Codex thread) or mini rules-file
+	// (Codex delta). Avoids re-paying the full system preamble every request.
+	plan := dm.Plan{FullRules: true}
+	if s.Prompt != nil && threadAlive {
+		plan = s.Prompt.Plan(storyID, threadAlive)
+	}
+
+	turnBody := dm.BuildDMRequestV2(prepared.Input)
+	if memoryInline != "" && !prepared.Input.DeltaMode {
+		turnBody = "前情提要（由伺服器注入，只讀）：\n" + memoryInline + "\n\n" + turnBody
+	}
+
+	selectedModel, err := api.NormalizeModel(req.Model)
 	if err != nil {
 		writeErr(w, err, http.StatusServiceUnavailable)
 		return
 	}
-	selectedEffort, err := s.Provider.NormalizeEffort(req.Effort)
+	selectedEffort, err := api.NormalizeEffort(req.Effort)
 	if err != nil {
 		writeErr(w, err, http.StatusServiceUnavailable)
 		return
 	}
-	// The mini-preamble is safe only when the full ruleset is readable from
-	// the rules file (delta mode); otherwise the complete preamble ships inline.
-	slim := prepared.Input.DeltaMode && prepared.Input.RulesRef != ""
-	output, err := dm.RunDungeonMaster(ctx, s.Provider, prompt, selectedModel, selectedEffort, s.SchemaPath, s.ProviderCWD, storyID, slim)
+
+	// Choose rules block:
+	//  - Codex delta + rules file → mini (points at dossier)
+	//  - Session already has full rules → compact (short reminders)
+	//  - Otherwise → full preamble
+	rulesMode := dm.RulesFull
+	switch {
+	case prepared.Input.DeltaMode && prepared.Input.RulesRef != "":
+		rulesMode = dm.RulesMini
+	case threadAlive && s.Prompt != nil && !plan.FullRules:
+		rulesMode = dm.RulesCompact
+	}
+
+	output, err := dm.RunDungeonMaster(ctx, api, turnBody, selectedModel, selectedEffort, s.SchemaPath, s.ProviderCWD, storyID, rulesMode)
 	if err != nil {
-		log.Printf("[dm] generation failed: %v", err)
+		detail := fmt.Sprintf("story=%s dm=%s model=%q effort=%q rules=%v delta=%v",
+			storyID, dmID, selectedModel, selectedEffort, rulesMode, prepared.Input.DeltaMode)
 		if errors.Is(err, provider.ErrNeedsConsent) {
+			logHandlerErr("dm", err, detail+" | tip: POST /api/codex/connect 綁定本故事")
 			writeJSON(w, http.StatusConflict, needsConsentBody{Error: err.Error(), NeedsConsent: true})
 			return
 		}
+		logHandlerErr("dm", err, detail+" | tip: Codex/Grok 是否逾時/斷線；LOG_PROMPTS=1 可看完整 prompt")
 		writeErr(w, err, http.StatusServiceUnavailable)
 		return
+	}
+
+	if s.Prompt != nil && threadAlive {
+		fullRules := rulesMode == dm.RulesFull
+		s.Prompt.Commit(storyID, &dm.TurnSnapshot{
+			Title: prepared.Input.Title, Scene: prepared.Input.Scene,
+			Objective: prepared.Input.Objective, Stakes: prepared.Input.Stakes,
+		}, fullRules, true)
 	}
 
 	applied, err := s.Game.ApplyDMTurn(storyID, prepared, output)
@@ -249,35 +401,93 @@ func (s *Server) handleDm(w http.ResponseWriter, r *http.Request) {
 	if output.RequiresCheck && output.Check != nil {
 		checkText = "\n\n檢定：" + output.Check.Character + " 進行 DC " + strconv.Itoa(output.Check.DC) + " 的" + output.Check.Ability + "（" + output.Check.Skill + "）檢定。" + output.Check.Reason
 	}
-	choiceText := ""
-	if len(output.Choices) > 0 {
-		texts := make([]string, len(output.Choices))
-		for i, c := range output.Choices {
-			texts[i] = c.Text
-		}
-		choiceText = "\n\n可考慮：" + strings.Join(texts, "／")
-	}
 
-	status := s.Provider.Status(ctx)
+	status := api.Status(ctx)
 	model := selectedModel
 	if model == "" {
 		model = status.Model
 	}
 
-	text := output.Narration + checkText + choiceText
+	publicText := FormatDialogueBreaks(strings.TrimSpace(output.Narration)) + checkText
 	if len(applied.Rejected) > 0 {
-		text = ""
+		publicText = ""
 	}
+	privateMsgs := make([]dm.PrivateMessage, 0, len(output.PrivateMessages))
+	for _, m := range output.PrivateMessages {
+		privateMsgs = append(privateMsgs, dm.PrivateMessage{
+			PlayerID: m.PlayerID,
+			Text:     FormatDialogueBreaks(strings.TrimSpace(m.Text)),
+		})
+	}
+
+	// Persist a scene-image placeholder so the player can generate this beat later.
+	var slotPayload *sceneSlotPayload
+	if s.Store != nil && strings.TrimSpace(output.Narration) != "" && len(applied.Rejected) == 0 {
+		slotID := "slot-" + strconv.FormatInt(time.Now().UnixMilli(), 10) + "-" + randomHex(4)
+		playersJSON := "[]"
+		if rawPlayers, merr := json.Marshal(prepared.Players); merr == nil {
+			playersJSON = string(rawPlayers)
+		}
+		sceneName := strings.TrimSpace(output.Scene)
+		if sceneName == "" {
+			sceneName = prepared.Input.Scene
+		}
+		slot := store.SceneSlot{
+			ID: slotID, StoryID: storyID, Scene: sceneName,
+			Title: prepared.Input.Title, Narration: publicText,
+			ImagePrompt: strings.TrimSpace(output.ImagePrompt),
+			PlayersJSON: playersJSON, CreatedAt: time.Now().UnixMilli(),
+		}
+		if err := s.Store.SaveSceneSlot(slot); err != nil {
+			log.Printf("[dm] save scene slot failed story=%s: %v", storyID, err)
+		} else {
+			slotPayload = &sceneSlotPayload{
+				ID: slot.ID, Scene: slot.Scene, ImagePrompt: slot.ImagePrompt, CreatedAt: slot.CreatedAt,
+			}
+		}
+	}
+
 	writeJSON(w, http.StatusOK, dmResponse{
 		View:            &applied.View,
-		Text:            text,
+		Text:            publicText,
 		Choices:         output.Choices,
 		RequiresCheck:   output.RequiresCheck,
 		Check:           output.Check,
-		PrivateMessages: output.PrivateMessages,
+		PrivateMessages: privateMsgs,
 		ActionIssues:    applied.Rejected,
 		Model:           model,
+		SceneSlot:       slotPayload,
 	})
+}
+
+func randomHex(nBytes int) string {
+	b := make([]byte, nBytes)
+	if _, err := rand.Read(b); err != nil {
+		return fmt.Sprintf("%d", time.Now().UnixNano())
+	}
+	return hex.EncodeToString(b)
+}
+
+// FormatDialogueBreaks inserts newlines around 「」 dialogue so speech is readable.
+var (
+	dialogueOpenRe  = regexp.MustCompile(`([^\n「])(「)`)
+	dialogueCloseRe = regexp.MustCompile(`(」[。！？…—]*)([^\n」])`)
+	speechTagRe     = regexp.MustCompile(`([。！？])([\p{Han}]{1,12}(?:低聲|輕聲|喃喃|碎念|嘀咕|低語|咕噥|說道|問道|喝道|怒道|笑道|喊道|接著說|繼續說)[：「])`)
+)
+
+func FormatDialogueBreaks(s string) string {
+	s = strings.ReplaceAll(s, "\r\n", "\n")
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return s
+	}
+	s = dialogueOpenRe.ReplaceAllString(s, "$1\n$2")
+	s = dialogueCloseRe.ReplaceAllString(s, "$1\n$2")
+	s = speechTagRe.ReplaceAllString(s, "$1\n$2")
+	for strings.Contains(s, "\n\n\n") {
+		s = strings.ReplaceAll(s, "\n\n\n", "\n\n")
+	}
+	return strings.TrimSpace(s)
 }
 
 func parseForgeOptions(body map[string]any, renderer images.Renderer) (*images.ForgeOptions, error) {
@@ -372,17 +582,43 @@ func (s *Server) handleSceneImage(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, err, http.StatusServiceUnavailable)
 		return
 	}
+
+	// Prefer a server-side scene slot captured at DM-turn time when provided.
+	slotID := strings.TrimSpace(jsutil.StrOr(jsutil.Get(body, "sceneSlotId"), ""))
 	title := jsutil.JSSlice(strings.TrimSpace(jsutil.StrOr(jsutil.Get(body, "campaign", "title"), "")), 180)
 	scene := jsutil.JSSlice(strings.TrimSpace(jsutil.StrOr(jsutil.Get(body, "campaign", "scene"), "")), 240)
 	narration := jsutil.JSSlice(strings.TrimSpace(jsutil.StrOr(jsutil.Get(body, "narration"), "")), 5000)
-	// The DM agent's ready-made English SD prompt for this scene; when present
-	// the image backend uses it directly instead of translating again.
 	imagePrompt := jsutil.JSSlice(strings.TrimSpace(jsutil.StrOr(jsutil.Get(body, "imagePrompt"), "")), 600)
+	campaignID := sanitizeStoryID(jsutil.StrOr(jsutil.Get(body, "campaignId"), ""))
+
+	if slotID != "" && s.Store != nil {
+		if slot, ok, gerr := s.Store.GetSceneSlot(slotID); gerr != nil {
+			logHandlerErr("scene-image", gerr, "sceneSlotId="+slotID)
+			writeErr(w, gerr, http.StatusServiceUnavailable)
+			return
+		} else if ok {
+			if title == "" {
+				title = jsutil.JSSlice(slot.Title, 180)
+			}
+			if scene == "" {
+				scene = jsutil.JSSlice(slot.Scene, 240)
+			}
+			if narration == "" {
+				narration = jsutil.JSSlice(slot.Narration, 5000)
+			}
+			if imagePrompt == "" {
+				imagePrompt = jsutil.JSSlice(slot.ImagePrompt, 600)
+			}
+			if campaignID == "" {
+				campaignID = sanitizeStoryID(slot.StoryID)
+			}
+		}
+	}
 
 	// Party visuals come from the server-authoritative sheets when the body
 	// names a campaign; the legacy body players list stays as a fallback.
 	var players []images.ScenePlayer
-	if campaignID := sanitizeStoryID(jsutil.StrOr(jsutil.Get(body, "campaignId"), "")); campaignID != "" {
+	if campaignID != "" {
 		if view, err := s.Game.View(campaignID); err == nil {
 			for i, p := range view.Players {
 				if i >= 4 {
@@ -418,8 +654,10 @@ func (s *Server) handleSceneImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	renderer, err := s.imageRenderer(jsutil.StrOr(jsutil.Get(body, "imageBackend"), ""))
+	backendReq := jsutil.StrOr(jsutil.Get(body, "imageBackend"), "")
+	renderer, err := s.imageRenderer(backendReq)
 	if err != nil {
+		logHandlerErr("scene-image", err, "backend="+backendReq+" default="+s.DefaultImageBackend)
 		writeErr(w, err, http.StatusBadRequest)
 		return
 	}
@@ -429,18 +667,158 @@ func (s *Server) handleSceneImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	result, err := images.GenerateScene(ctx, renderer, s.Store, images.SceneInput{
-		Title:       title,
-		Scene:       scene,
-		Narration:   narration,
-		ImagePrompt: imagePrompt,
-		Players:     players,
-		Forge:       forgeOptions,
+		Title:        title,
+		Scene:        scene,
+		Narration:    narration,
+		ImagePrompt:  imagePrompt,
+		Players:      players,
+		Forge:        forgeOptions,
+		CampaignID:   campaignID,
+		SourceSlotID: slotID,
 	})
 	if err != nil {
 		writeErr(w, err, http.StatusServiceUnavailable)
 		return
 	}
-	writeJSON(w, http.StatusOK, result)
+	if slotID != "" && s.Store != nil {
+		if err := s.Store.BindSceneSlotImage(slotID, result.URL, result.Model); err != nil {
+			log.Printf("[scene-image] bind slot image failed id=%s: %v", slotID, err)
+		}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"url": result.URL, "prompt": result.Prompt, "model": result.Model, "sceneSlotId": slotID,
+	})
+}
+
+func (s *Server) handleListImageMeta(w http.ResponseWriter, r *http.Request) {
+	if s.Store == nil {
+		writeJSON(w, http.StatusOK, map[string]any{"images": []any{}})
+		return
+	}
+	campaignID := strings.TrimSpace(r.URL.Query().Get("campaignId"))
+	limit := 100
+	if v, err := strconv.Atoi(r.URL.Query().Get("limit")); err == nil && v > 0 && v <= 500 {
+		limit = v
+	}
+	list, err := s.Store.ListImageMeta(campaignID, limit)
+	if err != nil {
+		writeErr(w, err, http.StatusServiceUnavailable)
+		return
+	}
+	out := make([]map[string]any, 0, len(list))
+	for _, m := range list {
+		out = append(out, map[string]any{
+			"filename": m.Filename, "campaignId": m.CampaignID, "scene": m.Scene,
+			"prompt": m.Prompt, "model": m.Model, "sourceSlotId": m.SourceSlotID,
+			"createdAt": m.CreatedAt, "url": "/generated/" + m.Filename,
+		})
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"images": out})
+}
+
+// handleReviseStory rewrites the last public DM narration from a player note
+// without advancing the round or re-validating actions.
+func (s *Server) handleReviseStory(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 210*time.Second)
+	defer cancel()
+
+	storyID := sanitizeStoryID(chi.URLParam(r, "id"))
+	if storyID == "" {
+		writeJSON(w, http.StatusBadRequest, errorBody{Error: "缺少有效的 campaignId。"})
+		return
+	}
+	body, err := readJSONBody(w, r)
+	if err != nil {
+		writeErr(w, err, http.StatusServiceUnavailable)
+		return
+	}
+	note := strings.TrimSpace(jsutil.StrOr(jsutil.Get(body, "note"), ""))
+	if note == "" {
+		writeJSON(w, http.StatusBadRequest, errorBody{Error: "需要修正說明（note）。"})
+		return
+	}
+	dmID, api := s.pickDM(jsutil.StrOr(jsutil.Get(body, "dmProvider"), ""))
+	if api == nil {
+		writeJSON(w, http.StatusServiceUnavailable, errorBody{Error: "沒有可用的 DM 資料源。"})
+		return
+	}
+
+	view, err := s.Game.View(storyID)
+	if err != nil {
+		writeErr(w, err, http.StatusServiceUnavailable)
+		return
+	}
+	lastDM := ""
+	for i := len(view.Story) - 1; i >= 0; i-- {
+		e := view.Story[i]
+		if e.Speaker == "dm" && (e.Audience == "" || e.Audience == "public") {
+			lastDM = e.Text
+			break
+		}
+	}
+	if strings.TrimSpace(lastDM) == "" {
+		writeJSON(w, http.StatusBadRequest, errorBody{Error: "尚無可重寫的 DM 敘事。"})
+		return
+	}
+
+	selectedModel, err := api.NormalizeModel(jsutil.StrOr(jsutil.Get(body, "model"), ""))
+	if err != nil {
+		writeErr(w, err, http.StatusServiceUnavailable)
+		return
+	}
+	selectedEffort, err := api.NormalizeEffort(jsutil.StrOr(jsutil.Get(body, "effort"), ""))
+	if err != nil {
+		writeErr(w, err, http.StatusServiceUnavailable)
+		return
+	}
+
+	prompt := strings.Join([]string{
+		"規則版本：2024 第五版／SRD 5.2.1。這是敘事修正回合，不是新的玩家行動。",
+		"戰役：" + view.Title,
+		"場景：" + view.Scene,
+		"目前目標：" + view.Objective,
+		"",
+		"上一則公開 DM 敘事草稿：",
+		lastDM,
+		"",
+		"玩家修正要求：",
+		note,
+		"",
+		"請只重寫 narration（繁體中文公開敘事），修正事實錯誤、語氣或遺漏；不可推進新場景、不可開始戰鬥、不可要求新檢定、不可發放 XP 或套用 effects。actionIssues、choices 可為空。combat.starts 必須為 false。",
+	}, "\n")
+
+	// Revision keeps mechanical state; prefer compact rules when session is warm.
+	revRules := dm.RulesFull
+	if s.Prompt != nil {
+		if p := s.Prompt.Plan(storyID, true); !p.FullRules {
+			revRules = dm.RulesCompact
+		}
+	}
+	output, err := dm.RunDungeonMaster(ctx, api, prompt, selectedModel, selectedEffort, s.SchemaPath, s.ProviderCWD, storyID, revRules)
+	if err != nil {
+		if errors.Is(err, provider.ErrNeedsConsent) {
+			writeJSON(w, http.StatusConflict, needsConsentBody{Error: err.Error(), NeedsConsent: true})
+			return
+		}
+		writeErr(w, err, http.StatusServiceUnavailable)
+		return
+	}
+	newText := FormatDialogueBreaks(strings.TrimSpace(output.Narration))
+	if newText == "" {
+		writeJSON(w, http.StatusServiceUnavailable, errorBody{Error: "DM 未回傳可用敘事。"})
+		return
+	}
+	if err := s.Game.ReplaceLastPublicDM(storyID, newText); err != nil {
+		writeErr(w, err, http.StatusServiceUnavailable)
+		return
+	}
+	updated, err := s.Game.View(storyID)
+	if err != nil {
+		writeErr(w, err, http.StatusServiceUnavailable)
+		return
+	}
+	_ = dmID
+	writeJSON(w, http.StatusOK, map[string]any{"view": updated, "text": newText, "model": selectedModel})
 }
 
 func (s *Server) handleCharacterImage(w http.ResponseWriter, r *http.Request) {

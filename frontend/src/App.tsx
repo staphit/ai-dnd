@@ -13,14 +13,14 @@ import { SceneVisual } from './components/SceneVisual';
 import { PartySetup } from './components/PartySetup';
 import { CombatTracker } from './components/CombatTracker';
 import { CampaignManager } from './components/CampaignManager';
+import { SpellCastModal } from './components/SpellCastModal';
+import { StoryRevisionPanel, type RevisionChatLine } from './components/StoryRevisionPanel';
 import * as api from './api';
 import { ApiError, type ActionIssue, type CombatConclusion } from './api';
 import { getActiveCampaignId, readLegacyVault, setActiveCampaignId } from './campaign-storage';
 
 const CharacterManager = lazy(() => import('./components/CharacterManager').then((module) => ({ default: module.CharacterManager })));
-// Lazy so the three.js chunk (see vite.config.ts `three` group) loads only when
-// the table page mounts, and never enters the jsdom test bundle.
-const DMTable = lazy(() => import('./components/DMTable').then((module) => ({ default: module.DMTable })));
+// DM 3D avatar is loaded inside StoryFeed (not duplicated above the dialogue).
 
 // One DM continuation request. actions come from the server pending lock;
 // checkRoll carries the local d20 (the server recomputes modifier/success);
@@ -92,6 +92,11 @@ export default function App() {
   const [dmSpeaking, setDmSpeaking] = useState(false);
   const [sceneImage, setSceneImage] = useState<SceneImage | null>(null);
   const [spellRoll, setSpellRoll] = useState<{ check: RequiredCheck; casterId: PlayerId; spell: CharacterSpell; asRitual: boolean; targetId: string } | null>(null);
+  const [spellModal, setSpellModal] = useState<{ playerId: PlayerId; spell: CharacterSpell } | null>(null);
+  const [revisionOpen, setRevisionOpen] = useState(false);
+  const [revisionChat, setRevisionChat] = useState<RevisionChatLine[]>([]);
+  const [revising, setRevising] = useState(false);
+  const [pendingSceneSlotId, setPendingSceneSlotId] = useState('');
   const [codexConn, setCodexConn] = useState<{ alive: boolean; storyId: string } | null>(null);
   const [connecting, setConnecting] = useState(false);
   const advancingRef = useRef(false);
@@ -180,42 +185,53 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    const controller = new AbortController();
-    fetch('/api/status', { signal: controller.signal }).then((response) => response.json()).then((data: AiStatus) => setStatus(data)).catch(() => setStatus({ connected: false, provider: 'Codex CLI', model: null, message: '本機伺服器未啟動' }));
-    return () => controller.abort();
-  }, []);
+  const activeDmProvider = settings.dmProvider || status?.dmProvider || 'codex';
+  const activeDmInfo = status?.dmProviders?.find((entry) => entry.id === activeDmProvider);
 
-  // Refresh the codex connection binding on load and whenever the active story
-  // changes; switching stories invalidates the connection until the player
-  // re-consents to connect.
   useEffect(() => {
     const controller = new AbortController();
-    fetch('/api/codex/connection', { signal: controller.signal })
+    const q = settings.dmProvider ? `?dmProvider=${encodeURIComponent(settings.dmProvider)}` : '';
+    fetch(`/api/status${q}`, { signal: controller.signal }).then((response) => response.json()).then((data: AiStatus) => setStatus(data)).catch(() => setStatus({ connected: false, provider: 'Codex CLI', model: null, message: '本機伺服器未啟動' }));
+    return () => controller.abort();
+  }, [settings.dmProvider]);
+
+  // Refresh the DM connection binding on load and whenever the active story
+  // or provider changes; switching stories invalidates the connection until
+  // the player re-consents to connect.
+  useEffect(() => {
+    const controller = new AbortController();
+    const q = activeDmProvider ? `?dmProvider=${encodeURIComponent(activeDmProvider)}` : '';
+    fetch(`/api/codex/connection${q}`, { signal: controller.signal })
       .then((response) => response.json())
       .then((data: { alive?: boolean; storyId?: string }) => setCodexConn({ alive: Boolean(data.alive), storyId: data.storyId || '' }))
       .catch(() => {});
     return () => controller.abort();
-  }, [campaign.id]);
+  }, [campaign.id, activeDmProvider]);
 
   const codexReady = !campaign.id || (Boolean(codexConn?.alive) && codexConn?.storyId === campaign.id);
+  // Grok can still "connect" (bind story) for consent UX; treat unbound as needs connect.
   const needsCodexConnect = !demoMode && !codexReady;
+  const dmLabel = activeDmInfo?.label || (activeDmProvider === 'grok' ? 'Grok' : 'Codex');
 
   async function connectCodex() {
     if (connecting) return;
     setConnecting(true); setError('');
     try {
-      const response = await fetch('/api/codex/connect', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ campaignId: campaign.id }) });
+      const response = await fetch('/api/codex/connect', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ campaignId: campaign.id, dmProvider: activeDmProvider }),
+      });
       const data = await response.json().catch(() => ({} as { alive?: boolean; storyId?: string; error?: string }));
       if (!response.ok) throw new Error(data.error || '連線失敗');
       setCodexConn({ alive: Boolean(data.alive), storyId: data.storyId || '' });
-      setNotice('已連線 Codex，這個故事現在可以請 DM 裁定。');
+      setNotice(`已連線 ${dmLabel}，這個故事現在可以請 DM 裁定。`);
       // Replay a turn that was blocked by the consent gate, if any.
       const retry = retryTurnRef.current;
       retryTurnRef.current = null;
       if (retry && data.alive) void advance(retry);
     } catch (caught) {
-      setError(`連線 Codex 失敗：${message(caught)}`);
+      setError(`連線 ${dmLabel} 失敗：${message(caught)}`);
     } finally {
       setConnecting(false);
     }
@@ -289,6 +305,25 @@ export default function App() {
     if (areAllActionsReady(view)) void advance({ actions: actionsFrom(view) });
   }
 
+  function openSpellCast(casterId: PlayerId, spell: CharacterSpell, asRitual?: boolean, targetId?: string) {
+    if (activeRequiredCheck) return setError('請先完成目前畫面上的必要擲骰，再進行施法。');
+    const player = campaign.players.find((entry) => entry.id === casterId);
+    if (!player) return;
+    if (campaign.pending[casterId] && !campaign.combat?.active) {
+      return setError(`${player.name}本回合已鎖定行動，請先解鎖才能改為施法。`);
+    }
+    if (spell.effect?.kind === 'damage' && !campaign.combat?.active) {
+      return setError('傷害法術必須在戰鬥追蹤器有有效目標時結算。');
+    }
+    // Character sheet may already pass ritual + target; cast immediately.
+    if (targetId) {
+      void castSpell(casterId, spell, Boolean(asRitual), targetId);
+      return;
+    }
+    setSpellModal({ playerId: casterId, spell });
+    setError('');
+  }
+
   async function castSpell(casterId: PlayerId, spell: CharacterSpell, asRitual: boolean, targetId?: string) {
     if (!campaign.id) return;
     if (activeRequiredCheck) return setError('請先完成目前畫面上的必要擲骰，再進行施法。');
@@ -297,12 +332,9 @@ export default function App() {
     if (campaign.pending[casterId]) return setError(`${player.name}本回合已鎖定行動，請先解鎖才能改為施法。`);
     if (spell.effect?.kind === 'damage' && !campaign.combat?.active) return setError('傷害法術必須在戰鬥追蹤器有有效目標時結算。');
     if (!targetId) return setError(`${spell.name} 必須先指定目標。`);
-    const usedFreeClassCast = Boolean(spell.freeUseResourceId && player.resources.some((entry) => entry.id === spell.freeUseResourceId && entry.current > 0));
-    const cost = asRitual || spell.level === 0 ? '不消耗法術位' : usedFreeClassCast ? '消耗一次免費施法能力' : `消耗 ${spell.level} 環以上法術位`;
-    const targetName = targetId === 'scene' ? '目前場景' : [...campaign.players, ...(campaign.combat?.combatants || [])].find((entry) => entry.id === targetId)?.name || targetId;
-    if (!window.confirm(`確認由 ${player.name} 施放「${spell.name}」？\n${cost}${targetName ? `，目標：${targetName}` : ''}`)) return;
     try {
       const result = await api.castSpell(campaign.id, casterId, { spellId: spell.id, asRitual, targetId });
+      setSpellModal(null);
       if (result.needsAttackRoll) {
         setSpellRoll({ check: result.needsAttackRoll, casterId, spell, asRitual, targetId });
         setError('');
@@ -314,6 +346,33 @@ export default function App() {
       }
       setError('');
     } catch (caught) { setError(message(caught)); }
+  }
+
+  async function submitStoryRevision(note: string) {
+    if (!campaign.id || revising) return;
+    setRevising(true); setError('');
+    const stamp = now();
+    setRevisionChat((chat) => [...chat, { id: `${Date.now()}-p`, role: 'player', text: note, time: stamp }]);
+    try {
+      const resp = await api.reviseStory(campaign.id, {
+        note,
+        model: settings.selectedModel || '',
+        effort: settings.selectedEffort || '',
+        dmProvider: activeDmProvider,
+      });
+      setCampaign(resp.view);
+      setRevisionChat((chat) => [...chat, { id: `${Date.now()}-s`, role: 'system', text: '已依你的說明重寫上一則公開敘事。', time: now() }]);
+      if (settings.ttsEnabled && resp.text) void speakNarration(resp.text);
+    } catch (caught) {
+      if (caught instanceof ApiError && caught.status === 409 && caught.data.needsConsent) {
+        setCodexConn({ alive: false, storyId: '' });
+        setError(`${caught.message}\n請先連線 ${dmLabel} 後再修正敘事。`);
+      } else {
+        setError(message(caught));
+      }
+    } finally {
+      setRevising(false);
+    }
   }
 
   // Resubmit the cast with the rolled spell-attack total (DiceTray flow).
@@ -357,7 +416,7 @@ export default function App() {
   }
 
   const localImages = (settings.imageBackend || status?.imageBackend || '').startsWith('local');
-  const canGenerateImages = Boolean(status?.connected) || localImages;
+  const canGenerateImages = Boolean(status?.imageBackends?.length) || Boolean(status?.connected) || localImages;
 
   const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -398,16 +457,30 @@ export default function App() {
     updateSettings({ sceneImages });
   }
 
-  async function generateImage(narrationOverride?: string, imagePromptOverride?: string, sceneOverride?: string) {
+  async function generateImage(narrationOverride?: string, imagePromptOverride?: string, sceneOverride?: string, sceneSlotId?: string) {
     if (!canGenerateImages || imageLoading) return;
+    const slotId = sceneSlotId || pendingSceneSlotId;
     const narration = narrationOverride || latestDm?.text;
-    if (!narration) return setImageError('目前沒有可供繪製的公開 DM 場景敘事。');
+    if (!narration && !slotId) return setImageError('目前沒有可供繪製的公開 DM 場景敘事。');
     setImageLoading(true); setImageError('');
     try {
-      const response = await fetch('/api/scene-image', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ imageBackend: settings.imageBackend || '', campaignId: campaign.id || '', campaign: { title: campaign.title, scene: sceneOverride || campaign.scene }, narration, imagePrompt: imagePromptOverride ?? campaign.imagePrompt ?? '', forge: forgeDefaults ? forgeRequest(settings.forgeSettings) : undefined }) });
+      const response = await fetch('/api/scene-image', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          imageBackend: settings.imageBackend || '',
+          campaignId: campaign.id || '',
+          campaign: { title: campaign.title, scene: sceneOverride || campaign.scene },
+          narration: narration || '',
+          imagePrompt: imagePromptOverride ?? campaign.imagePrompt ?? '',
+          sceneSlotId: slotId || undefined,
+          forge: forgeDefaults ? forgeRequest(settings.forgeSettings) : undefined,
+        }),
+      });
       const data = await response.json().catch(() => ({} as { url?: string; model?: string; error?: string }));
       if (!response.ok) throw new Error(data.error || '場景插圖生成失敗');
-      appendSceneImage({ url: data.url, scene: sceneOverride || campaignRef.current.scene, createdAt: now(), model: data.model || status?.imageModel || 'Codex Image' });
+      appendSceneImage({ url: data.url!, scene: sceneOverride || campaignRef.current.scene, createdAt: now(), model: data.model || status?.imageModel || 'Image' });
+      if (slotId && slotId === pendingSceneSlotId) setPendingSceneSlotId('');
     } catch (caught) { setImageError(message(caught)); } finally { setImageLoading(false); }
   }
 
@@ -532,6 +605,7 @@ export default function App() {
           campaignId,
           model: settings.selectedModel || '',
           effort: settings.selectedEffort || '',
+          dmProvider: activeDmProvider,
           ...(input.checkRoll
             ? { checkRoll: { natural: input.checkRoll.natural } }
             : input.combatConclusion
@@ -542,6 +616,7 @@ export default function App() {
         window.clearTimeout(timeout);
       }
       setCampaign(resp.view);
+      if (resp.sceneSlot?.id) setPendingSceneSlotId(resp.sceneSlot.id);
       if (resp.actionIssues.length > 0) {
         // AI narrative veto: the view already carries the 【行動駁回】 entry and
         // the released locks; mirror it in the error banner.
@@ -549,14 +624,16 @@ export default function App() {
         return;
       }
       const combatStarted = !combatWasActive && resp.view.combat?.active === true;
-      if ((settings.autoSceneImages || combatStarted) && resp.text) void generateImage(resp.text, resp.view.imagePrompt, resp.view.scene);
+      if ((settings.autoSceneImages || combatStarted) && resp.text) {
+        void generateImage(resp.text, resp.view.imagePrompt || resp.sceneSlot?.imagePrompt, resp.view.scene, resp.sceneSlot?.id);
+      }
       if (settings.ttsEnabled && resp.text) void speakNarration(resp.text);
     } catch (caught) {
       if (caught instanceof ApiError && caught.status === 409 && caught.data.needsConsent) {
         setCodexConn({ alive: false, storyId: '' });
         retryTurnRef.current = input;
         if (input.checkRoll && previousCheck) setCampaignState((current) => ({ ...current, requiredCheck: previousCheck }));
-        setError(`${caught.message}\n請按「連線 codex」後即會自動重試本回合。`);
+        setError(`${caught.message}\n請按「連線 ${dmLabel}」後即會自動重試本回合。`);
         return;
       }
       if (caught instanceof ApiError && caught.status === 422) {
@@ -738,31 +815,235 @@ export default function App() {
   return (
     <div className="app-shell" style={appStyle}><div className="grain" aria-hidden="true" /><Sidebar page={page} setPage={setPage} /><div className="workspace">
       <Topbar campaign={campaign} status={status} demoMode={demoMode} />
-      {notice && <div className="notice-banner"><span>{notice}</span><button type="button" onClick={() => setNotice('')}><XCircle /></button></div>}
-      {contextualTip && <aside className="novice-tip" aria-label="新手提示"><Lightbulb size={20} /><div><strong>{contextualTip.title}</strong><span>{contextualTip.text}</span></div>{contextualTip.page && <button type="button" className="tip-action" onClick={() => setPage(contextualTip.page!)}>前往查看</button>}<button type="button" className="tip-dismiss" aria-label="關閉提示" onClick={() => dismissTip(contextualTip.id)}><XCircle /></button></aside>}
+      {/* Non-table pages still get global notice/tip above content */}
+      {page !== 'table' && notice && <div className="notice-banner"><span>{notice}</span><button type="button" onClick={() => setNotice('')}><XCircle /></button></div>}
+      {page !== 'table' && contextualTip && <aside className="novice-tip" aria-label="新手提示"><Lightbulb size={20} /><div><strong>{contextualTip.title}</strong><span>{contextualTip.text}</span></div>{contextualTip.page && <button type="button" className="tip-action" onClick={() => setPage(contextualTip.page!)}>前往查看</button>}<button type="button" className="tip-dismiss" aria-label="關閉提示" onClick={() => dismissTip(contextualTip.id)}><XCircle /></button></aside>}
       <AnimatePresence mode="wait">
-        {page === 'table' && <motion.main key="table" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="table-layout"><div className="table-main">
-          <section className="scene-strip"><MapTrifold size={21} /><div><span>目前場景</span><strong>{campaign.scene}</strong></div><div className={`game-state ${campaign.combat?.active ? 'game-state-combat' : 'game-state-exploration'}`}>{campaign.combat?.active ? <Sword size={17} weight="fill" /> : <Compass size={17} />}<div><span>遊戲狀態</span><strong>{campaign.combat?.active ? `戰鬥中${currentCombatant ? `・${currentCombatant.name} 行動` : ''}` : '探索中'}</strong></div></div><div className="round-mark"><span>{campaign.combat?.active ? '戰鬥輪' : '探索回合'}</span><strong>{String(campaign.combat?.active ? campaign.combat.round : campaign.round).padStart(2, '0')}</strong></div></section>
-          {status && !status.connected && !demoMode && <div className="model-notice"><ShieldWarning size={20} /><div><strong>本機 AI 尚未連線</strong><span>請先執行 codex login，或使用示範 DM。</span></div><MagneticButton variant="quiet" onClick={() => setDemoMode(true)}>使用示範 DM</MagneticButton></div>}
-          {needsCodexConnect && status?.connected && <div className="model-notice"><Plugs size={20} /><div><strong>需要連線 Codex</strong><span>每個故事各自一條 Codex 連線；「{campaign.title}」要先連線後 DM 才會裁定。切換故事或連線中斷後都需要重新連線。</span></div><MagneticButton onClick={() => void connectCodex()} disabled={connecting}>{connecting ? '連線中…' : '連線 codex'}</MagneticButton></div>}
-          {error && <div className="error-banner" role="alert"><XCircle size={19} /><div><strong>操作中斷</strong><span>{error}</span></div>{retryTurnRef.current && !needsCodexConnect && !loading && <button type="button" className="retry-turn" onClick={retryLastTurn}><ArrowClockwise />重試上一步</button>}<button type="button" onClick={() => setError('')}><XCircle /></button></div>}
-          <SceneVisual image={sceneImage} images={settings.sceneImages || []} scene={campaign.scene} loading={imageLoading} error={imageError} canGenerate={canGenerateImages} onGenerate={() => void generateImage()} onSelect={setSceneImage} />
-          <Suspense fallback={<div className="dm-table dm-table-loading" aria-hidden="true" />}>
-            <DMTable speaking={dmSpeaking} thinking={loading} combatActive={campaign.combat?.active === true} scene={campaign.scene} />
-          </Suspense>
-          <div className="viewer-switch"><LockKey /><span>訊息視角</span><select value={viewer} onChange={(event) => setViewer(event.target.value as MessageAudience)}><option value="public">公開訊息</option>{campaign.players.map((player) => <option key={player.id} value={player.id}>{player.name} 的私密訊息</option>)}</select></div>
-          <StoryFeed story={campaign.story} players={campaign.players} loading={loading} viewer={viewer} />
+        {page === 'table' && (
+        <motion.main key="table" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="table-layout">
+          <div className="table-main">
+          {/* Match bug/image.png: image on top, then viewer switch, then
+              tip → notices → scene/state → summary right above 最新對話. */}
+          <div className="table-preamble">
+            <SceneVisual
+              image={sceneImage}
+              images={settings.sceneImages || []}
+              scene={campaign.scene}
+              loading={imageLoading}
+              error={imageError}
+              canGenerate={canGenerateImages}
+              onGenerate={() => void generateImage()}
+              onSelect={setSceneImage}
+            />
+          </div>
+
+          <div className="viewer-switch">
+            <LockKey />
+            <span>訊息視角</span>
+            <select value={viewer} onChange={(event) => setViewer(event.target.value as MessageAudience)}>
+              <option value="public">公開訊息</option>
+              {campaign.players.map((player) => (
+                <option key={player.id} value={player.id}>{player.name} 的私密訊息</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="table-preamble table-context">
+            {contextualTip && (
+              <aside className="novice-tip novice-tip-inline" aria-label="新手提示">
+                <Lightbulb size={20} />
+                <div>
+                  <strong>{contextualTip.title}</strong>
+                  <span>{contextualTip.text}</span>
+                </div>
+                {contextualTip.page && (
+                  <button type="button" className="tip-action" onClick={() => setPage(contextualTip.page!)}>前往查看</button>
+                )}
+                <button type="button" className="tip-dismiss" aria-label="關閉提示" onClick={() => dismissTip(contextualTip.id)}>
+                  <XCircle />
+                </button>
+              </aside>
+            )}
+            {notice && (
+              <div className="notice-banner">
+                <span>{notice}</span>
+                <button type="button" onClick={() => setNotice('')}><XCircle /></button>
+              </div>
+            )}
+            {status && !status.connected && !demoMode && (
+              <div className="model-notice">
+                <ShieldWarning size={20} />
+                <div><strong>本機 AI 尚未連線</strong><span>請先執行 codex login，或使用示範 DM。</span></div>
+                <MagneticButton variant="quiet" onClick={() => setDemoMode(true)}>使用示範 DM</MagneticButton>
+              </div>
+            )}
+            {needsCodexConnect && (status?.connected || activeDmInfo?.connected) && (
+              <div className="model-notice">
+                <Plugs size={20} />
+                <div>
+                  <strong>需要連線 {dmLabel}</strong>
+                  <span>每個故事各自一條 DM 連線；「{campaign.title}」要先連線後 DM 才會裁定。切換故事、切換資料源或連線中斷後都需要重新連線。</span>
+                </div>
+                <MagneticButton onClick={() => void connectCodex()} disabled={connecting}>
+                  {connecting ? '連線中…' : `連線 ${dmLabel}`}
+                </MagneticButton>
+              </div>
+            )}
+            {error && (
+              <div className="error-banner" role="alert">
+                <XCircle size={19} />
+                <div><strong>操作中斷</strong><span>{error}</span></div>
+                {retryTurnRef.current && !needsCodexConnect && !loading && (
+                  <button type="button" className="retry-turn" onClick={retryLastTurn}><ArrowClockwise />重試上一步</button>
+                )}
+                <button type="button" onClick={() => setError('')}><XCircle /></button>
+              </div>
+            )}
+
+            <section className="scene-strip" aria-label="場景與遊戲狀態">
+              <MapTrifold size={21} />
+              <div>
+                <span>目前場景</span>
+                <strong>{campaign.scene}</strong>
+              </div>
+              <div className={`game-state ${campaign.combat?.active ? 'game-state-combat' : 'game-state-exploration'}`}>
+                {campaign.combat?.active ? <Sword size={17} weight="fill" /> : <Compass size={17} />}
+                <div>
+                  <span>遊戲狀態</span>
+                  <strong>
+                    {campaign.combat?.active
+                      ? `戰鬥中${currentCombatant ? `・${currentCombatant.name} 行動` : ''}`
+                      : '探索中'}
+                  </strong>
+                </div>
+              </div>
+              <div className="round-mark">
+                <span>{campaign.combat?.active ? '戰鬥輪' : '探索回合'}</span>
+                <strong>{String(campaign.combat?.active ? campaign.combat.round : campaign.round).padStart(2, '0')}</strong>
+              </div>
+            </section>
+
+            <section className="objective objective-preamble" aria-label="任務摘要">
+              <p className="eyebrow">任務摘要</p>
+              <strong>{campaign.objective}</strong>
+              <p className="objective-context">{campaign.objectiveContext}</p>
+              <div className="objective-stakes">
+                <span>風險</span>
+                <p>{campaign.stakes}</p>
+              </div>
+              <small>
+                {campaign.combat?.active
+                  ? `戰鬥第 ${campaign.combat.round} 輪（戰鬥操作在對話下方）`
+                  : '探索進行中'}
+              </small>
+            </section>
+          </div>
+
+          <div className={`story-workspace ${revisionOpen ? 'story-workspace-revision' : ''}`}>
+            <div className="story-workspace-main">
+              <StoryFeed story={campaign.story} players={campaign.players} loading={loading} viewer={viewer} />
+              <div className="story-revision-toggle-row">
+                <button
+                  type="button"
+                  className={`story-revision-toggle ${revisionOpen ? 'active' : ''}`}
+                  disabled={!latestDm || loading || revising}
+                  onClick={() => setRevisionOpen((open) => !open)}
+                >
+                  {revisionOpen ? '關閉敘事修正' : '修正上一則 DM 敘事'}
+                </button>
+              </div>
+            </div>
+            <StoryRevisionPanel
+              open={revisionOpen}
+              onClose={() => setRevisionOpen(false)}
+              loading={revising}
+              disabled={loading || needsCodexConnect || !latestDm}
+              disabledReason={needsCodexConnect ? `請先連線 ${dmLabel}` : !latestDm ? '尚無公開 DM 敘事' : undefined}
+              previousDraft={latestDm?.text || ''}
+              chat={revisionChat}
+              onSubmit={(note) => void submitStoryRevision(note)}
+            />
+          </div>
           {activeRequiredCheck && <DiceTray players={campaign.players} requiredCheck={activeRequiredCheck} onRoll={({ total }) => { if (spellRoll) void resolveSpellAttack(total); }} onRequiredRoll={(roll) => { if (spellRoll) { setSpellRoll(null); return; } if (campaign.requiredCheck) void advance({ checkRoll: { natural: roll.natural, success: roll.success } }); }} />}
-          {campaign.combat?.active && campaign.id && <section className="inline-combat"><div className="section-heading"><div><p className="eyebrow">戰鬥進行中</p><h2>先攻與回合操作</h2></div></div><CombatTracker campaignId={campaign.id} players={campaign.players} combat={campaign.combat} onView={setCampaign} onEnd={() => void endCombat()} /></section>}
-          <div className={`composer-grid party-${campaign.players.length}`}>{campaign.players.map((player) => <section className="player-console" key={player.id} aria-label={`${player.name}玩家操作區`}><CharacterPanel player={player} xp={campaign.xpProgress?.[player.id]} showStatHints={settings.showStatHints !== false} combatActive={campaign.combat?.active === true} pending={campaign.pending[player.id]} actionDisabled={loading || Boolean(activeRequiredCheck)} partySize={campaign.players.length} choices={(campaign.choices || []).filter((choice) => !choice.playerId || choice.playerId === player.id)} resourceSummary={player.spellcasting ? player.spellcasting.slots.map((slot) => `${slot.level}環 ${slot.current}/${slot.max}`).join('、') : player.resources.slice(0, 3).map((resource) => `${resource.name} ${resource.current}/${resource.max}`).join('、')} onSubmitAction={(id, text) => void submitAction(id, text)} onUnlockAction={(id) => void unlockAction(id)} spellTargets={[...campaign.players.map((entry) => ({ id: entry.id, name: entry.name, side: 'party' as const })), ...(campaign.combat?.active ? campaign.combat.combatants.filter((entry) => entry.side === 'enemy' && !entry.defeated).map((entry) => ({ id: entry.id, name: entry.name, side: 'enemy' as const })) : [])]} onResourceChange={(id, resourceId, delta) => void changeClassResource(id, resourceId, delta)} onCastSpell={(id, spell, asRitual, targetId) => void castSpell(id, spell, asRitual, targetId)} onRest={(id, type) => void rest(id, type)} onGeneratePortrait={generatePortrait} /></section>)}</div>
-        </div><aside className="table-rail"><section className="objective"><p className="eyebrow">任務摘要</p><strong>{campaign.objective}</strong><p className="objective-context">{campaign.objectiveContext}</p><div className="objective-stakes"><span>風險</span><p>{campaign.stakes}</p></div><small>{campaign.combat?.active ? `戰鬥第 ${campaign.combat.round} 輪（戰鬥操作已顯示於主畫面）` : '探索進行中'}</small></section></aside></motion.main>}
+          {campaign.combat?.active && campaign.id && (
+            <section className="inline-combat">
+              <div className="section-heading">
+                <div><p className="eyebrow">戰鬥進行中</p><h2>先攻與回合操作</h2></div>
+              </div>
+              <CombatTracker
+                campaignId={campaign.id}
+                players={campaign.players}
+                combat={campaign.combat}
+                onView={setCampaign}
+                onEnd={() => void endCombat()}
+                onCastSpell={(playerId, spell) => openSpellCast(playerId, spell)}
+              />
+            </section>
+          )}
+          <div className={`composer-grid party-${campaign.players.length}`}>
+            {campaign.players.map((player) => (
+              <section className="player-console" key={player.id} aria-label={`${player.name}玩家操作區`}>
+                <CharacterPanel
+                  player={player}
+                  xp={campaign.xpProgress?.[player.id]}
+                  showStatHints={settings.showStatHints !== false}
+                  combatActive={campaign.combat?.active === true}
+                  pending={campaign.pending[player.id]}
+                  actionDisabled={loading || Boolean(activeRequiredCheck)}
+                  partySize={campaign.players.length}
+                  choices={(campaign.choices || []).filter((choice) => !choice.playerId || choice.playerId === player.id)}
+                  resourceSummary={player.spellcasting
+                    ? player.spellcasting.slots.map((slot) => `${slot.level}環 ${slot.current}/${slot.max}`).join('、')
+                    : player.resources.slice(0, 3).map((resource) => `${resource.name} ${resource.current}/${resource.max}`).join('、')}
+                  onSubmitAction={(id, text) => void submitAction(id, text)}
+                  onUnlockAction={(id) => void unlockAction(id)}
+                  spellTargets={[
+                    ...campaign.players.map((entry) => ({ id: entry.id, name: entry.name, side: 'party' as const })),
+                    ...(campaign.combat?.active
+                      ? campaign.combat.combatants
+                        .filter((entry) => entry.side === 'enemy' && !entry.defeated)
+                        .map((entry) => ({ id: entry.id, name: entry.name, side: 'enemy' as const }))
+                      : []),
+                  ]}
+                  onResourceChange={(id, resourceId, delta) => void changeClassResource(id, resourceId, delta)}
+                  onCastSpell={(id, spell, asRitual, targetId) => openSpellCast(id, spell, asRitual, targetId)}
+                  onRest={(id, type) => void rest(id, type)}
+                  onGeneratePortrait={generatePortrait}
+                />
+              </section>
+            ))}
+          </div>
+          {spellModal && (() => {
+            const caster = campaign.players.find((p) => p.id === spellModal.playerId);
+            if (!caster) return null;
+            const targets = [
+              ...campaign.players.map((entry) => ({ id: entry.id, name: entry.name, side: 'party' as const })),
+              ...(campaign.combat?.active
+                ? campaign.combat.combatants.filter((entry) => entry.side === 'enemy' && !entry.defeated).map((entry) => ({ id: entry.id, name: entry.name, side: 'enemy' as const }))
+                : []),
+            ];
+            return (
+              <SpellCastModal
+                open
+                player={caster}
+                spell={spellModal.spell}
+                spellTargets={targets}
+                onClose={() => setSpellModal(null)}
+                onCast={(spell, asRitual, targetId) => void castSpell(spellModal.playerId, spell, asRitual, targetId)}
+              />
+            );
+          })()}
+          </div>
+        </motion.main>
+        )}
         {page === 'characters' && <motion.div key="characters" initial={{ opacity: 0 }} animate={{ opacity: 1 }}><Suspense fallback={<main className="single-page lazy-page-loading" role="status"><span>正在載入角色成長資料…</span></main>}><CharacterManager players={campaign.players} xpProgress={campaign.xpProgress} showStatHints={settings.showStatHints !== false} onLevelUp={(playerId, className) => { if (!campaign.id) return; api.levelUp(campaign.id, playerId, className).then(setCampaign).catch((caught) => setError(message(caught))); }} onSpendAbilityPoint={(playerId, ability: AbilityKey) => { if (!campaign.id) return; api.spendAbilityPoint(campaign.id, playerId, ability).then(setCampaign).catch((caught) => setError(message(caught))); }} onSetPreparedSpells={(playerId, spellIds) => { if (!campaign.id) return; api.setPreparedSpells(campaign.id, playerId, spellIds).then(setCampaign).catch((caught) => setError(message(caught))); }} onSaveProfile={(playerId, patch) => { if (!campaign.id) return; api.patchPlayer(campaign.id, playerId, patch).then((view) => { setCampaign(view); setNotice('角色配置已儲存。'); }).catch((caught) => setError(message(caught))); }} onGeneratePortrait={generatePortrait} /></Suspense></motion.div>}
         {page === 'journal' && <motion.main key="journal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="single-page"><div className="page-intro"><p className="eyebrow">戰役記憶</p><h2>{campaign.title}</h2><p>公開與私密訊息都保存在伺服器戰役資料庫與匯出檔中。</p></div><div className="journal-list">{visibleStory.map((entry, index) => <article key={entry.id} className={entry.audience && entry.audience !== 'public' ? 'journal-private' : ''}><span>{String(index + 1).padStart(2, '0')}</span><div><small>{entry.time}／{speakerLabel(entry)}</small><p>{entry.text}</p></div></article>)}</div></motion.main>}
         {page === 'settings' && <motion.main key="settings" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="single-page settings-page"><div className="page-intro"><p className="eyebrow">戰役設定</p><h2>地城主與戰役</h2><p>設定會即時保存在伺服器上的這個戰役；匯入預設不切換。</p></div>
           <section className="settings-row"><div><strong>示範 DM</strong><span>完全不呼叫模型。</span></div><button type="button" className={`switch ${demoMode ? 'switch-on' : ''}`} onClick={() => setDemoMode((value) => !value)}><i /></button></section>
-          <section className="settings-row model-selector"><div><strong>Codex 模型</strong><span>只影響之後的新 DM 請求；目前進度與既有訊息不會改變。</span></div><select value={settings.selectedModel || ''} onChange={(event) => updateSettings({ selectedModel: event.target.value })}>{(status?.models || [{ id: '', label: 'Codex 預設（沿用目前設定）' }]).map((model) => <option key={model.id || 'default'} value={model.id}>{model.label}</option>)}</select></section>
-          <section className="settings-row model-selector"><div><strong>推理強度（effort）</strong><span>越高越深思但回應越慢；只影響之後的新 DM 請求。</span></div><select value={settings.selectedEffort || ''} onChange={(event) => updateSettings({ selectedEffort: event.target.value })}>{(status?.efforts || [{ id: '', label: 'Codex 預設推理強度' }]).map((effort) => <option key={effort.id || 'default'} value={effort.id}>{effort.label}</option>)}</select></section>
-          <section className="settings-row"><div><strong>Codex CLI</strong><span>{status?.connected ? `已登入／${status.model}` : status?.message || '正在檢查'}</span></div><ShieldWarning size={22} /></section>
+          <section className="settings-row model-selector"><div><strong>DM 資料源</strong><span>Codex（ChatGPT 登入）或 Grok（`grok login`／XAI_API_KEY）。切換後請重新連線該故事。</span></div><select value={activeDmProvider} onChange={(event) => { updateSettings({ dmProvider: event.target.value, selectedModel: '', selectedEffort: '' }); setCodexConn(null); }}>{(status?.dmProviders?.length ? status.dmProviders : [{ id: 'codex', label: 'Codex CLI', connected: true }]).map((p) => <option key={p.id} value={p.id}>{p.label}{'connected' in p && !p.connected ? '（未就緒）' : ''}</option>)}</select></section>
+          <section className="settings-row model-selector"><div><strong>模型</strong><span>只影響之後的新 DM 請求；目前進度與既有訊息不會改變。</span></div><select value={settings.selectedModel || ''} onChange={(event) => updateSettings({ selectedModel: event.target.value })}>{(activeDmInfo?.models || status?.models || [{ id: '', label: '預設模型' }]).map((model) => <option key={model.id || 'default'} value={model.id}>{model.label}</option>)}</select></section>
+          <section className="settings-row model-selector"><div><strong>推理強度（effort）</strong><span>越高越深思但回應越慢；Grok 可能僅有預設。</span></div><select value={settings.selectedEffort || ''} onChange={(event) => updateSettings({ selectedEffort: event.target.value })}>{(activeDmInfo?.efforts || status?.efforts || [{ id: '', label: '預設推理強度' }]).map((effort) => <option key={effort.id || 'default'} value={effort.id}>{effort.label}</option>)}</select></section>
+          <section className="settings-row"><div><strong>{dmLabel} 狀態</strong><span>{(activeDmInfo?.connected ?? status?.connected) ? `已就緒／${activeDmInfo?.model || status?.model || '—'}` : activeDmInfo?.message || status?.message || '正在檢查'}</span></div><ShieldWarning size={22} /></section>
           <section className="settings-row model-selector"><div><strong>圖片生成引擎</strong><span>場景圖與角色肖像使用的後端；本地選項需先啟動 SD Forge（--api）。</span></div><select value={settings.imageBackend || status?.imageBackend || 'codex'} onChange={(event) => updateSettings({ imageBackend: event.target.value })}>{(status?.imageBackends || [{ id: 'codex', label: status?.imageModel || 'Codex $imagegen' }]).map((backend) => <option key={backend.id} value={backend.id}>{backend.label}</option>)}</select></section>
           <section className="settings-row"><div><strong>每回合自動生成場景圖</strong><span>開啟後，每次 DM 完成公開敘事便自動生成並加入圖庫。</span></div><button type="button" className={`switch ${settings.autoSceneImages ? 'switch-on' : ''}`} onClick={() => updateSettings({ autoSceneImages: !settings.autoSceneImages })}><i /></button></section>
           <section className="settings-row"><div><strong>語音朗讀 DM 敘事</strong><span>使用本地 GPT-SoVITS 朗讀每回合公開敘事；需先啟動 scripts/sovits.sh 並設定聲線。</span></div><button type="button" role="switch" aria-checked={Boolean(settings.ttsEnabled)} aria-label="語音朗讀 DM 敘事" className={`switch ${settings.ttsEnabled ? 'switch-on' : ''}`} onClick={() => updateSettings({ ttsEnabled: !settings.ttsEnabled })}><i /></button></section>

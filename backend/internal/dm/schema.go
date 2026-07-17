@@ -18,11 +18,13 @@ type Check struct {
 	Reason    string `json:"reason"`
 }
 
-// Effect is a damage/healing/condition change to sync onto a character sheet.
+// Effect is a narrative sheet change. Severity is model-facing; Amount is
+// filled by NormalizeTurn from the service-owned severity table.
 type Effect struct {
 	TargetID  string `json:"targetId"`
 	Kind      string `json:"kind"`
-	Amount    int    `json:"amount"`
+	Severity  string `json:"severity,omitempty"` // light | moderate | heavy (damage/healing)
+	Amount    int    `json:"amount"`             // service-computed HP delta
 	Condition string `json:"condition"`
 	Reason    string `json:"reason"`
 }
@@ -64,10 +66,12 @@ type Choice struct {
 	PlayerID string `json:"playerId"`
 }
 
-// ExperienceAward grants XP to a player.
+// ExperienceAward grants XP to a player. Tier is model-facing; Amount is
+// filled by NormalizeTurn from the service-owned milestone table.
 type ExperienceAward struct {
 	PlayerID string `json:"playerId"`
-	Amount   int    `json:"amount"`
+	Tier     string `json:"tier,omitempty"` // minor | clue | social | quest
+	Amount   int    `json:"amount"`         // service-computed XP
 	Reason   string `json:"reason"`
 }
 
@@ -220,9 +224,12 @@ func validateDMTurn(raw json.RawMessage) (*Turn, error) {
 			if !playerIDPattern.MatchString(targetID) || !(kind == "damage" || kind == "healing" || kind == "condition") || !reasonOK {
 				continue
 			}
+			sev := strings.ToLower(strings.TrimSpace(strOr(get(e, "severity"), "")))
 			turn.Effects = append(turn.Effects, Effect{
 				TargetID:  targetID,
 				Kind:      kind,
+				Severity:  sev,
+				// Amount may be present from legacy models; NormalizeTurn overwrites it.
 				Amount:    floorClampInt(numOr(get(e, "amount"), 0), 0, 500),
 				Condition: jsSlice(strOr(get(e, "condition"), ""), 40),
 				Reason:    jsSlice(reason, 160),
@@ -282,14 +289,23 @@ func validateDMTurn(raw json.RawMessage) (*Turn, error) {
 	if arr, ok := asSlice(v["experienceAwards"]); ok {
 		for _, a := range arr {
 			playerID, _ := get(a, "playerId").(string)
-			amount, amountOK := get(a, "amount").(float64)
 			reason, reasonOK := get(a, "reason").(string)
-			if !playerIDPattern.MatchString(playerID) || !amountOK || math.IsInf(amount, 0) || math.IsNaN(amount) || !reasonOK {
+			if !playerIDPattern.MatchString(playerID) || !reasonOK {
+				continue
+			}
+			tier := strings.ToLower(strings.TrimSpace(strOr(get(a, "tier"), "")))
+			// Legacy models may still send amount without tier.
+			amount := 0
+			if rawAmt, ok := get(a, "amount").(float64); ok && !math.IsInf(rawAmt, 0) && !math.IsNaN(rawAmt) {
+				amount = floorClampInt(rawAmt, 0, 10000)
+			}
+			if tier == "" && amount <= 0 {
 				continue
 			}
 			turn.ExperienceAwards = append(turn.ExperienceAwards, ExperienceAward{
 				PlayerID: playerID,
-				Amount:   floorClampInt(amount, 0, 10000),
+				Tier:     tier,
+				Amount:   amount,
 				Reason:   jsSlice(reason, 200),
 			})
 			if len(turn.ExperienceAwards) == 4 {

@@ -15,7 +15,8 @@ interface CharacterPanelProps {
   combatActive?: boolean;
   onResourceChange: (id: PlayerCharacter['id'], resourceId: string, delta: number) => void;
   spellTargets: Array<{ id: string; name: string; side: 'party' | 'enemy' }>;
-  onCastSpell: (id: PlayerCharacter['id'], spell: CharacterSpell, asRitual: boolean, targetId?: string) => void;
+  /** Opens cast UI (modal); ritual/target are chosen there. */
+  onCastSpell: (id: PlayerCharacter['id'], spell: CharacterSpell, asRitual?: boolean, targetId?: string) => void;
   onRest: (id: PlayerCharacter['id'], type: RestType) => void;
   onGeneratePortrait: (player: PlayerCharacter, appearance: string) => Promise<void>;
   pending?: string;
@@ -44,9 +45,6 @@ function signed(value: number) {
 export function CharacterPanel({ player, xp, showStatHints = true, combatActive = false, spellTargets, onResourceChange, onCastSpell, onRest, onGeneratePortrait, pending, actionDisabled, partySize, choices, resourceSummary, onSubmitAction, onUnlockAction }: CharacterPanelProps) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [tab, setTab] = useState<QuickTab>('action');
-  const [spellTarget, setSpellTarget] = useState<Record<string, string>>({});
-  // Free-text location for spells cast at the scene rather than a combatant.
-  const [sceneTarget, setSceneTarget] = useState<Record<string, string>>({});
   const [appearance, setAppearance] = useState(player.appearance || '');
   const [portraitLoading, setPortraitLoading] = useState(false);
   const hpRatio = Math.max(0, Math.min(100, (player.hp / player.maxHp) * 100));
@@ -90,26 +88,47 @@ export function CharacterPanel({ player, xp, showStatHints = true, combatActive 
           {player.spellcasting ? <>
             <div className="quick-casting"><StatHint hint="spellAbility" enabled={showStatHints}>施法：{abilityLabels[player.spellcasting.ability]}</StatHint><StatHint hint="spellAttack" enabled={showStatHints}>攻擊 {signed(player.spellcasting.attackBonus)}</StatHint><StatHint hint="spellSaveDc" enabled={showStatHints}>DC {player.spellcasting.saveDc}</StatHint></div>
             <div className="quick-slots">{player.spellcasting.slots.map((slot) => <StatHint key={slot.level} hint="spellSlots" enabled={showStatHints}><b>{slot.level} 環 {slot.current}/{slot.max}</b></StatHint>)}{player.concentration && <b>專注：{player.concentration}</b>}</div>
-            <div className="quick-spells">{player.spellcasting.spells.map((spell) => {
-              const canCast = spell.level === 0 || spell.prepared || spell.alwaysPrepared;
-              const canRitual = spell.ritual && (spell.prepared || spell.inSpellbook);
-              const hasFreeUse = Boolean(spell.freeUseResourceId && player.resources.some((entry) => entry.id === spell.freeUseResourceId && entry.current > 0));
-              const hasSlot = spell.level === 0 || hasFreeUse || Boolean(player.spellcasting?.slots.some((slot) => slot.level >= spell.level && slot.current > 0));
-              const targets = spell.effect?.target === 'self' || /自身/.test(spell.range)
-                ? spellTargets.filter((entry) => entry.id === player.id)
-                : spell.effect?.target === 'ally'
-                  ? spellTargets.filter((entry) => entry.side === 'party')
-                  : spell.effect?.target === 'creature'
-                    ? spellTargets.filter((entry) => entry.side === 'enemy')
-                    : [...spellTargets, { id: 'scene', name: '目前場景／指定位置', side: 'party' as const }];
-              const selectedTarget = spellTarget[spell.id] || ((spell.effect?.target === 'self' || /自身/.test(spell.range)) ? player.id : undefined);
-              const rollRule = spell.effect?.attackRoll ? '・施放後擲法術攻擊 d20' : spell.effect?.saveAbility ? `・目標進行${abilityLabels[spell.effect.saveAbility]}豁免` : spell.effect?.automaticHit ? '・自動命中' : '';
-              // Scene-target spells let the player type the exact spot; empty
-              // text falls back to the generic "目前場景" marker.
-              const isSceneTarget = selectedTarget === 'scene';
-              const resolvedTarget = isSceneTarget ? (sceneTarget[spell.id]?.trim() || 'scene') : selectedTarget;
-              return <article key={spell.id} className={!canCast ? 'disabled' : ''}><div><strong>{spell.name}</strong><small>{spell.level === 0 ? '戲法' : `${spell.level} 環`}・{spell.castingTime}・{spell.range}{rollRule}{!canCast ? '・未準備' : ''}</small><p>{spell.description}</p></div><div><select aria-label={`${spell.name}目標`} value={selectedTarget || ''} onChange={(event) => setSpellTarget((current) => ({ ...current, [spell.id]: event.target.value }))}><option value="" disabled>必須指定目標</option>{targets.map((target) => <option key={target.id} value={target.id}>{target.name}</option>)}</select>{isSceneTarget && <input className="spell-scene-target" aria-label={`${spell.name}施法位置`} placeholder="輸入施法位置／區域（例：洞穴深處的祭壇）" value={sceneTarget[spell.id] || ''} onChange={(event) => setSceneTarget((current) => ({ ...current, [spell.id]: event.target.value }))} />}{canCast && <button type="button" disabled={!hasSlot || !selectedTarget} onClick={() => onCastSpell(player.id, spell, false, resolvedTarget)}>施放並鎖定行動</button>}{canRitual && <button type="button" className="quiet" disabled={!selectedTarget} onClick={() => onCastSpell(player.id, spell, true, resolvedTarget)}>儀式並鎖定</button>}</div></article>;
-            })}</div>
+            <p className="quick-spell-hint">點選法術開啟施法面板，再選目標／儀式後確認。</p>
+            <div className="quick-spells">
+              {player.spellcasting.spells.map((spell) => {
+                const canCast = spell.level === 0 || spell.prepared || spell.alwaysPrepared;
+                const hasFreeUse = Boolean(spell.freeUseResourceId && player.resources.some((entry) => entry.id === spell.freeUseResourceId && entry.current > 0));
+                const hasSlot = spell.level === 0 || hasFreeUse || Boolean(player.spellcasting?.slots.some((slot) => slot.level >= spell.level && slot.current > 0));
+                const rollRule = spell.effect?.attackRoll
+                  ? '施放後擲法術攻擊'
+                  : spell.effect?.saveAbility
+                    ? `目標${abilityLabels[spell.effect.saveAbility]}豁免`
+                    : spell.effect?.automaticHit
+                      ? '自動命中'
+                      : '';
+                const levelLabel = spell.level === 0 ? '戲法' : `${spell.level} 環`;
+                return (
+                  <button
+                    key={spell.id}
+                    type="button"
+                    className={`quick-spell-card${!canCast ? ' disabled' : ''}${canCast && !hasSlot ? ' no-slot' : ''}`}
+                    disabled={!canCast}
+                    onClick={() => onCastSpell(player.id, spell)}
+                  >
+                    <span className="quick-spell-level">{levelLabel}</span>
+                    <span className="quick-spell-body">
+                      <strong>{spell.name}</strong>
+                      <small>
+                        {spell.castingTime}・{spell.range}
+                        {rollRule ? `・${rollRule}` : ''}
+                        {!canCast ? '・未準備' : ''}
+                        {spell.ritual ? '・可儀式' : ''}
+                      </small>
+                      <em>{spell.description}</em>
+                    </span>
+                    <span className="quick-spell-cta">
+                      <MagicWand size={14} weight="fill" />
+                      施放
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </> : <p className="quick-empty">這名角色沒有法術。</p>}
           {player.resources.length > 0 && <div className="quick-resources">{player.resources.map((resource) => <div key={resource.id}><span><strong>{resource.name}</strong><small>{resource.description}</small></span><b>{resource.current}/{resource.max}</b><button type="button" disabled={resource.current === 0} onClick={() => onResourceChange(player.id, resource.id, -1)}>使用</button></div>)}</div>}
         </>}

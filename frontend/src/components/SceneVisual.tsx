@@ -15,6 +15,8 @@ interface SceneVisualProps {
 }
 
 export function SceneVisual({ image, images = [], scene, loading, error, canGenerate, onGenerate, onSelect }: SceneVisualProps) {
+  const gallery = images.length > 0 ? images : image ? [image] : [];
+
   return (
     <section className="scene-visual" aria-label="場景插圖">
       <AnimatePresence mode="wait">
@@ -56,7 +58,41 @@ export function SceneVisual({ image, images = [], scene, loading, error, canGene
           {image ? '重新生成' : '生成場景'}
         </MagneticButton>
       </div>
-      {images.length > 1 && <div className="scene-gallery" aria-label="過去場景圖片">{images.map((entry, index) => <button type="button" key={`${entry.url}-${index}`} className={entry.url === image?.url ? 'selected' : ''} onClick={() => onSelect(entry)}><img src={entry.url} alt={`${entry.scene}，${entry.createdAt}`} /><span>{entry.scene}</span></button>)}</div>}
+
+      {gallery.length > 1 && (
+        <div className="scene-gallery" aria-label="過去場景圖片">
+          {gallery.map((entry, index) => {
+            const selected = entry.url === image?.url;
+            const label = entry.scene || `場景 ${index + 1}`;
+            return (
+              <div
+                key={`${entry.url}-${index}`}
+                className={`scene-gallery-item${selected ? ' selected' : ''}`}
+              >
+                <button
+                  type="button"
+                  className={selected ? 'selected' : undefined}
+                  onClick={() => onSelect(entry)}
+                  title={`${label}${entry.createdAt ? ` · ${entry.createdAt}` : ''}`}
+                  aria-pressed={selected}
+                >
+                  <span className="scene-gallery-thumb" aria-hidden="true">
+                    {entry.url ? (
+                      <img src={entry.url} alt="" loading="lazy" decoding="async" />
+                    ) : (
+                      <span className="scene-gallery-thumb-empty">
+                        <ImageSquare size={18} />
+                      </span>
+                    )}
+                  </span>
+                  <span className="scene-gallery-label">{label}</span>
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {error && <p className="image-error">{error}</p>}
       {!canGenerate && !error && <p className="image-helper">先以 codex login 登入，或在設定改用本地 SD Forge，即可生成圖片。</p>}
     </section>

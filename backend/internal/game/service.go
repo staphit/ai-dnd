@@ -488,3 +488,14 @@ func (s *Service) AppendStory(id string, entries []store.StoryRow) error {
 	}
 	return s.store.AppendStoryEntries(id, entries)
 }
+
+// ReplaceLastPublicDM rewrites the most recent public DM narration without
+// advancing the round or changing mechanical state.
+func (s *Service) ReplaceLastPublicDM(id, text string) error {
+	unlock := s.Lock(id)
+	defer unlock()
+	if _, err := s.mustCampaign(id); err != nil {
+		return err
+	}
+	return s.store.ReplaceLastPublicDMText(id, text)
+}

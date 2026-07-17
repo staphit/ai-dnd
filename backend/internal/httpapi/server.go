@@ -18,6 +18,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"dndduet/internal/apperr"
+	"dndduet/internal/dm"
 	"dndduet/internal/game"
 	"dndduet/internal/images"
 	"dndduet/internal/memory"
@@ -30,7 +31,13 @@ const maxRequestBody = 1_000_000
 
 // Server holds the backend dependencies.
 type Server struct {
-	Provider    provider.API
+	// Provider is the default DM backend (also in Providers[DefaultDMProvider]).
+	Provider provider.API
+	// Providers maps dmProvider ids ("codex", "grok") for runtime UI switching.
+	Providers map[string]provider.API
+	// DefaultDMProvider is used when a request omits dmProvider (DM_PROVIDER env).
+	DefaultDMProvider string
+
 	Store       *store.Store
 	WebDist     string // absolute path to the built frontend
 	SchemaPath  string // absolute path to the DM output schema
@@ -40,8 +47,7 @@ type Server struct {
 	// AI enemy turns (mechanical fallback targeting only).
 	TacticsSchemaPath string
 
-	// ImageRenderers maps a backend id ("codex", "local") to its renderer; the
-	// request body's imageBackend field picks one per generation.
+	// ImageRenderers maps a backend id ("codex", "local", "grok") to its renderer.
 	ImageRenderers map[string]images.Renderer
 	// DefaultImageBackend is used when a request omits imageBackend (IMAGE_BACKEND).
 	DefaultImageBackend string
@@ -61,6 +67,39 @@ type Server struct {
 	// Game orchestrates server-authoritative campaign state (characters,
 	// combat, story journal) on top of Store.
 	Game *game.Service
+
+	// Prompt tracks what was already sent on the live Codex thread so subsequent
+	// turns can omit the full system preamble. Reset on Connect. Nil disables
+	// compaction (always full prompt). Only used for multi-turn thread providers.
+	Prompt *dm.PromptSession
+}
+
+// pickDM resolves the DM provider for a request. Unknown ids fall back to default.
+func (s *Server) pickDM(requested string) (id string, api provider.API) {
+	id = strings.ToLower(strings.TrimSpace(requested))
+	if id == "xai" {
+		id = "grok"
+	}
+	if id == "" {
+		id = strings.ToLower(strings.TrimSpace(s.DefaultDMProvider))
+	}
+	if id == "" {
+		id = "codex"
+	}
+	if s.Providers != nil {
+		if p, ok := s.Providers[id]; ok && p != nil {
+			return id, p
+		}
+	}
+	if s.Provider != nil {
+		return id, s.Provider
+	}
+	for k, p := range s.Providers {
+		if p != nil {
+			return k, p
+		}
+	}
+	return id, nil
 }
 
 // imageGateMinGap is the minimum spacing between image generations.
@@ -97,7 +136,7 @@ func (g *imageGate) release() {
 }
 
 // imageBackendOrder fixes the /api/status listing order.
-var imageBackendOrder = []string{"codex", "local", "local2"}
+var imageBackendOrder = []string{"codex", "grok", "local", "local2"}
 
 // imageBackendOptions lists the configured image backends for /api/status.
 func (s *Server) imageBackendOptions() []provider.ModelOption {
@@ -170,6 +209,9 @@ func (s *Server) Router() http.Handler {
 	r.Post("/api/dm", s.handleDm)
 	r.Post("/api/scene-image", s.handleSceneImage)
 	r.Post("/api/character-image", s.handleCharacterImage)
+	r.Delete("/api/generated/{filename}", s.handleDeleteGenerated)
+	r.Get("/api/images/meta", s.handleListImageMeta)
+	r.Post("/api/campaign/{id}/revise-story", s.handleReviseStory)
 	r.Post("/api/tts", s.handleTTS)
 	r.Get("/generated/*", s.serveGenerated)
 	r.NotFound(s.serveStatic)
@@ -223,8 +265,28 @@ type errorBody struct {
 }
 
 // writeErr writes {"error": ...} with the status carried by err (default def).
+// Always logs the error so operators can fix issues from server.log without
+// relying on the browser toast alone.
 func writeErr(w http.ResponseWriter, err error, def int) {
-	writeJSON(w, apperr.StatusOf(err, def), errorBody{Error: err.Error()})
+	status := apperr.StatusOf(err, def)
+	if err != nil {
+		log.Printf("[api] error status=%d: %v", status, err)
+	}
+	writeJSON(w, status, errorBody{Error: err.Error()})
+}
+
+// logHandlerErr records a handler failure with route context and an optional
+// fix hint (what to check / restart). Prefer this before writeErr when the
+// surrounding request state matters for diagnosis.
+func logHandlerErr(route string, err error, detail string) {
+	if err == nil {
+		return
+	}
+	if detail != "" {
+		log.Printf("[%s] failed: %v | %s", route, err, detail)
+		return
+	}
+	log.Printf("[%s] failed: %v", route, err)
 }
 
 // readJSONBody reads and parses the request body as a JSON object, enforcing the

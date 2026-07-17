@@ -5,6 +5,7 @@ import tailwindcss from '@tailwindcss/vite';
 export default defineConfig({
   root: '.',
   plugins: [react(), tailwindcss()],
+  assetsInclude: ['**/*.glb'],
   build: {
     outDir: '../web-dist',
     emptyOutDir: true,
@@ -12,9 +13,7 @@ export default defineConfig({
       output: {
         codeSplitting: {
           groups: [
-            // Keep the large three.js / react-three stack in its own async chunk
-            // (this group must precede the node_modules catch-all, else three is
-            // pulled into the eager vendor chunk and the DMTable lazy-load is moot).
+            // Geometric DMTable pulls three.js; keep it out of the eager vendor chunk.
             { name: 'three', test: /node_modules\/(three|@react-three)/ },
             { name: 'vendor', test: /node_modules/ },
           ],
@@ -25,6 +24,10 @@ export default defineConfig({
   server: {
     host: '127.0.0.1',
     port: 4317,
+    fs: {
+      // tokens.css lives at the monorepo root (Hallmark design system).
+      allow: ['..'],
+    },
     proxy: {
       '/api': 'http://127.0.0.1:4318',
       '/generated': 'http://127.0.0.1:4318',

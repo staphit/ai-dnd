@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowClockwise, Crosshair, Plus, Shield, Skull, Sword, X } from '@phosphor-icons/react';
-import type { Campaign, CombatState, PlayerCharacter } from '../types';
+import { ArrowClockwise, Crosshair, MagicWand, Plus, Shield, Skull, Sword, X } from '@phosphor-icons/react';
+import type { Campaign, CharacterSpell, CombatState, PlayerCharacter, PlayerId } from '../types';
 import { combatAttack, combatEndTurn, combatEnemyTurn, combatStart, type EnemySpec } from '../api';
 
 interface CombatTrackerProps {
@@ -11,15 +11,18 @@ interface CombatTrackerProps {
   onView: (view: Campaign) => void;
   // 結束戰鬥並敘述: the parent runs conclude + the DM narration turn.
   onEnd: () => void;
+  /** Open spell-cast modal for a party member (combat or exploration). */
+  onCastSpell?: (playerId: PlayerId, spell: CharacterSpell) => void;
 }
 
 const emptyEnemy: EnemySpec = { name: '骸骨守衛', ac: 13, hp: 13, initiativeBonus: 2, attackBonus: 4, damage: '1d6+2', damageType: '穿刺' };
 
-export function CombatTracker({ campaignId, players, combat, onView, onEnd }: CombatTrackerProps) {
+export function CombatTracker({ campaignId, players, combat, onView, onEnd, onCastSpell }: CombatTrackerProps) {
   const [enemies, setEnemies] = useState<EnemySpec[]>([]);
   const [draft, setDraft] = useState(emptyEnemy);
   const [targetId, setTargetId] = useState('');
   const [attackId, setAttackId] = useState('');
+  const [spellId, setSpellId] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [enemyIntent, setEnemyIntent] = useState('');
@@ -29,6 +32,10 @@ export function CombatTracker({ campaignId, players, combat, onView, onEnd }: Co
   const current = combat?.active ? combat.combatants[combat.turnIndex] : undefined;
   const currentPlayer = players.find((player) => player.id === current?.playerId);
   const availableAttacks = currentPlayer?.attacks || [];
+  const castableSpells = useMemo(() => {
+    const list = currentPlayer?.spellcasting?.spells || [];
+    return list.filter((spell) => spell.level === 0 || spell.prepared || spell.alwaysPrepared);
+  }, [currentPlayer]);
   const validTargets = useMemo(() => combat?.combatants.filter((entry) => !entry.defeated && entry.id !== current?.id && entry.side !== current?.side) || [], [combat, current]);
   const currentEconomy = current ? combat?.turnEconomy?.[current.id] || { actionUsed: false, bonusActionUsed: false, reactionUsed: false } : undefined;
   const enemyTurnKey = combat?.active && current?.side === 'enemy' && !current.defeated
@@ -137,9 +144,52 @@ export function CombatTracker({ campaignId, players, combat, onView, onEnd }: Co
           <button type="button" className="primary-action" onClick={enemyTurn} disabled={busy}><Skull />{busy ? '敵方行動結算中…' : '敵方行動'}</button>
         ) : (
           <>
-            {availableAttacks.length > 0 && <label>攻擊方式<select value={attackId || availableAttacks[0]?.id} onChange={(event) => setAttackId(event.target.value)}>{availableAttacks.map((entry) => <option key={entry.id} value={entry.id}>{entry.name}／命中 +{entry.attackBonus}／{entry.damage}</option>)}</select></label>}
-            <label>攻擊目標<select value={targetId} onChange={(event) => setTargetId(event.target.value)}>{validTargets.map((entry) => <option key={entry.id} value={entry.id}>{entry.name}（AC {entry.ac}）</option>)}</select></label>
-            <button type="button" className="primary-action" onClick={attack} disabled={busy || !validTargets.length || currentEconomy?.actionUsed}><Crosshair />攻擊（使用動作）</button>
+            {availableAttacks.length > 0 && (
+              <label>
+                攻擊方式
+                <select value={attackId || availableAttacks[0]?.id} onChange={(event) => setAttackId(event.target.value)}>
+                  {availableAttacks.map((entry) => (
+                    <option key={entry.id} value={entry.id}>{entry.name}／命中 +{entry.attackBonus}／{entry.damage}</option>
+                  ))}
+                </select>
+              </label>
+            )}
+            <label>
+              攻擊目標
+              <select value={targetId} onChange={(event) => setTargetId(event.target.value)}>
+                {validTargets.map((entry) => (
+                  <option key={entry.id} value={entry.id}>{entry.name}（AC {entry.ac}）</option>
+                ))}
+              </select>
+            </label>
+            <button type="button" className="primary-action" onClick={attack} disabled={busy || !validTargets.length || currentEconomy?.actionUsed}>
+              <Crosshair />攻擊（使用動作）
+            </button>
+            {onCastSpell && currentPlayer && castableSpells.length > 0 && (
+              <div className="combat-spell-cast">
+                <label>
+                  法術
+                  <select value={spellId || castableSpells[0]?.id} onChange={(event) => setSpellId(event.target.value)}>
+                    {castableSpells.map((spell) => (
+                      <option key={spell.id} value={spell.id}>
+                        {spell.name}（{spell.level === 0 ? '戲法' : `${spell.level} 環`}）
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button
+                  type="button"
+                  disabled={busy || currentEconomy?.actionUsed}
+                  onClick={() => {
+                    const id = spellId || castableSpells[0]?.id;
+                    const spell = castableSpells.find((entry) => entry.id === id);
+                    if (spell && currentPlayer) onCastSpell(currentPlayer.id, spell);
+                  }}
+                >
+                  <MagicWand />施放法術
+                </button>
+              </div>
+            )}
           </>
         )}
         <button type="button" onClick={endTurn} disabled={busy}><ArrowClockwise />結束回合</button>

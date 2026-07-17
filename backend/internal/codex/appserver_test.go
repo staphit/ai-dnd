@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -57,6 +59,47 @@ func TestAppServerClientImplementsAPI(t *testing.T) {
 	}
 	if got, _ := c.NormalizeModel("gpt-5.6-terra"); got != "gpt-5.6-terra" {
 		t.Errorf("AppServerClient should delegate NormalizeModel")
+	}
+	if c.story == nil || c.image == nil {
+		t.Fatal("AppServerClient must own both story and image AppServers")
+	}
+	if c.story.label != "story" || c.image.label != "image" {
+		t.Errorf("labels story=%q image=%q", c.story.label, c.image.label)
+	}
+}
+
+func TestRunImageTurnRequiresConsent(t *testing.T) {
+	a := NewAppServerLabeled("codex", "/tmp", "image")
+	_, err := a.RunImageTurn(context.Background(), "story1", "draw a dragon", time.Second)
+	if !errors.Is(err, provider.ErrNeedsConsent) {
+		t.Fatalf("want ErrNeedsConsent, got %v", err)
+	}
+}
+
+func TestPickImagePrefersNewestAfterCutoff(t *testing.T) {
+	dir := t.TempDir()
+	oldPath := filepath.Join(dir, "old.png")
+	newPath := filepath.Join(dir, "new.png")
+	if err := os.WriteFile(oldPath, []byte("old"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// Ensure distinct mtimes.
+	oldTime := time.Now().Add(-time.Hour)
+	if err := os.Chtimes(oldPath, oldTime, oldTime); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(newPath, []byte("new"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cutoff := time.Now().Add(-time.Minute)
+	got, ok := pickImage([]string{oldPath, newPath}, cutoff)
+	if !ok || got != newPath {
+		t.Fatalf("pickImage = %q ok=%v, want %q", got, ok, newPath)
+	}
+	// Zero cutoff picks newest overall.
+	got, ok = pickImage([]string{oldPath, newPath}, time.Time{})
+	if !ok || got != newPath {
+		t.Fatalf("pickImage zero cutoff = %q ok=%v", got, ok)
 	}
 }
 

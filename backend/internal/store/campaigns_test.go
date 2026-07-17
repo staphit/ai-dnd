@@ -7,7 +7,8 @@ import (
 
 func openTestStore(t *testing.T) *Store {
 	t.Helper()
-	s, err := Open(filepath.Join(t.TempDir(), "test.db"))
+	dir := t.TempDir()
+	s, err := Open(filepath.Join(dir, "test.db"), filepath.Join(dir, "images"))
 	if err != nil {
 		t.Fatalf("open store: %v", err)
 	}

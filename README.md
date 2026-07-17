@@ -8,7 +8,7 @@
 瀏覽器網站前後端分離：
 
 - `frontend/`：React／Vite 前端（UI 未變動）
-- `backend/`：Go 後端（`net/http` + chi），封裝 Codex CLI、DM 裁定、圖片生成，並以 SQLite（`campaign-data/dnd-duet.db`）保存生成的圖片
+- `backend/`：Go 後端（`net/http` + chi），封裝 Codex CLI、DM 裁定、圖片生成；生成圖存於本機 `generated-images/`（使用者刪除前會保留），敘事記憶在 SQLite（`campaign-data/dnd-duet.db`）
 - 後端提供 `/api/status`、`/api/dm`、`/api/scene-image`、`/api/character-image` 與 `/generated/<檔名>`，並在正式模式下同時服務已建置的前端
 
 需求：Go 1.24+、Node.js 20+，以及 Codex CLI。
@@ -96,11 +96,11 @@ PORT=4318
 
 `CODEX_MODEL` 留空時使用 Codex CLI 的預設模型。後端啟動 Codex 子程序時會移除 `OPENAI_API_KEY` 與 `CODEX_API_KEY`，確保走 ChatGPT 登入而不是 API 計費。
 
-DM 流程使用 `codex exec --ephemeral --sandbox read-only --output-schema`，回傳經 JSON Schema 約束的裁定結果。場景插圖明確呼叫 `$imagegen` 的內建工具；原圖先由 Codex 保存於個人 `generated_images`，後端驗證工作識別碼後把圖片位元組寫入 SQLite（`campaign-data/dnd-duet.db`），再由 `/generated/<檔名>` 服務。
+DM 流程使用 `codex exec --ephemeral --sandbox read-only --output-schema`，回傳經 JSON Schema 約束的裁定結果。場景插圖明確呼叫 `$imagegen` 的內建工具；原圖先由 Codex 保存於個人 `generated_images`，後端驗證工作識別碼後把圖片位元組寫入本機 `generated-images/`（可用 `DND_IMAGE_DIR` 覆寫），再由 `/generated/<檔名>` 服務。圖片會持久保存，直到使用者在 UI 刪除（`DELETE /api/generated/<檔名>`）。
 
 目前後端只監聽 `127.0.0.1`，不會直接暴露到區域網路。Codex 未安裝或未登入時，可在首頁切換示範 DM。
 
-圖片不會每回合自動生成。玩家按下「生成場景」後才會產生一張 3:2 場景圖並存入 SQLite；資料庫位於 `campaign-data/`，不會進入 Git 或 VSIX。文字與圖片都會計入目前 ChatGPT 方案的 Codex 使用限制，但不需要 OpenAI Platform API Key。
+圖片不會每回合自動生成（可在設定開啟自動生成）。玩家按下「生成場景」後會產生一張 3:2 場景圖並寫入 `generated-images/`（不進 Git）。文字與圖片都會計入目前 ChatGPT 方案的 Codex 使用限制，但不需要 OpenAI Platform API Key。
 
 模型選擇只套用在之後送出的 DM 回合，不會重新生成或修改既有故事。可用模型仍取決於目前帳號方案；未開放的模型會讓該次請求顯示錯誤。多戰役資料保存在 `dnd-duet-web-v2-vault`，第一次啟動只會複製舊存檔，不會刪除 `dnd-duet-web-v1`。匯入 JSON 預設只加入資料庫，不會自動切換目前戰役。
 

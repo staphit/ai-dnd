@@ -3,6 +3,7 @@ package store
 import (
 	"database/sql"
 	"errors"
+	"strings"
 )
 
 // CampaignRow is one campaigns table row. The JSON document columns (Choices,
@@ -244,6 +245,27 @@ func (s *Store) AppendStoryEntries(campaignID string, entries []StoryRow) error 
 		}
 	}
 	return tx.Commit()
+}
+
+// ReplaceLastPublicDMText rewrites the most recent public DM journal entry's text.
+// Used by story revision so mechanical state (round, HP, XP) is untouched.
+func (s *Store) ReplaceLastPublicDMText(campaignID, text string) error {
+	if campaignID == "" || strings.TrimSpace(text) == "" {
+		return errors.New("campaign id and text are required")
+	}
+	var seq int64
+	err := s.db.QueryRow(
+		`SELECT seq FROM story_entries
+		 WHERE campaign_id = ? AND speaker = 'dm' AND (audience = '' OR audience = 'public')
+		 ORDER BY seq DESC LIMIT 1`, campaignID).Scan(&seq)
+	if errors.Is(err, sql.ErrNoRows) {
+		return errors.New("no public DM entry to revise")
+	}
+	if err != nil {
+		return err
+	}
+	_, err = s.db.Exec(`UPDATE story_entries SET text = ? WHERE campaign_id = ? AND seq = ?`, text, campaignID, seq)
+	return err
 }
 
 // StoryTail returns the last limit journal entries, oldest first.

@@ -23,6 +23,56 @@ export interface StoryPreset {
   demoBeats: DemoBeat[];
 }
 
+/** Open-table custom story id — not in storyPresets; fields come from setup form. */
+export const CUSTOM_STORY_ID = 'custom';
+
+/** Seed applied when the party starts a custom (user-written) adventure. */
+export interface CustomStorySeed {
+  title: string;
+  genre: string;
+  summary: string;
+  chapter: string;
+  scene: string;
+  objective: string;
+  objectiveContext: string;
+  stakes: string;
+  opening: string;
+  /** Freeform brief the user wrote; kept in objectiveContext / opening as needed. */
+  brief: string;
+}
+
+export const customStoryInstructions = [
+  '用繁體中文寫下你想遊玩的冒險構想（不必是完整章回）。',
+  '建議寫清楚：世界與起點、主要衝突、第一個可執行目標、拖延／失敗的風險。',
+  '可加上關鍵 NPC、地標、已知線索與調性（恐怖／幽默／史詩等）。',
+  '開場敘事會當成 DM 的第一段公開描述；目標與風險會顯示在任務摘要。',
+  'DM 會依此即興推進，請勿要求替玩家擲骰，或假設角色擁有未建立的能力／資源。',
+].join('\n');
+
+export function buildCustomStorySeed(input: Partial<CustomStorySeed> & { title: string; brief: string }): CustomStorySeed {
+  const brief = input.brief.trim();
+  const title = input.title.trim() || '自訂冒險';
+  const scene = (input.scene || '').trim() || '冒險起點';
+  const objective = (input.objective || '').trim() || '依劇本構想推進眼前的危機';
+  const stakes = (input.stakes || '').trim() || '若拖延過久，構想中的威脅將進一步惡化。';
+  const opening = (input.opening || '').trim()
+    || `故事從這裡開始。\n\n${brief.slice(0, 800)}`;
+  const objectiveContext = (input.objectiveContext || '').trim()
+    || (brief.length > 0 ? brief.slice(0, 600) : '自訂劇本：依玩家構想推進。');
+  return {
+    title,
+    genre: (input.genre || '').trim() || '自訂',
+    summary: (input.summary || '').trim() || brief.slice(0, 120) || '玩家自訂的冒險構想。',
+    chapter: (input.chapter || '').trim() || '第一章／啟程',
+    scene,
+    objective,
+    objectiveContext,
+    stakes,
+    opening,
+    brief,
+  };
+}
+
 export const storyPresets: StoryPreset[] = [
   {
     id: 'ashen-crown',

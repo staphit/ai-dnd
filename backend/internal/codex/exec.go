@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"math"
 	"os"
 	"path/filepath"
@@ -220,6 +221,10 @@ func (c *Client) RunStructured(ctx context.Context, prompt string, opts provider
 	if timeout == 0 {
 		timeout = 180 * time.Second
 	}
+	// Exec is single-shot: fold system rules into the user prompt.
+	if sys := strings.TrimSpace(opts.SystemPrompt); sys != "" {
+		prompt = sys + "\n\n" + prompt
+	}
 	stdout, _, err := c.runProcess(ctx, args, prompt, timeout, execEnv())
 	if err != nil {
 		return nil, err
@@ -294,6 +299,101 @@ func findImages(dir string) ([]string, error) {
 
 var imageExtPattern = regexp.MustCompile(`(?i)\.(?:png|jpe?g|webp)$`)
 
+// codexGeneratedImagesRoot resolves ~/.codex/generated_images (or CODEX_HOME).
+func codexGeneratedImagesRoot() (string, error) {
+	codeHome := strings.TrimSpace(os.Getenv("CODEX_HOME"))
+	if codeHome == "" {
+		home, herr := os.UserHomeDir()
+		if herr != nil {
+			return "", herr
+		}
+		codeHome = filepath.Join(home, ".codex")
+	}
+	return filepath.EvalSymlinks(filepath.Join(codeHome, "generated_images"))
+}
+
+// locateGeneratedImage finds a generated image for threadID, preferring files
+// modified at or after notBefore. Used by both exec and app-server image paths.
+func locateGeneratedImage(threadID string, notBefore time.Time) (string, error) {
+	if threadID == "" || !threadIDPattern.MatchString(threadID) {
+		return "", errors.New("Codex CLI 沒有回報圖片工作識別碼")
+	}
+	allowedRoot, err := codexGeneratedImagesRoot()
+	if err != nil {
+		return "", err
+	}
+	sessionRoot, err := filepath.EvalSymlinks(filepath.Join(allowedRoot, threadID))
+	if err != nil {
+		// Thread folder may not exist yet; scan whole tree for recent images.
+		return newestImageUnder(allowedRoot, allowedRoot, notBefore)
+	}
+	if sessionRoot != allowedRoot && !strings.HasPrefix(sessionRoot, allowedRoot+string(filepath.Separator)) {
+		return "", errors.New("Codex 圖片輸出位於不允許的位置")
+	}
+	images, err := findImages(sessionRoot)
+	if err != nil {
+		return "", err
+	}
+	if path, ok := pickImage(images, notBefore); ok {
+		return filepath.EvalSymlinks(path)
+	}
+	// Long-lived image threads accumulate files; if nothing matched notBefore,
+	// take the newest file in the session folder (single-image turns).
+	if len(images) == 1 {
+		return filepath.EvalSymlinks(images[0])
+	}
+	if path, ok := pickImage(images, time.Time{}); ok {
+		return filepath.EvalSymlinks(path)
+	}
+	return "", errors.New("Codex imagegen 沒有產生圖片檔案")
+}
+
+// newestImageUnder walks root (must stay under allowedRoot) for the newest
+// image at or after notBefore.
+func newestImageUnder(root, allowedRoot string, notBefore time.Time) (string, error) {
+	images, err := findImages(root)
+	if err != nil {
+		return "", err
+	}
+	var filtered []string
+	for _, p := range images {
+		real, err := filepath.EvalSymlinks(p)
+		if err != nil {
+			continue
+		}
+		if real != allowedRoot && !strings.HasPrefix(real, allowedRoot+string(filepath.Separator)) {
+			continue
+		}
+		filtered = append(filtered, real)
+	}
+	if path, ok := pickImage(filtered, notBefore); ok {
+		return path, nil
+	}
+	return "", errors.New("Codex imagegen 沒有產生圖片檔案")
+}
+
+// pickImage returns the newest path among images, optionally requiring ModTime
+// >= notBefore when notBefore is non-zero.
+func pickImage(images []string, notBefore time.Time) (string, bool) {
+	var best string
+	var bestTime time.Time
+	for _, p := range images {
+		info, err := os.Stat(p)
+		if err != nil {
+			continue
+		}
+		mt := info.ModTime()
+		if !notBefore.IsZero() && mt.Before(notBefore) {
+			continue
+		}
+		if best == "" || mt.After(bestTime) {
+			best = p
+			bestTime = mt
+		}
+	}
+	return best, best != ""
+}
+
 // RunImageGeneration runs `codex exec --json`, locates the single generated
 // image inside Codex's generated_images directory and returns its real path.
 func (c *Client) RunImageGeneration(ctx context.Context, prompt string, opts provider.ImageOpts) (string, error) {
@@ -303,8 +403,10 @@ func (c *Client) RunImageGeneration(ctx context.Context, prompt string, opts pro
 	if timeout == 0 {
 		timeout = 420 * time.Second
 	}
+	log.Printf("[codex-exec-image] start timeout=%s cwd=%s promptLen=%d", timeout, opts.CWD, len(prompt))
 	stdout, _, err := c.runProcess(ctx, args, prompt, timeout, execEnv())
 	if err != nil {
+		log.Printf("[codex-exec-image] process failed: %v | tip: codex login；檢查 CODEX_CLI_PATH 與網路", err)
 		return "", err
 	}
 
@@ -317,38 +419,44 @@ func (c *Client) RunImageGeneration(ctx context.Context, prompt string, opts pro
 		}
 	}
 	if threadID == "" || !threadIDPattern.MatchString(threadID) {
+		log.Printf("[codex-exec-image] no thread_id in JSON events (lines=%d) | tip: codex 是否支援 image_gen／stdout 是否為 JSONL", len(events))
 		return "", errors.New("Codex CLI 沒有回報圖片工作識別碼")
 	}
 
-	codeHome := strings.TrimSpace(os.Getenv("CODEX_HOME"))
-	if codeHome == "" {
-		home, herr := os.UserHomeDir()
-		if herr != nil {
-			return "", herr
-		}
-		codeHome = filepath.Join(home, ".codex")
-	}
-	allowedRoot, err := filepath.EvalSymlinks(filepath.Join(codeHome, "generated_images"))
+	// Exec sessions write into a fresh thread folder; require exactly one image
+	// when the folder is brand-new (no notBefore filter).
+	allowedRoot, err := codexGeneratedImagesRoot()
 	if err != nil {
+		log.Printf("[codex-exec-image] generated_images root missing: %v | tip: 確認 CODEX_HOME 或 ~/.codex", err)
 		return "", err
 	}
 	sessionRoot, err := filepath.EvalSymlinks(filepath.Join(allowedRoot, threadID))
 	if err != nil {
+		log.Printf("[codex-exec-image] session dir missing thread=%s root=%s: %v", threadID, allowedRoot, err)
 		return "", err
 	}
 	if sessionRoot != allowedRoot && !strings.HasPrefix(sessionRoot, allowedRoot+string(filepath.Separator)) {
+		log.Printf("[codex-exec-image] path escape blocked session=%s root=%s", sessionRoot, allowedRoot)
 		return "", errors.New("Codex 圖片輸出位於不允許的位置")
 	}
-
 	images, err := findImages(sessionRoot)
 	if err != nil {
+		log.Printf("[codex-exec-image] walk session=%s: %v", sessionRoot, err)
 		return "", err
 	}
 	if len(images) != 1 {
 		if len(images) == 0 {
+			log.Printf("[codex-exec-image] zero images in %s | tip: 模型可能拒畫或工具未寫檔", sessionRoot)
 			return "", errors.New("Codex imagegen 沒有產生圖片檔案")
 		}
+		log.Printf("[codex-exec-image] expected 1 image, got %d in %s", len(images), sessionRoot)
 		return "", errors.New("Codex imagegen 產生了多張圖片，無法判斷要使用哪一張")
 	}
-	return filepath.EvalSymlinks(images[0])
+	out, err := filepath.EvalSymlinks(images[0])
+	if err != nil {
+		log.Printf("[codex-exec-image] eval symlink %s: %v", images[0], err)
+		return "", err
+	}
+	log.Printf("[codex-exec-image] ok path=%s", out)
+	return out, nil
 }

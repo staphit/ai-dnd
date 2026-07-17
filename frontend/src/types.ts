@@ -225,6 +225,8 @@ export interface CampaignSettings {
   storyId?: string;
   selectedModel?: string;
   selectedEffort?: string;
+  /** Storyteller backend: "codex" | "grok" (server DM_PROVIDER default when empty). */
+  dmProvider?: string;
   imageBackend?: string;
   forgeSettings?: ForgeSettings;
   fontScale?: number;
@@ -233,6 +235,16 @@ export interface CampaignSettings {
   ttsEnabled?: boolean;
   dismissedTips?: string[];
   sceneImages?: SceneImage[];
+}
+
+export interface DmProviderInfo {
+  id: string;
+  label: string;
+  connected: boolean;
+  model: string;
+  models?: Array<{ id: string; label: string }>;
+  efforts?: Array<{ id: string; label: string }>;
+  message?: string;
 }
 
 // Campaign mirrors the server View (backend/internal/game/service.go): every
@@ -281,6 +293,8 @@ export interface AiStatus {
   imageBackends?: Array<{ id: string; label: string }>;
   imageBackend?: string;
   message?: string;
+  dmProvider?: string;
+  dmProviders?: DmProviderInfo[];
 }
 
 export type Page = 'table' | 'characters' | 'journal' | 'settings';

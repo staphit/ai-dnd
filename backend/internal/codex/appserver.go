@@ -6,30 +6,37 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"os/exec"
+	"strings"
 	"sync"
 	"time"
 
 	"dndduet/internal/provider"
 )
 
-// AppServer keeps a single `codex app-server` process alive and runs
-// schema-constrained DM turns over its persistent JSON-RPC/stdio connection.
+// AppServer keeps a single `codex app-server` process alive and runs turns over
+// its persistent JSON-RPC/stdio connection.
 //
-// Per the "one story = one connection" model, the process holds exactly one
-// codex thread at a time, bound to the current story. Establishing or rebinding
-// that thread happens only through Connect, which the HTTP layer calls when the
-// player has explicitly consented — a turn for an unbound/dead connection
-// returns provider.ErrNeedsConsent instead of silently (re)connecting.
+// Each process holds exactly one codex thread at a time, bound to the current
+// story. Establishing or rebinding that thread happens only through Connect —
+// a turn for an unbound/dead connection returns provider.ErrNeedsConsent
+// instead of silently (re)connecting.
 //
-// mu serialises Connect and RunTurn so only one turn runs at a time (a single
-// local table). Response/notification routing is handled by a demultiplexer
-// (routeMu) so a turn only ever sees its own events — late events from a
-// timed-out or abandoned turn find no sink and are dropped.
+// A story may use up to two AppServer processes (see AppServerClient): one for
+// DM turns and one for GPT image generation, so image_gen cannot block the
+// story mutex.
+//
+// mu serialises Connect and turns on this process so only one turn runs at a
+// time. Response/notification routing is handled by a demultiplexer (routeMu)
+// so a turn only ever sees its own events — late events from a timed-out or
+// abandoned turn find no sink and are dropped.
 type AppServer struct {
 	command string
 	cwd     string
+	// label is a short role tag for logs ("story" / "image").
+	label string
 
 	// mu serialises Connect/RunTurn and guards stdin writes + cmd/stdin.
 	mu    sync.Mutex
@@ -62,7 +69,15 @@ type rpcMessage struct {
 
 // NewAppServer builds an AppServer wrapper (the process starts on first Connect).
 func NewAppServer(command, cwd string) *AppServer {
-	return &AppServer{command: command, cwd: cwd, pending: map[int]chan rpcMessage{}}
+	return NewAppServerLabeled(command, cwd, "story")
+}
+
+// NewAppServerLabeled is like NewAppServer but tags the process role for logs.
+func NewAppServerLabeled(command, cwd, label string) *AppServer {
+	if label == "" {
+		label = "story"
+	}
+	return &AppServer{command: command, cwd: cwd, label: label, pending: map[int]chan rpcMessage{}}
 }
 
 // ---------------------------------------------------------------------------
@@ -260,12 +275,16 @@ func (a *AppServer) ensureProcess() error {
 
 	go a.readLoop(stdout, gen)
 
-	if _, err := a.request(context.Background(), "initialize", map[string]any{"clientInfo": map[string]any{"name": "dnd-duet", "version": "0.1.0"}}, 30*time.Second); err != nil {
+	clientName := "dnd-duet"
+	if a.label != "" && a.label != "story" {
+		clientName = "dnd-duet-" + a.label
+	}
+	if _, err := a.request(context.Background(), "initialize", map[string]any{"clientInfo": map[string]any{"name": clientName, "version": "0.1.0"}}, 30*time.Second); err != nil {
 		_ = cmd.Process.Kill()
 		_ = cmd.Wait()
 		a.cmd = nil
 		a.stdin = nil
-		return fmt.Errorf("Codex app-server 初始化失敗：%w", err)
+		return fmt.Errorf("Codex app-server（%s）初始化失敗：%w", a.label, err)
 	}
 
 	a.stateMu.Lock()
@@ -324,6 +343,29 @@ func (a *AppServer) ConnectionState() provider.ConnState {
 // or dead connection, or a request for a different story than the one bound,
 // returns provider.ErrNeedsConsent.
 func (a *AppServer) RunTurn(ctx context.Context, storyID, prompt, model, effort, schemaJSON string, timeout time.Duration) (json.RawMessage, error) {
+	var schemaObj any
+	if err := json.Unmarshal([]byte(schemaJSON), &schemaObj); err != nil {
+		return nil, err
+	}
+	text, _, err := a.runTurn(ctx, storyID, prompt, model, effort, schemaObj, timeout, true)
+	if err != nil {
+		return nil, err
+	}
+	return json.RawMessage(text), nil
+}
+
+// RunImageTurn runs one unconstrained turn (no output schema) so the agent can
+// invoke image_gen. Empty assistant text is allowed; the caller locates the
+// image file via the returned thread id. Concurrent with story turns when run
+// on a separate AppServer process.
+func (a *AppServer) RunImageTurn(ctx context.Context, storyID, prompt string, timeout time.Duration) (threadID string, err error) {
+	_, threadID, err = a.runTurn(ctx, storyID, prompt, "", "", nil, timeout, false)
+	return threadID, err
+}
+
+// runTurn is the shared turn loop. When requireText is true an empty final
+// agent message is an error (DM turns). schemaObj nil omits outputSchema.
+func (a *AppServer) runTurn(ctx context.Context, storyID, prompt, model, effort string, schemaObj any, timeout time.Duration, requireText bool) (finalText, threadID string, err error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
@@ -332,20 +374,18 @@ func (a *AppServer) RunTurn(ctx context.Context, storyID, prompt, model, effort,
 	thread := a.threadID
 	a.stateMu.Unlock()
 	if !ready {
-		return nil, provider.ErrNeedsConsent
+		return "", "", provider.ErrNeedsConsent
 	}
 
-	var schemaObj any
-	if err := json.Unmarshal([]byte(schemaJSON), &schemaObj); err != nil {
-		return nil, err
-	}
 	params := map[string]any{
 		"threadId":       thread,
 		"input":          []any{map[string]any{"type": "text", "text": prompt}},
-		"outputSchema":   schemaObj,
 		"cwd":            a.cwd,
 		"sandboxPolicy":  readOnlySandbox,
 		"approvalPolicy": "never",
+	}
+	if schemaObj != nil {
+		params["outputSchema"] = schemaObj
 	}
 	if model != "" {
 		params["model"] = model
@@ -361,19 +401,22 @@ func (a *AppServer) RunTurn(ctx context.Context, storyID, prompt, model, effort,
 	defer a.clearSink(events)
 
 	if _, err := a.request(ctx, "turn/start", params, 30*time.Second); err != nil {
-		return nil, err
+		return "", "", err
 	}
 
 	if timeout == 0 {
-		timeout = 180 * time.Second
+		if requireText {
+			timeout = 180 * time.Second
+		} else {
+			timeout = 420 * time.Second
+		}
 	}
 	deadline := time.After(timeout)
-	var finalText string
 	for {
 		select {
 		case msg, ok := <-events:
 			if !ok {
-				return nil, errors.New("Codex app-server 連線已中斷")
+				return "", "", errors.New("Codex app-server 連線已中斷")
 			}
 			switch msg.Method {
 			case "item/completed":
@@ -395,25 +438,25 @@ func (a *AppServer) RunTurn(ctx context.Context, storyID, prompt, model, effort,
 				}
 				_ = json.Unmarshal(msg.Params, &pc)
 				if pc.Turn.Status == "failed" {
-					return nil, errors.New(appServerErrorMessage(pc.Turn.Error))
+					return "", "", errors.New(appServerErrorMessage(pc.Turn.Error))
 				}
-				if finalText == "" {
-					return nil, errors.New("Codex app-server 沒有回傳最終訊息")
+				if requireText && finalText == "" {
+					return "", "", errors.New("Codex app-server 沒有回傳最終訊息")
 				}
-				return json.RawMessage(finalText), nil
+				return finalText, thread, nil
 			case "error":
 				var pe struct {
 					Error json.RawMessage `json:"error"`
 				}
 				_ = json.Unmarshal(msg.Params, &pe)
-				return nil, errors.New(appServerErrorMessage(pe.Error))
+				return "", "", errors.New(appServerErrorMessage(pe.Error))
 			}
 		case <-ctx.Done():
 			a.interrupt(thread)
-			return nil, ctx.Err()
+			return "", "", ctx.Err()
 		case <-deadline:
 			a.interrupt(thread)
-			return nil, errors.New("Codex app-server 回應逾時")
+			return "", "", errors.New("Codex app-server 回應逾時")
 		}
 	}
 }
@@ -489,12 +532,19 @@ func (a *AppServer) Reset() error {
 func (a *AppServer) Close() error { return a.Reset() }
 
 // ---------------------------------------------------------------------------
-// AppServerClient adapts an AppServer to provider.API. It runs DM turns over the
-// persistent connection and delegates everything else (image generation, status,
-// model helpers) to the exec-based Client.
+// AppServerClient adapts AppServer processes to provider.API.
+//
+// Per story it owns at most two connections:
+//   - story: schema-constrained DM turns (primary consent binding)
+//   - image: unconstrained turns for GPT image_gen (optional; falls back to exec)
+//
+// The two processes have independent mutexes so image generation cannot block
+// story advancement. Status/model helpers and off-story structured calls still
+// use the embedded exec Client.
 type AppServerClient struct {
 	*Client
-	server *AppServer
+	story *AppServer
+	image *AppServer
 
 	schemaMu    sync.Mutex
 	schemaCache map[string][]byte
@@ -502,20 +552,42 @@ type AppServerClient struct {
 
 var _ provider.API = (*AppServerClient)(nil)
 
-// NewAppServerClient builds a persistent-connection provider. cwd is the working
-// directory passed to the app-server.
+// NewAppServerClient builds a dual-connection provider. cwd is the working
+// directory passed to both app-server processes.
 func NewAppServerClient(cwd string) *AppServerClient {
 	base := NewClient()
-	return &AppServerClient{Client: base, server: NewAppServer(base.Command, cwd), schemaCache: map[string][]byte{}}
+	return &AppServerClient{
+		Client:      base,
+		story:       NewAppServerLabeled(base.Command, cwd, "story"),
+		image:       NewAppServerLabeled(base.Command, cwd, "image"),
+		schemaCache: map[string][]byte{},
+	}
 }
 
-// Connect establishes the persistent connection bound to storyID (consent path).
+// Connect establishes the story connection (required) and a second image
+// connection for the same story (best-effort). Image connect failure does not
+// fail the overall Connect — GPT images then fall back to codex exec.
 func (c *AppServerClient) Connect(ctx context.Context, storyID string) error {
-	return c.server.Connect(ctx, storyID)
+	if err := c.story.Connect(ctx, storyID); err != nil {
+		return err
+	}
+	if err := c.image.Connect(ctx, storyID); err != nil {
+		// Keep story usable; image path will use exec or retry later.
+		log.Printf("[codex] image 連線失敗（故事仍可用，GPT 生圖改走 exec）：%v", err)
+		_ = c.image.Reset()
+		return nil
+	}
+	log.Printf("[codex] story+image 雙連線已就緒（story=%s）", storyID)
+	return nil
 }
 
-// ConnectionState reports the persistent connection's binding.
-func (c *AppServerClient) ConnectionState() provider.ConnState { return c.server.ConnectionState() }
+// ConnectionState reports the story (DM) connection binding used for consent.
+func (c *AppServerClient) ConnectionState() provider.ConnState { return c.story.ConnectionState() }
+
+// ImageConnectionState reports the dedicated image connection, if any.
+func (c *AppServerClient) ImageConnectionState() provider.ConnState {
+	return c.image.ConnectionState()
+}
 
 func (c *AppServerClient) schema(path string) ([]byte, error) {
 	c.schemaMu.Lock()
@@ -531,15 +603,91 @@ func (c *AppServerClient) schema(path string) ([]byte, error) {
 	return b, nil
 }
 
-// RunStructured runs the turn over the persistent app-server connection. The
-// model and effort are already resolved by handleDm, so they are used directly.
+// RunStructured runs DM turns on the story connection when StoryID is set.
+// Off-story structured work (e.g. SD prompt translation) uses codex exec so it
+// never holds the story mutex.
 func (c *AppServerClient) RunStructured(ctx context.Context, prompt string, opts provider.StructuredOpts) (json.RawMessage, error) {
+	if opts.StoryID == "" {
+		return c.Client.RunStructured(ctx, prompt, opts)
+	}
 	schemaBytes, err := c.schema(opts.SchemaPath)
 	if err != nil {
 		return nil, err
 	}
-	return c.server.RunTurn(ctx, opts.StoryID, prompt, opts.Model, opts.Effort, string(schemaBytes), opts.Timeout)
+	// Thread turns still take one prompt string; system rules are prepended.
+	if sys := strings.TrimSpace(opts.SystemPrompt); sys != "" {
+		prompt = sys + "\n\n" + prompt
+	}
+	return c.story.RunTurn(ctx, opts.StoryID, prompt, opts.Model, opts.Effort, string(schemaBytes), opts.Timeout)
 }
 
-// Close releases the persistent process.
-func (c *AppServerClient) Close() error { return c.server.Close() }
+// RunImageGeneration prefers the dedicated image app-server connection so it
+// can run in parallel with a DM turn. Falls back to codex exec when the image
+// connection is unavailable.
+func (c *AppServerClient) RunImageGeneration(ctx context.Context, prompt string, opts provider.ImageOpts) (string, error) {
+	storyID := c.story.ConnectionState().StoryID
+	if storyID == "" {
+		log.Printf("[codex-image] no story binding; using exec path | tip: 先連線故事可啟用 image 雙連線")
+		path, err := c.Client.RunImageGeneration(ctx, prompt, opts)
+		if err != nil {
+			log.Printf("[codex-image] exec failed (no story): %v", err)
+		}
+		return path, err
+	}
+
+	if err := c.ensureImageConnection(ctx, storyID); err != nil {
+		log.Printf("[codex-image] ensure image connection failed story=%s: %v; fallback exec", storyID, err)
+		path, err2 := c.Client.RunImageGeneration(ctx, prompt, opts)
+		if err2 != nil {
+			log.Printf("[codex-image] exec fallback failed after connect error: %v", err2)
+		}
+		return path, err2
+	}
+
+	started := time.Now().Add(-2 * time.Second) // clock skew / flush lag
+	timeout := opts.Timeout
+	if timeout == 0 {
+		timeout = 420 * time.Second
+	}
+	log.Printf("[codex-image] app-server image turn story=%s timeout=%s", storyID, timeout)
+	threadID, err := c.image.RunImageTurn(ctx, storyID, prompt, timeout)
+	if err != nil {
+		// Connection may have died mid-turn; one exec fallback keeps UX working.
+		log.Printf("[codex-image] image turn failed story=%s: %v; fallback exec | tip: 查 image app-server 是否中斷", storyID, err)
+		path, err2 := c.Client.RunImageGeneration(ctx, prompt, opts)
+		if err2 != nil {
+			log.Printf("[codex-image] exec fallback failed after turn error: %v", err2)
+		}
+		return path, err2
+	}
+	path, err := locateGeneratedImage(threadID, started)
+	if err != nil {
+		log.Printf("[codex-image] locate output failed thread=%s: %v; fallback exec | tip: 查 ~/.codex/generated_images/%s", threadID, err, threadID)
+		path, err2 := c.Client.RunImageGeneration(ctx, prompt, opts)
+		if err2 != nil {
+			log.Printf("[codex-image] exec fallback failed after locate error: %v", err2)
+		}
+		return path, err2
+	}
+	log.Printf("[codex-image] app-server ok story=%s thread=%s path=%s", storyID, threadID, path)
+	return path, nil
+}
+
+// ensureImageConnection binds the image process to storyID when missing/stale.
+func (c *AppServerClient) ensureImageConnection(ctx context.Context, storyID string) error {
+	cs := c.image.ConnectionState()
+	if cs.Alive && cs.StoryID == storyID {
+		return nil
+	}
+	return c.image.Connect(ctx, storyID)
+}
+
+// Close releases both persistent processes (story + image).
+func (c *AppServerClient) Close() error {
+	err1 := c.story.Close()
+	err2 := c.image.Close()
+	if err1 != nil {
+		return err1
+	}
+	return err2
+}

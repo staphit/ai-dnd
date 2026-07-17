@@ -248,6 +248,7 @@ export interface DmTurnRequest {
   campaignId: string;
   model?: string;
   effort?: string;
+  dmProvider?: string;
   actions?: Array<{ playerId: PlayerId; text: string }>;
   intents?: Partial<Record<PlayerId, DmIntent>>;
   checkRoll?: { natural: number };
@@ -268,6 +269,13 @@ export interface ActionIssue {
   message: string;
 }
 
+export interface SceneSlotPayload {
+  id: string;
+  scene: string;
+  imagePrompt: string;
+  createdAt: number;
+}
+
 export interface DmTurnResponse {
   view: Campaign;
   text: string;
@@ -277,8 +285,21 @@ export interface DmTurnResponse {
   privateMessages: Array<{ playerId: PlayerId; text: string }>;
   actionIssues: ActionIssue[];
   model: string;
+  sceneSlot?: SceneSlotPayload;
 }
 
 export function dmTurn(body: DmTurnRequest, signal?: AbortSignal): Promise<DmTurnResponse> {
   return apiFetch('/api/dm', { method: 'POST', body: JSON.stringify(body), signal });
+}
+
+export function reviseStory(
+  campaignId: string,
+  body: { note: string; model?: string; effort?: string; dmProvider?: string },
+  signal?: AbortSignal,
+): Promise<{ view: Campaign; text: string; model: string }> {
+  return apiFetch(campaignPath(campaignId, '/revise-story'), {
+    method: 'POST',
+    body: JSON.stringify(body),
+    signal,
+  });
 }
