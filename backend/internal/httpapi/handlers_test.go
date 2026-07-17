@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"dndduet/internal/codex"
+	"dndduet/internal/game"
 	"dndduet/internal/httpapi"
 	"dndduet/internal/images"
 	"dndduet/internal/provider"
@@ -89,7 +90,24 @@ func newServerWithLocal(t *testing.T, fake *fakeCodex) (*httpapi.Server, *fakeRe
 			"local": local,
 		},
 		DefaultImageBackend: "codex",
+		Game:                game.New(st, nil),
 	}, local
+}
+
+// seedCampaign creates a server-side campaign and returns its id.
+func seedCampaign(t *testing.T, srv *httpapi.Server, players ...game.PlayerSeed) string {
+	t.Helper()
+	if len(players) == 0 {
+		players = []game.PlayerSeed{{Name: "甲", ClassName: "法師"}}
+	}
+	view, err := srv.Game.Create(game.CreateParams{
+		ID: "campaign-1", Title: "測試", Scene: "石門", Objective: "找到伊薩克",
+		Players: players,
+	})
+	if err != nil {
+		t.Fatalf("seed campaign: %v", err)
+	}
+	return view.ID
 }
 
 func newServer(t *testing.T, fake *fakeCodex) *httpapi.Server {
@@ -210,7 +228,8 @@ func TestStatusIncludesMessageWhenDisconnected(t *testing.T) {
 
 func TestDmEndpointSuccess(t *testing.T) {
 	srv := newServer(t, &fakeCodex{Client: &codex.Client{}, status: configured(), turn: validTurnJSON})
-	body := `{"campaignId":"campaign-1","players":[{"name":"甲","className":"法師"}],"actions":[{"playerId":"player1","text":"檢查符文"}],"campaign":{"title":"測試","scene":"石門","round":1}}`
+	id := seedCampaign(t, srv)
+	body := `{"campaignId":"` + id + `","actions":[{"playerId":"player1","text":"檢查符文"}]}`
 	w := do(t, srv, http.MethodPost, "/api/dm", body)
 	if w.Code != 200 {
 		t.Fatalf("status %d body %s", w.Code, w.Body.String())
@@ -221,8 +240,23 @@ func TestDmEndpointSuccess(t *testing.T) {
 	if !strings.Contains(text, "隊伍推進") || !strings.Contains(text, "可考慮：搜索祭壇／檢查泥痕") {
 		t.Errorf("text = %q", text)
 	}
-	if resp["scene"] != "禮拜堂" {
-		t.Errorf("scene = %v", resp["scene"])
+	view, _ := resp["view"].(map[string]any)
+	if view == nil {
+		t.Fatalf("missing view in response: %v", resp)
+	}
+	if view["scene"] != "禮拜堂" {
+		t.Errorf("view scene = %v", view["scene"])
+	}
+	if view["round"] != float64(2) {
+		t.Errorf("round should advance to 2, got %v", view["round"])
+	}
+	story, _ := view["story"].([]any)
+	if len(story) < 3 { // setup system + action + narration
+		t.Fatalf("story should carry action + narration entries, got %d", len(story))
+	}
+	last, _ := story[len(story)-1].(map[string]any)
+	if last["speaker"] != "dm" || !strings.Contains(last["text"].(string), "隊伍推進") {
+		t.Errorf("last story entry should be the DM narration: %v", last)
 	}
 	if resp["model"] != "test-model" {
 		t.Errorf("model = %v", resp["model"])
@@ -231,7 +265,8 @@ func TestDmEndpointSuccess(t *testing.T) {
 
 func TestDmEndpointRejectsIncompleteParty(t *testing.T) {
 	srv := newServer(t, &fakeCodex{Client: &codex.Client{}, status: configured(), turn: validTurnJSON})
-	body := `{"campaignId":"campaign-1","players":[{"name":"甲","className":"法師"},{"name":"乙","className":"戰士"}],"actions":[{"playerId":"player1","text":"檢查符文"}]}`
+	id := seedCampaign(t, srv, game.PlayerSeed{Name: "甲", ClassName: "法師"}, game.PlayerSeed{Name: "乙", ClassName: "戰士"})
+	body := `{"campaignId":"` + id + `","actions":[{"playerId":"player1","text":"檢查符文"}]}`
 	w := do(t, srv, http.MethodPost, "/api/dm", body)
 	if w.Code != 400 {
 		t.Fatalf("status %d, want 400", w.Code)
@@ -240,6 +275,46 @@ func TestDmEndpointRejectsIncompleteParty(t *testing.T) {
 	json.Unmarshal(w.Body.Bytes(), &resp)
 	if msg, _ := resp["error"].(string); !strings.Contains(msg, "每位玩家") {
 		t.Errorf("error = %v", resp["error"])
+	}
+}
+
+func TestDmEndpointPreValidatesSpells(t *testing.T) {
+	srv := newServer(t, &fakeCodex{Client: &codex.Client{}, status: configured(), turn: validTurnJSON})
+	id := seedCampaign(t, srv, game.PlayerSeed{Name: "米芮", ClassName: "牧師"})
+	// Drain every level-1+ slot so a named cast must fail mechanically.
+	view, err := srv.Game.View(id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	spellName, spellID := "", ""
+	for _, sp := range view.Players[0].Spellcasting.Spells {
+		if sp.Level > 0 && (sp.Prepared || sp.AlwaysPrepared) && (sp.Effect == nil || sp.Effect.Kind != "damage") {
+			spellName, spellID = sp.Name, sp.ID
+			break
+		}
+	}
+	if spellID == "" {
+		t.Fatal("cleric should have a prepared non-damage level-1 spell")
+	}
+	for i := 0; i < 10; i++ {
+		if _, err := srv.Game.CastSpell(id, "player1", game.CastParams{SpellID: spellID, TargetID: "player1"}); err != nil {
+			break
+		}
+		if _, err := srv.Game.UnlockAction(id, "player1"); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	body := `{"campaignId":"` + id + `","actions":[{"playerId":"player1","text":"我對自己施放「` + spellName + `」"}]}`
+	w := do(t, srv, http.MethodPost, "/api/dm", body)
+	if w.Code != 422 {
+		t.Fatalf("status %d body %s, want 422", w.Code, w.Body.String())
+	}
+	var resp map[string]any
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	issues, _ := resp["actionIssues"].([]any)
+	if len(issues) != 1 {
+		t.Fatalf("expected one issue, got %v", resp)
 	}
 }
 
