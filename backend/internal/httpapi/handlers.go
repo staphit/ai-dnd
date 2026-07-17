@@ -448,14 +448,26 @@ func (s *Server) handleDm(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// nil slices marshal to JSON null; the client indexes these directly.
+	rejected := applied.Rejected
+	if rejected == nil {
+		rejected = []game.ActionIssue{}
+	}
+	choices := output.Choices
+	if choices == nil {
+		choices = []dm.Choice{}
+	}
+	if privateMsgs == nil {
+		privateMsgs = []dm.PrivateMessage{}
+	}
 	writeJSON(w, http.StatusOK, dmResponse{
 		View:            &applied.View,
 		Text:            publicText,
-		Choices:         output.Choices,
+		Choices:         choices,
 		RequiresCheck:   output.RequiresCheck,
 		Check:           output.Check,
 		PrivateMessages: privateMsgs,
-		ActionIssues:    applied.Rejected,
+		ActionIssues:    rejected,
 		Model:           model,
 		SceneSlot:       slotPayload,
 	})

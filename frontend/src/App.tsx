@@ -678,10 +678,11 @@ export default function App() {
       }
       setCampaign(resp.view);
       if (resp.sceneSlot?.id) setPendingSceneSlotId(resp.sceneSlot.id);
-      if (resp.actionIssues.length > 0) {
+      const rejectedIssues = resp.actionIssues || [];
+      if (rejectedIssues.length > 0) {
         // AI narrative veto: the view already carries the 【行動駁回】 entry and
         // the released locks; mirror it in the error banner.
-        showRejection(resp.actionIssues, resp.view.players);
+        showRejection(rejectedIssues, resp.view.players);
         return;
       }
       const combatStarted = !combatWasActive && resp.view.combat?.active === true;
