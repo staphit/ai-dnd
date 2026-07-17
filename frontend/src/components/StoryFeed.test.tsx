@@ -2,9 +2,9 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { fireEvent } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { StoryFeed } from './StoryFeed';
-import { createLevel3Character } from '../rules/characters';
+import { makePlayer } from '../test/fixtures';
 
-const players = [createLevel3Character('player1', '艾拉', '遊俠'), createLevel3Character('player2', '米拉', '法師')];
+const players = [makePlayer('player1', '艾拉', { className: '遊俠' }), makePlayer('player2', '米拉', { className: '法師' })];
 const story = [
   { id: 'public', speaker: 'dm' as const, text: '所有人都看見門打開。', time: '10:00', audience: 'public' as const },
   { id: 'private-1', speaker: 'dm' as const, text: '艾拉注意到牆上的暗號。', time: '10:01', audience: 'player1' as const },

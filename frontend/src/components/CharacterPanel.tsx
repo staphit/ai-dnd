@@ -1,8 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { BookOpenText, MagicWand, Shield, Sword } from '@phosphor-icons/react';
-import type { CharacterSpell, Choice, PlayerCharacter, PlayerId, RestType } from '../types';
-import { abilityLabels, abilityModifier } from '../rules/characters';
-import { experienceToNextLevel } from '../rules/advancement';
+import type { CharacterSpell, Choice, PlayerCharacter, PlayerId, RestType, XpProgress } from '../types';
+import { abilityLabels, abilityModifier } from '../labels';
 import { ActionComposer } from './ActionComposer';
 import { StatHint } from './StatHint';
 
@@ -10,6 +9,8 @@ const CharacterSheet = lazy(() => import('./CharacterSheet').then((module) => ({
 
 interface CharacterPanelProps {
   player: PlayerCharacter;
+  // Server-computed XP progress for this player (view.xpProgress[player.id]).
+  xp?: XpProgress;
   showStatHints?: boolean;
   combatActive?: boolean;
   onResourceChange: (id: PlayerCharacter['id'], resourceId: string, delta: number) => void;
@@ -40,7 +41,7 @@ function signed(value: number) {
   return value >= 0 ? `+${value}` : String(value);
 }
 
-export function CharacterPanel({ player, showStatHints = true, combatActive = false, spellTargets, onResourceChange, onCastSpell, onRest, onGeneratePortrait, pending, actionDisabled, partySize, choices, resourceSummary, onSubmitAction, onUnlockAction }: CharacterPanelProps) {
+export function CharacterPanel({ player, xp, showStatHints = true, combatActive = false, spellTargets, onResourceChange, onCastSpell, onRest, onGeneratePortrait, pending, actionDisabled, partySize, choices, resourceSummary, onSubmitAction, onUnlockAction }: CharacterPanelProps) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [tab, setTab] = useState<QuickTab>('action');
   const [spellTarget, setSpellTarget] = useState<Record<string, string>>({});
@@ -49,7 +50,7 @@ export function CharacterPanel({ player, showStatHints = true, combatActive = fa
   const [appearance, setAppearance] = useState(player.appearance || '');
   const [portraitLoading, setPortraitLoading] = useState(false);
   const hpRatio = Math.max(0, Math.min(100, (player.hp / player.maxHp) * 100));
-  const experience = experienceToNextLevel(player);
+  const experience: XpProgress = xp ?? { current: player.experience, required: player.experience, remaining: 0, ready: false, progress: 0 };
   useEffect(() => { if (pending) setTab('action'); }, [pending]);
 
   return (

@@ -1,17 +1,17 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowClockwise, ImageSquare, MagicWand } from '@phosphor-icons/react';
-import type { Campaign } from '../types';
+import type { SceneImage } from '../types';
 import { MagneticButton } from './MagneticButton';
 
 interface SceneVisualProps {
-  image?: Campaign['sceneImage'];
-  images?: Campaign['sceneImages'];
+  image?: SceneImage | null;
+  images?: SceneImage[];
   scene: string;
   loading: boolean;
   error: string;
   canGenerate: boolean;
   onGenerate: () => void;
-  onSelect: (image: NonNullable<Campaign['sceneImage']>) => void;
+  onSelect: (image: SceneImage) => void;
 }
 
 export function SceneVisual({ image, images = [], scene, loading, error, canGenerate, onGenerate, onSelect }: SceneVisualProps) {

@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { createLevel3Character } from '../rules/characters';
+import { makePlayer } from '../test/fixtures';
 import { ActionComposer } from './ActionComposer';
 import { DiceTray } from './DiceTray';
 
@@ -20,11 +20,17 @@ describe('player action flow', () => {
   });
 
   it('shows only the required d20 check rather than a permanent manual dice tray', () => {
-    const player = createLevel3Character('player1', '艾拉', '遊俠');
-    render(<DiceTray players={[player]} requiredCheck={{ character: '艾拉', ability: '敏捷', skill: '隱匿', dc: 14, reason: '避開守衛。' }} onResult={vi.fn()} onRequiredRoll={vi.fn()} />);
+    const player = makePlayer('player1', '艾拉');
+    render(<DiceTray players={[player]} requiredCheck={{ character: '艾拉', ability: '敏捷', skill: '隱匿', dc: 14, reason: '避開守衛。' }} onRequiredRoll={vi.fn()} />);
     expect(screen.getByText('現在擲 d20')).toBeVisible();
     expect(screen.getByText(/總值需達到 DC 14/)).toBeVisible();
     expect(screen.queryByText('d4')).not.toBeInTheDocument();
     expect(screen.queryByText('自訂')).not.toBeInTheDocument();
+  });
+
+  it('prefers the server-computed modifier over the local fallback', () => {
+    const player = makePlayer('player1', '艾拉');
+    render(<DiceTray players={[player]} requiredCheck={{ character: '艾拉', ability: '力量', skill: '運動', dc: 13, reason: '祭壇沉重。', modifier: 7, playerId: 'player1' }} onRequiredRoll={vi.fn()} />);
+    expect(screen.getByText(/加上 運動 加值 \+7/)).toBeVisible();
   });
 });
