@@ -106,8 +106,9 @@ func TestLevelUpRequiresXPAndGrantsAbilityPoints(t *testing.T) {
 	if leveled.Level != 4 {
 		t.Errorf("level = %d, want 4", leveled.Level)
 	}
-	if leveled.AbilityPoints != 2 {
-		t.Errorf("abilityPoints = %d, want 2", leveled.AbilityPoints)
+	// House rule: every level-up grants abilityPointsPerLevel (5) points.
+	if leveled.AbilityPoints != abilityPointsPerLevel {
+		t.Errorf("abilityPoints = %d, want %d", leveled.AbilityPoints, abilityPointsPerLevel)
 	}
 	improved, err := SpendAbilityPoint(leveled, "str")
 	if err != nil {
@@ -116,7 +117,7 @@ func TestLevelUpRequiresXPAndGrantsAbilityPoints(t *testing.T) {
 	if improved.Abilities.Str != leveled.Abilities.Str+1 {
 		t.Errorf("str = %d, want %d", improved.Abilities.Str, leveled.Abilities.Str+1)
 	}
-	if improved.AbilityPoints != 1 {
-		t.Errorf("abilityPoints = %d, want 1", improved.AbilityPoints)
+	if improved.AbilityPoints != abilityPointsPerLevel-1 {
+		t.Errorf("abilityPoints = %d, want %d", improved.AbilityPoints, abilityPointsPerLevel-1)
 	}
 }

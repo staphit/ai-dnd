@@ -35,9 +35,10 @@ var ExperienceThresholds = []int{
 	19000,
 }
 
-// abilityImprovementLevels mirrors the advancement.ts abilityImprovementLevels
-// set: total character levels that unlock 2 ability score points.
-var abilityImprovementLevels = map[int]bool{4: true, 8: true, 12: true, 16: true, 19: true}
+// abilityPointsPerLevel: this duet grants ability points on EVERY level-up
+// (house rule replacing the official 4/8/12/16/19 ASI schedule) so growth is
+// felt each level.
+const abilityPointsPerLevel = 5
 
 // slotTable mirrors the advancement.ts slotTable: standard spell slots per
 // caster level (row index), one column per slot level starting at 1.
@@ -450,11 +451,7 @@ func LevelUpCharacter(c Character, className string) (Character, error) {
 		ID:   fmt.Sprintf("progression-%s-%d", className, nextClassLevel),
 		Name: fmt.Sprintf("%s %d 級進展", className, nextClassLevel),
 	}
-	if abilityImprovementLevels[nextLevel] {
-		progressionFeature.Description = "解鎖 2 點能力值提升，可在角色成長頁分配；生命、熟練與法術進展亦已重新計算。"
-	} else {
-		progressionFeature.Description = fmt.Sprintf("解鎖 %s 第 %d 級進展；生命值、熟練加值、攻擊與法術位依新等級重新計算。", className, nextClassLevel)
-	}
+	progressionFeature.Description = fmt.Sprintf("解鎖 %s 第 %d 級進展與 %d 點能力值提升（角色成長頁分配）；生命值、熟練加值、攻擊與法術位依新等級重新計算。", className, nextClassLevel, abilityPointsPerLevel)
 	// Math.max(1, Math.floor(starter.hitDie / 2) + 1 + conModifier); the
 	// starter hit die is always positive, so truncation matches Math.floor.
 	hpGain := starter.HitDie/2 + 1 + AbilityModifier(c.Abilities.Con)
@@ -472,9 +469,7 @@ func LevelUpCharacter(c Character, className string) (Character, error) {
 	if c.Spellcasting == nil {
 		c.Spellcasting = starter.Spellcasting
 	}
-	if abilityImprovementLevels[nextLevel] {
-		c.AbilityPoints += 2 // (character.abilityPoints || 0) + 2
-	}
+	c.AbilityPoints += abilityPointsPerLevel
 	return Recalculate(c), nil
 }
 
