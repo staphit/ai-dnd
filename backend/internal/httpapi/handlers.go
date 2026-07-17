@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -856,12 +855,15 @@ func (s *Server) handleExportNovel(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusServiceUnavailable, errorBody{Error: "沒有可用的 AI 資料源。"})
 		return
 	}
+	if s.NovelSchemaPath == "" {
+		writeJSON(w, http.StatusServiceUnavailable, errorBody{Error: "劇本輸出功能未啟用。"})
+		return
+	}
 	ctx, cancel := context.WithTimeout(r.Context(), 300*time.Second)
 	defer cancel()
-	schemaPath := filepath.Join(filepath.Dir(s.SchemaPath), "novel-export.schema.json")
 	raw, err := api.RunStructured(ctx, prompt, provider.StructuredOpts{
 		CWD:        s.ProviderCWD,
-		SchemaPath: schemaPath,
+		SchemaPath: s.NovelSchemaPath,
 		Model:      body.Model,
 		Timeout:    280 * time.Second,
 	})

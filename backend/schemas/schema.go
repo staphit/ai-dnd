@@ -18,6 +18,9 @@ var ImagePromptRaw []byte
 //go:embed combat-tactics.schema.json
 var CombatTacticsRaw []byte
 
+//go:embed novel-export.schema.json
+var NovelExportRaw []byte
+
 // WriteTempFile writes the embedded DM-turn schema to a stable temp path and
 // returns it.
 func WriteTempFile() (string, error) {
@@ -34,6 +37,12 @@ func WriteImagePromptTempFile() (string, error) {
 // to a stable temp path and returns it.
 func WriteCombatTacticsTempFile() (string, error) {
 	return writeTempFile("dnd-duet-combat-tactics.schema.json", CombatTacticsRaw)
+}
+
+// WriteNovelExportTempFile writes the embedded first-person novel-export
+// schema to a stable temp path and returns it.
+func WriteNovelExportTempFile() (string, error) {
+	return writeTempFile("dnd-duet-novel-export.schema.json", NovelExportRaw)
 }
 
 func writeTempFile(name string, raw []byte) (string, error) {

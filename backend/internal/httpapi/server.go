@@ -47,6 +47,10 @@ type Server struct {
 	// AI enemy turns (mechanical fallback targeting only).
 	TacticsSchemaPath string
 
+	// NovelSchemaPath is the first-person novel-export output schema; empty
+	// disables /api/campaign/{id}/export-novel.
+	NovelSchemaPath string
+
 	// ImageRenderers maps a backend id ("codex", "local", "grok") to its renderer.
 	ImageRenderers map[string]images.Renderer
 	// DefaultImageBackend is used when a request omits imageBackend (IMAGE_BACKEND).
