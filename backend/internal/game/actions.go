@@ -59,6 +59,11 @@ func (s *Service) loadState(id string) (*gameState, error) {
 	if st.arc == nil {
 		st.arc = defaultStoryArc(row.Round, row.Objective)
 	}
+	// Weapons bought before shop weapons granted attacks: backfill the attack
+	// entries so carried catalog weapons are usable (persists on next write).
+	for i := range st.players {
+		ensureShopWeaponAttacks(&st.players[i])
+	}
 	return st, nil
 }
 

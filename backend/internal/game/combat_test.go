@@ -314,6 +314,53 @@ func TestUseHealingPotion(t *testing.T) {
 	}
 }
 
+func TestBoughtWeaponBecomesAttack(t *testing.T) {
+	s := newTestService(t)
+	view := createSample(t, s)
+	id := view.ID
+
+	bought, err := s.BuyItem(id, "player1", "greatsword")
+	if err != nil {
+		t.Fatalf("buy: %v", err)
+	}
+	var greatsword *rules.Attack
+	for i, a := range bought.Players[0].Attacks {
+		if a.Name == "巨劍" {
+			greatsword = &bought.Players[0].Attacks[i]
+		}
+	}
+	if greatsword == nil {
+		t.Fatalf("greatsword attack missing: %+v", bought.Players[0].Attacks)
+	}
+	if greatsword.AttackBonus == 0 || !strings.HasPrefix(greatsword.Damage, "2d6") {
+		t.Fatalf("greatsword numbers not derived: %+v", greatsword)
+	}
+	if greatsword.AttacksPerAction != 1 {
+		t.Fatalf("greatsword should strike once: %+v", greatsword)
+	}
+
+	// Selling the only copy removes the shop attack.
+	sold, err := s.SellItem(id, "player1", "巨劍")
+	if err != nil {
+		t.Fatalf("sell: %v", err)
+	}
+	for _, a := range sold.Players[0].Attacks {
+		if a.Name == "巨劍" {
+			t.Fatalf("greatsword attack should be removed: %+v", sold.Players[0].Attacks)
+		}
+	}
+	// Class starting weapon untouched by the sweep (ranger keeps 短劍).
+	var shortswords int
+	for _, a := range sold.Players[0].Attacks {
+		if a.Name == "短劍" {
+			shortswords++
+		}
+	}
+	if shortswords != 1 {
+		t.Fatalf("class shortsword count wrong: %+v", sold.Players[0].Attacks)
+	}
+}
+
 func TestShopBuySell(t *testing.T) {
 	s := newTestService(t)
 	view := createSample(t, s)

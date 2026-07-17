@@ -51,6 +51,62 @@ func shopItem(itemID string) *ShopItem {
 	return nil
 }
 
+func shopItemByName(name string) *ShopItem {
+	for i := range ShopCatalog {
+		if ShopCatalog[i].Name == name {
+			return &ShopCatalog[i]
+		}
+	}
+	return nil
+}
+
+// weaponSpecs are the attack entries a buyer gains for catalog weapons.
+// IDs carry a shop- prefix so selling can remove exactly the shop-granted
+// attack without touching class starting weapons. Recalculate fills the
+// attack bonus and damage modifier from the wielder's abilities.
+var weaponSpecs = map[string]rules.Attack{
+	"dagger":     {ID: "shop-dagger", Name: "匕首", Damage: "1d4", DamageType: "穿刺", Properties: []string{"靈巧", "輕型", "投擲 20/60"}},
+	"shortsword": {ID: "shop-shortsword", Name: "短劍", Damage: "1d6", DamageType: "穿刺", Properties: []string{"靈巧", "輕型"}},
+	"longsword":  {ID: "shop-longsword", Name: "長劍", Damage: "1d8", DamageType: "揮砍", Properties: []string{"多用途 1d10"}},
+	"warhammer":  {ID: "shop-warhammer", Name: "戰鎚", Damage: "1d8", DamageType: "鈍擊", Properties: []string{"多用途 1d10"}},
+	"rapier":     {ID: "shop-rapier", Name: "刺劍", Damage: "1d8", DamageType: "穿刺", Properties: []string{"靈巧"}},
+	"greatsword": {ID: "shop-greatsword", Name: "巨劍", Damage: "2d6", DamageType: "揮砍", Properties: []string{"重型", "雙手"}},
+	"longbow":    {ID: "shop-longbow", Name: "長弓", Damage: "1d8", DamageType: "穿刺", Properties: []string{"彈藥 150/600", "重型", "雙手"}},
+}
+
+// ensureShopWeaponAttacks grants an attack entry for every carried catalog
+// weapon the character has no same-named attack for, so bought (or previously
+// bought) weapons are actually usable in combat. Returns true when changed.
+func ensureShopWeaponAttacks(c *rules.Character) bool {
+	changed := false
+	for _, owned := range c.Equipment {
+		item := shopItemByName(owned)
+		if item == nil {
+			continue
+		}
+		spec, ok := weaponSpecs[item.ID]
+		if !ok {
+			continue
+		}
+		exists := false
+		for _, a := range c.Attacks {
+			if a.Name == spec.Name {
+				exists = true
+				break
+			}
+		}
+		if exists {
+			continue
+		}
+		c.Attacks = append(c.Attacks, spec)
+		changed = true
+	}
+	if changed {
+		*c = rules.Recalculate(*c)
+	}
+	return changed
+}
+
 // BuyItem purchases one catalog item for a character (out of combat only).
 func (s *Service) BuyItem(id, playerID, itemID string) (View, error) {
 	unlock := s.Lock(id)
@@ -75,6 +131,7 @@ func (s *Service) BuyItem(id, playerID, itemID string) (View, error) {
 	}
 	player.Gold -= item.Price
 	player.Equipment = append(player.Equipment, item.Name)
+	ensureShopWeaponAttacks(player) // weapons become a usable attack entry
 	return s.persist(st, []string{fmt.Sprintf("%s向裝備商購買「%s」（%d gp），剩餘 %d gp。", player.Name, item.Name, item.Price, player.Gold)})
 }
 
@@ -263,5 +320,26 @@ func (s *Service) SellItem(id, playerID, itemName string) (View, error) {
 	}
 	player.Equipment = append(player.Equipment[:index], player.Equipment[index+1:]...)
 	player.Gold += price
+	// Selling the last copy of a shop weapon removes the shop-granted attack
+	// (class starting weapons use different IDs and stay).
+	if item := shopItemByName(itemName); item != nil {
+		if spec, ok := weaponSpecs[item.ID]; ok {
+			stillOwned := false
+			for _, owned := range player.Equipment {
+				if owned == itemName {
+					stillOwned = true
+					break
+				}
+			}
+			if !stillOwned {
+				for i := range player.Attacks {
+					if player.Attacks[i].ID == spec.ID {
+						player.Attacks = append(player.Attacks[:i], player.Attacks[i+1:]...)
+						break
+					}
+				}
+			}
+		}
+	}
 	return s.persist(st, []string{fmt.Sprintf("%s將「%s」賣給裝備商（+%d gp），現有 %d gp。", player.Name, itemName, price, player.Gold)})
 }
