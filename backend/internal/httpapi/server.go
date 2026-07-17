@@ -36,6 +36,10 @@ type Server struct {
 	SchemaPath  string // absolute path to the DM output schema
 	ProviderCWD string // absolute working directory for the CLI's --cd flag
 
+	// TacticsSchemaPath is the combat-tactics output schema; empty disables
+	// AI enemy turns (mechanical fallback targeting only).
+	TacticsSchemaPath string
+
 	// ImageRenderers maps a backend id ("codex", "local") to its renderer; the
 	// request body's imageBackend field picks one per generation.
 	ImageRenderers map[string]images.Renderer
@@ -158,6 +162,11 @@ func (s *Server) Router() http.Handler {
 	r.Patch("/api/campaign/{id}/players/{pid}", s.handleCharacterPatch)
 	r.Post("/api/campaign/{id}/players/{pid}/action", s.handleActionSubmit)
 	r.Delete("/api/campaign/{id}/players/{pid}/action", s.handleActionUnlock)
+	r.Post("/api/campaign/{id}/combat/start", s.handleCombatStart)
+	r.Post("/api/campaign/{id}/combat/attack", s.handleCombatAttack)
+	r.Post("/api/campaign/{id}/combat/end-turn", s.handleCombatEndTurn)
+	r.Post("/api/campaign/{id}/combat/enemy-turn", s.handleCombatEnemyTurn)
+	r.Post("/api/campaign/{id}/combat/conclude", s.handleCombatConclude)
 	r.Post("/api/dm", s.handleDm)
 	r.Post("/api/scene-image", s.handleSceneImage)
 	r.Post("/api/character-image", s.handleCharacterImage)

@@ -25,6 +25,7 @@ import (
 type Service struct {
 	store *store.Store
 	now   func() time.Time
+	dice  rules.RandomSource
 
 	mu    sync.Mutex
 	locks map[string]*sync.Mutex
@@ -36,7 +37,15 @@ func New(st *store.Store, now func() time.Time) *Service {
 	if now == nil {
 		now = time.Now
 	}
-	return &Service{store: st, now: now, locks: map[string]*sync.Mutex{}}
+	return &Service{store: st, now: now, dice: rules.DefaultRandom, locks: map[string]*sync.Mutex{}}
+}
+
+// WithDice overrides the random source (tests).
+func (s *Service) WithDice(dice rules.RandomSource) *Service {
+	if dice != nil {
+		s.dice = dice
+	}
+	return s
 }
 
 // Lock acquires the per-campaign mutex and returns the unlock func.

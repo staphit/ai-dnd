@@ -66,6 +66,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("cannot materialise image-prompt schema: %v", err)
 	}
+	tacticsSchemaPath, err := schema.WriteCombatTacticsTempFile()
+	if err != nil {
+		log.Fatalf("cannot materialise combat-tactics schema: %v", err)
+	}
 
 	db, err := store.Open(filepath.Join(dataDir, "dnd-duet.db"))
 	if err != nil {
@@ -165,6 +169,7 @@ func main() {
 		TTS:                 tts.NewClientFromEnv(),
 		Memory:              mem,
 		Game:                game.New(db, nil),
+		TacticsSchemaPath:   tacticsSchemaPath,
 	}
 	log.Printf("語音朗讀：GPT-SoVITS %s（未啟動時 /api/tts 會回報連線錯誤）", srv.TTS.BaseURL)
 

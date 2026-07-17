@@ -1,0 +1,25 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["targetId", "attack", "intent"],
+  "properties": {
+    "targetId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 60,
+      "description": "從候選目標清單中選出的目標 id"
+    },
+    "attack": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80,
+      "description": "敵人使用的攻擊或能力名稱"
+    },
+    "intent": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160,
+      "description": "一句繁體中文行動意圖，供戰鬥紀錄顯示"
+    }
+  }
+}
