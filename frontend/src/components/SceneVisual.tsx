@@ -24,6 +24,15 @@ function slotTime(createdAt: number) {
   return new Intl.DateTimeFormat('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(createdAt));
 }
 
+// Generation costs time (and possibly quota); a stray click should not fire it.
+function confirmGenerate(label: string, regenerate: boolean) {
+  return window.confirm(
+    regenerate
+      ? `要重新生成「${label}」的場景圖嗎？此幕現有圖片會被新圖取代。`
+      : `要生成「${label}」的場景圖嗎？通常需要數十秒，期間遊戲可繼續進行。`,
+  );
+}
+
 export function SceneVisual({ image, images = [], slots = [], generatingSlotId = '', scene, loading, error, canGenerate, onGenerate, onSelect, onGenerateSlot }: SceneVisualProps) {
   const gallery = images.length > 0 ? images : image ? [image] : [];
   // Prompt recorded for the beat the main image belongs to.
@@ -73,7 +82,11 @@ export function SceneVisual({ image, images = [], slots = [], generatingSlotId =
         <MagneticButton
           variant="quiet"
           disabled={loading || !canGenerate}
-          onClick={() => (selectedSlot && onGenerateSlot ? onGenerateSlot(selectedSlot.id) : onGenerate())}
+          onClick={() => {
+            if (!confirmGenerate(image ? image.scene : scene, Boolean(image))) return;
+            if (selectedSlot && onGenerateSlot) onGenerateSlot(selectedSlot.id);
+            else onGenerate();
+          }}
         >
           {image ? <ArrowClockwise size={16} /> : <MagicWand size={16} />}
           {image ? '重新生成' : '生成場景'}
@@ -107,7 +120,7 @@ export function SceneVisual({ image, images = [], slots = [], generatingSlotId =
                     type="button"
                     className="scene-slot-generate"
                     disabled={loading || !canGenerate || !onGenerateSlot}
-                    onClick={() => onGenerateSlot?.(slot.id)}
+                    onClick={() => { if (confirmGenerate(label, false)) onGenerateSlot?.(slot.id); }}
                     title={tooltip}
                   >
                     <span className="scene-gallery-thumb scene-gallery-thumb-empty" aria-hidden="true">
