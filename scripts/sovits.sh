@@ -30,11 +30,21 @@ fi
 
 # Fail fast with an actionable message instead of a buried uvicorn bind error
 # if a previous run (or something else) is still holding the port.
-existing_pid="$(netstat -ano 2>/dev/null | { grep -E "[[:space:]]$ADDR:$PORT[[:space:]].*LISTENING" || true; } | awk '{print $NF}' | head -n1)"
+# lsof works on macOS/Linux; Windows git-bash falls back to netstat -ano.
+existing_pid=""
+if command -v lsof >/dev/null 2>&1; then
+  existing_pid="$(lsof -ti "tcp:$PORT" 2>/dev/null | head -n1 || true)"
+else
+  existing_pid="$(netstat -ano 2>/dev/null | { grep -E "[[:space:]]$ADDR:$PORT[[:space:]].*LISTENING" || true; } | awk '{print $NF}' | head -n1)" || true
+fi
 if [ -n "$existing_pid" ]; then
   echo "error: port $PORT is already in use by PID $existing_pid." >&2
-  tasklist //FI "PID eq $existing_pid" 2>/dev/null >&2 || true
-  echo "Stop it first: taskkill //F //PID $existing_pid" >&2
+  if command -v tasklist >/dev/null 2>&1; then
+    tasklist //FI "PID eq $existing_pid" 2>/dev/null >&2 || true
+    echo "Stop it first: taskkill //F //PID $existing_pid" >&2
+  else
+    echo "Stop it first: kill $existing_pid" >&2
+  fi
   exit 1
 fi
 

@@ -1,18 +1,30 @@
 # scripts/
 
 All scripts are bash — run from git-bash on Windows, or a normal shell on
-Linux/macOS. Everything below is cross-platform through git-bash **except**
-where noted.
+Linux/macOS. Most scripts are cross-platform through git-bash **except**
+where noted. Production serve is split by OS (see below).
 
 ## App
 
 | Script | Purpose |
 |---|---|
 | `dev.sh` | Backend + Vite dev server together, hot reload. |
-| `run.sh` | Build frontend + backend, serve everything from the Go binary. |
+| `run.sh` | OS dispatcher → `run-mac.sh` or `run-windows.sh`. |
+| `run-mac.sh` | **macOS / Linux:** build frontend + backend (`lsof` port check), serve from Go binary. |
+| `run-windows.sh` | **Windows (git-bash):** same, with `netstat`/`taskkill` and `.exe` binary name. |
 | `restart.sh` | Stop whatever's on `PORT`, rebuild, run again. Needs `lsof` — not present on git-bash by default. |
 | `build.sh` | Build frontend to `web-dist/` and backend to `backend/bin/dnd-server`, no serving. |
 | `test.sh` | `go test ./...` + `npm test`. |
+
+```bash
+# Prefer the platform script directly:
+./scripts/run-mac.sh          # macOS / Linux
+./scripts/run-windows.sh      # Windows git-bash
+
+# Or let the dispatcher pick:
+./scripts/run.sh
+```
+
 
 ## Local Stable Diffusion (SD Forge)
 
