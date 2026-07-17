@@ -320,24 +320,26 @@ func (s *Service) SellItem(id, playerID, itemName string) (View, error) {
 	}
 	player.Equipment = append(player.Equipment[:index], player.Equipment[index+1:]...)
 	player.Gold += price
-	// Selling the last copy of a shop weapon removes the shop-granted attack
-	// (class starting weapons use different IDs and stay).
-	if item := shopItemByName(itemName); item != nil {
-		if spec, ok := weaponSpecs[item.ID]; ok {
-			stillOwned := false
-			for _, owned := range player.Equipment {
-				if owned == itemName {
-					stillOwned = true
-					break
-				}
+	// Selling the last copy of a shop or loot weapon removes the granted
+	// attack (class starting weapons use different IDs and stay).
+	stillOwned := false
+	for _, owned := range player.Equipment {
+		if owned == itemName {
+			stillOwned = true
+			break
+		}
+	}
+	if !stillOwned {
+		removeIDs := map[string]bool{"loot-" + itemName: true}
+		if item := shopItemByName(itemName); item != nil {
+			if spec, ok := weaponSpecs[item.ID]; ok {
+				removeIDs[spec.ID] = true
 			}
-			if !stillOwned {
-				for i := range player.Attacks {
-					if player.Attacks[i].ID == spec.ID {
-						player.Attacks = append(player.Attacks[:i], player.Attacks[i+1:]...)
-						break
-					}
-				}
+		}
+		for i := range player.Attacks {
+			if removeIDs[player.Attacks[i].ID] {
+				player.Attacks = append(player.Attacks[:i], player.Attacks[i+1:]...)
+				break
 			}
 		}
 	}

@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"dndduet/internal/apperr"
@@ -9,6 +10,9 @@ import (
 	"dndduet/internal/rules"
 	"dndduet/internal/store"
 )
+
+// lootDicePattern accepts weapon damage expressions on loot items (1d8, 2d6+1).
+var lootDicePattern = regexp.MustCompile(`^[0-9]+d[0-9]+([+-][0-9]+)?$`)
 
 // CapabilityDigest renders one character as a single prompt line: enough for
 // the AI to tailor narration and choices, nothing it needs for validation
@@ -381,11 +385,45 @@ func (s *Service) ApplyDMTurn(id string, prepared PreparedDMTurn, turn *dm.Turn)
 	}
 	for _, item := range turn.Loot.Items {
 		for i := range st.players {
-			if st.players[i].ID == item.PlayerID {
-				st.players[i].Equipment = append(st.players[i].Equipment, item.Name)
-				entries = append(entries, store.StoryRow{Speaker: "system", Text: fmt.Sprintf("%s獲得物品：%s。", st.players[i].Name, item.Name)})
-				break
+			if st.players[i].ID != item.PlayerID {
+				continue
 			}
+			p := &st.players[i]
+			owned := false
+			for _, e := range p.Equipment {
+				if e == item.Name {
+					owned = true
+					break
+				}
+			}
+			if !owned {
+				p.Equipment = append(p.Equipment, item.Name)
+				entries = append(entries, store.StoryRow{Speaker: "system", Text: fmt.Sprintf("%s獲得物品：%s。", p.Name, item.Name)})
+			}
+			// Items with weapon stats become usable attacks (also the path for
+			// "identifying" an already-carried story item: same name + stats).
+			if lootDicePattern.MatchString(item.Damage) {
+				hasAttack := false
+				for _, a := range p.Attacks {
+					if a.Name == item.Name {
+						hasAttack = true
+						break
+					}
+				}
+				if !hasAttack {
+					damageType := item.DamageType
+					if damageType == "" {
+						damageType = "揮砍"
+					}
+					p.Attacks = append(p.Attacks, rules.Attack{
+						ID: "loot-" + item.Name, Name: item.Name,
+						Damage: item.Damage, DamageType: damageType, Properties: item.Properties,
+					})
+					*p = rules.Recalculate(*p)
+					entries = append(entries, store.StoryRow{Speaker: "system", Text: fmt.Sprintf("「%s」帶有武器數值（%s %s），已加入%s的攻擊選項。", item.Name, item.Damage, damageType, p.Name)})
+				}
+			}
+			break
 		}
 	}
 
