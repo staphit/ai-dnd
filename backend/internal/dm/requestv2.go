@@ -41,6 +41,7 @@ type TurnInputV2 struct {
 	CombatLine       string
 	Players          []SanitizedPlayer // Summary holds the one-line digest
 	Actions          map[string]string
+	ArcLines         []string // story-pacing directives (phase, deadline, reward)
 	Resolution       *ResolutionV2
 	Conclusion       *ConclusionV2
 	DeltaMode        bool
@@ -70,8 +71,9 @@ func BuildDMRequestV2(in TurnInputV2) string {
 		"回合：" + numToStr(float64(maxIntV2(1, in.Round))),
 		"上一回合你提供的選項（玩家若照著宣告就必須接受）：" + firstNonEmpty(jsSlice(in.PrevChoices, 400), "（無）"),
 		combat,
-		"",
 	}
+	lines = append(lines, in.ArcLines...)
+	lines = append(lines, "")
 
 	if in.DeltaMode {
 		if in.RulesRef != "" {

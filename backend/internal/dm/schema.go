@@ -75,6 +75,13 @@ type ExperienceAward struct {
 	Reason   string `json:"reason"`
 }
 
+// ArcSignal is the DM's story-pacing output: phaseComplete marks the current
+// arc phase's goal as achieved; nextGoal names the following phase's goal.
+type ArcSignal struct {
+	PhaseComplete bool   `json:"phaseComplete"`
+	NextGoal      string `json:"nextGoal"`
+}
+
 // Turn is the validated DM output.
 type Turn struct {
 	Narration        string
@@ -91,6 +98,7 @@ type Turn struct {
 	Combat           Combat
 	ActionIssues     []ActionIssue
 	ExperienceAwards []ExperienceAward
+	Arc              ArcSignal
 }
 
 var playerIDPattern = regexp.MustCompile(`^player[1-4]$`)
@@ -267,6 +275,14 @@ func validateDMTurn(raw json.RawMessage) (*Turn, error) {
 					DamageType:      strOf(get(e, "damageType")),
 				})
 			}
+		}
+	}
+
+	// Optional pacing signal; absent on providers without the arc schema.
+	if am := asMap(v["arc"]); am != nil {
+		turn.Arc = ArcSignal{
+			PhaseComplete: am["phaseComplete"] == true,
+			NextGoal:      jsSlice(strOr(am["nextGoal"], ""), 240),
 		}
 	}
 

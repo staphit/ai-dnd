@@ -59,6 +59,56 @@ func asActionIssues(err error, target **ActionIssuesError) bool {
 	return false
 }
 
+func TestStoryArcPhaseCompletion(t *testing.T) {
+	s := newTestService(t)
+	view := createSample(t, s)
+	id := view.ID
+
+	prepared := preparedActions(t, s, id)
+	if len(prepared.Input.ArcLines) == 0 || !strings.Contains(prepared.Input.ArcLines[0], "前期") {
+		t.Fatalf("arc lines missing from prompt input: %+v", prepared.Input.ArcLines)
+	}
+
+	xpBefore := view.Players[0].Experience
+	turn := &dm.Turn{
+		Narration: "你們找到了失蹤的燈塔守。", Scene: "北岬燈塔",
+		Objective: "護送燈塔守回鎮上", ObjectiveContext: "ctx", Stakes: "stakes",
+		Choices: []dm.Choice{{Text: "出發"}},
+		Combat:  dm.Combat{FirstTurn: "initiative", Enemies: []dm.Enemy{}},
+		Arc:     dm.ArcSignal{PhaseComplete: true, NextGoal: "查明燈塔熄滅的幕後黑手"},
+	}
+	applied, err := s.ApplyDMTurn(id, prepared, turn)
+	if err != nil {
+		t.Fatalf("apply: %v", err)
+	}
+	v := applied.View
+	if v.StoryArc == nil {
+		t.Fatal("view missing storyArc")
+	}
+	if v.StoryArc.Current != 1 {
+		t.Fatalf("arc should advance to 中期: %+v", v.StoryArc)
+	}
+	first := v.StoryArc.Phases[0]
+	if first.CompletedRound == 0 || !first.RewardGranted {
+		t.Fatalf("phase 1 not stamped/rewarded: %+v", first)
+	}
+	if v.StoryArc.Phases[1].Goal != "查明燈塔熄滅的幕後黑手" {
+		t.Fatalf("next goal not set: %+v", v.StoryArc.Phases[1])
+	}
+	if v.Players[0].Experience != xpBefore+first.RewardXP {
+		t.Fatalf("timed reward XP missing: before %d after %d want +%d", xpBefore, v.Players[0].Experience, first.RewardXP)
+	}
+	var hasLog bool
+	for _, e := range v.Story {
+		if strings.Contains(e.Text, "階段達成") {
+			hasLog = true
+		}
+	}
+	if !hasLog {
+		t.Fatal("missing 階段達成 journal entry")
+	}
+}
+
 func TestApplyDMTurnFullFlow(t *testing.T) {
 	s := newTestService(t)
 	view := createSample(t, s)

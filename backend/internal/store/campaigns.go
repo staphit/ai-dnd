@@ -134,6 +134,7 @@ func (s *Store) DeleteCampaign(id string) error {
 		`DELETE FROM story_entries WHERE campaign_id = ?`,
 		`DELETE FROM combats WHERE campaign_id = ?`,
 		`DELETE FROM combat_snapshots WHERE campaign_id = ?`,
+		`DELETE FROM story_arcs WHERE campaign_id = ?`,
 		`DELETE FROM characters WHERE campaign_id = ?`,
 		`DELETE FROM campaigns WHERE id = ?`,
 	} {
@@ -248,6 +249,33 @@ func (s *Store) CombatSnapshot(campaignID string) (string, bool, error) {
 func (s *Store) DeleteCombatSnapshot(campaignID string) error {
 	_, err := s.db.Exec(`DELETE FROM combat_snapshots WHERE campaign_id = ?`, campaignID)
 	return err
+}
+
+// SaveStoryArc upserts the story-pacing arc for a campaign.
+func (s *Store) SaveStoryArc(campaignID, data string, updatedAt int64) error {
+	if campaignID == "" {
+		return errors.New("campaign id is required")
+	}
+	_, err := s.db.Exec(
+		`INSERT INTO story_arcs (campaign_id, data, updated_at) VALUES (?, ?, ?)
+		 ON CONFLICT(campaign_id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at`,
+		campaignID, data, updatedAt,
+	)
+	return err
+}
+
+// StoryArc returns the story-pacing arc; ok is false when none.
+func (s *Store) StoryArc(campaignID string) (string, bool, error) {
+	row := s.db.QueryRow(`SELECT data FROM story_arcs WHERE campaign_id = ?`, campaignID)
+	var data string
+	err := row.Scan(&data)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", false, nil
+	}
+	if err != nil {
+		return "", false, err
+	}
+	return data, true, nil
 }
 
 // AppendStoryEntries appends journal entries, assigning per-campaign

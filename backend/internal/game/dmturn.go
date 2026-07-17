@@ -143,6 +143,7 @@ func (s *Service) prepareBase(st *gameState) dm.TurnInputV2 {
 		Round:            st.row.Round,
 		PrevChoices:      choiceTexts(choices),
 		CombatLine:       combatLine(st.combat),
+		ArcLines:         arcPromptLines(st.arc, st.row.Round),
 		Players:          sanitizedPlayers(st.players),
 	}
 }
@@ -359,6 +360,35 @@ func (s *Service) ApplyDMTurn(id string, prepared PreparedDMTurn, turn *dm.Turn)
 					entries = append(entries, store.StoryRow{Speaker: "system", Text: fmt.Sprintf("%s獲得 %d XP：%s", st.players[i].Name, award.Amount, award.Reason)})
 					break
 				}
+			}
+		}
+	}
+
+	// Story-arc phase completion: the server stamps the round, pays the timed
+	// reward, and advances the campaign to its next act.
+	if turn.Arc.PhaseComplete && st.arc != nil {
+		if p := st.arc.phase(); p != nil {
+			p.CompletedRound = st.row.Round
+			if st.row.Round <= p.DeadlineRound {
+				p.RewardGranted = true
+				for i := range st.players {
+					st.players[i] = rules.GrantExperience(st.players[i], p.RewardXP)
+				}
+				entries = append(entries, store.StoryRow{Speaker: "system", Text: fmt.Sprintf("階段達成：%s目標「%s」於期限內完成（第 %d/%d 回合）！每位角色獲得 %d XP。", p.Stage, p.Goal, st.row.Round, p.DeadlineRound, p.RewardXP)})
+			} else {
+				entries = append(entries, store.StoryRow{Speaker: "system", Text: fmt.Sprintf("階段達成：%s目標「%s」完成，但已超過期限（第 %d 回合／期限第 %d 回合），沒有限時獎勵。", p.Stage, p.Goal, st.row.Round, p.DeadlineRound)})
+			}
+			st.arc.Current++
+			if next := st.arc.phase(); next != nil {
+				goal := strings.TrimSpace(turn.Arc.NextGoal)
+				if goal == "" {
+					goal = clampStr(turn.Objective, 240)
+				}
+				next.Goal = goal
+				entries = append(entries, store.StoryRow{Speaker: "system", Text: fmt.Sprintf("劇本進入%s：目標「%s」，期限第 %d 回合，期限內達成每人獎勵 %d XP。", next.Stage, next.Goal, next.DeadlineRound, next.RewardXP)})
+			} else {
+				st.arc.Ended = true
+				entries = append(entries, store.StoryRow{Speaker: "system", Text: "劇本三階段目標全部完成！故事進入尾聲。"})
 			}
 		}
 	}

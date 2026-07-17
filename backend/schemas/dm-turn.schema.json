@@ -120,6 +120,15 @@
         "additionalProperties": false
       }
     },
+    "arc": {
+      "type": "object",
+      "properties": {
+        "phaseComplete": { "type": "boolean" },
+        "nextGoal": { "type": "string", "maxLength": 240 }
+      },
+      "required": ["phaseComplete", "nextGoal"],
+      "additionalProperties": false
+    },
     "experienceAwards": {
       "type": "array",
       "maxItems": 4,
@@ -135,6 +144,6 @@
       }
     }
   },
-  "required": ["narration", "scene", "imagePrompt", "objective", "objectiveContext", "stakes", "requiresCheck", "check", "choices", "effects", "combat", "privateMessages", "actionIssues", "experienceAwards"],
+  "required": ["narration", "scene", "imagePrompt", "objective", "objectiveContext", "stakes", "requiresCheck", "check", "choices", "effects", "combat", "privateMessages", "actionIssues", "arc", "experienceAwards"],
   "additionalProperties": false
 }

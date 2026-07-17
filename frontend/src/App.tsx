@@ -943,6 +943,22 @@ export default function App() {
 
             <section className="objective objective-preamble" aria-label="任務摘要">
               <p className="eyebrow">任務摘要</p>
+              {(() => {
+                const arc = campaign.storyArc;
+                if (!arc) return null;
+                if (arc.ended) return <div className="arc-progress arc-ended">劇本三階段已完成，故事進入尾聲</div>;
+                const phase = arc.phases[arc.current];
+                if (!phase) return null;
+                const pct = Math.min(100, Math.round((campaign.round / Math.max(1, phase.deadlineRound)) * 100));
+                return (
+                  <div className={`arc-progress ${campaign.round > phase.deadlineRound ? 'arc-overdue' : ''}`} aria-label="劇本進度">
+                    <span className="arc-stage">{phase.stage}</span>
+                    <div className="arc-track" role="presentation"><i style={{ width: `${pct}%` }} /></div>
+                    <span className="arc-rounds">第 {campaign.round}／{phase.deadlineRound} 回合</span>
+                    <span className="arc-reward">限時獎勵 {phase.rewardXp} XP</span>
+                  </div>
+                );
+              })()}
               <strong>{campaign.objective}</strong>
               <p className="objective-context">{campaign.objectiveContext}</p>
               <div className="objective-stakes">

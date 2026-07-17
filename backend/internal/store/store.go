@@ -118,6 +118,12 @@ CREATE TABLE IF NOT EXISTS combat_snapshots (
 	data        TEXT NOT NULL,
 	updated_at  INTEGER NOT NULL
 );
+-- Story pacing arc: three phases with round deadlines and timed rewards.
+CREATE TABLE IF NOT EXISTS story_arcs (
+	campaign_id TEXT PRIMARY KEY,
+	data        TEXT NOT NULL,
+	updated_at  INTEGER NOT NULL
+);
 CREATE TABLE IF NOT EXISTS story_entries (
 	campaign_id TEXT NOT NULL,
 	seq         INTEGER NOT NULL,

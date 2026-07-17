@@ -270,8 +270,25 @@ export interface Campaign {
   imagePrompt?: string;
   requiredCheck?: RequiredCheck | null;
   combat?: CombatState;
+  storyArc?: StoryArc;
   settings?: Record<string, unknown>;
   xpProgress?: Partial<Record<PlayerId, XpProgress>>;
+}
+
+// Story pacing arc: three acts with round deadlines and timed XP rewards.
+export interface ArcPhase {
+  stage: string; // 前期 | 中期 | 後期
+  goal: string;
+  deadlineRound: number;
+  rewardXp: number;
+  completedRound?: number;
+  rewardGranted?: boolean;
+}
+
+export interface StoryArc {
+  phases: ArcPhase[];
+  current: number;
+  ended?: boolean;
 }
 
 export interface CampaignSummary {

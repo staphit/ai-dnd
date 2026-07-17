@@ -259,6 +259,40 @@ button:not(:disabled):active:where(.tip-dismiss, .notice-banner button, .error-b
 .game-state-combat { border-color: oklch(55% 0.145 28 / 0.55); background: oklch(55% 0.145 28 / 0.12); color: var(--color-danger); }
 .game-state-combat strong { color: oklch(78% 0.09 28); }
 
+/* Story-arc pacing strip inside the mission brief. */
+.arc-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 10px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.arc-stage {
+  padding: 2px 8px;
+  border: 1px solid var(--accent-soft);
+  color: var(--accent);
+  letter-spacing: .12em;
+}
+.arc-track {
+  flex: 1;
+  height: 4px;
+  min-width: 60px;
+  background: rgba(255,255,255,.06);
+  overflow: hidden;
+}
+.arc-track i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width .4s ease;
+}
+.arc-overdue .arc-track i { background: oklch(62% 0.16 28); }
+.arc-overdue .arc-rounds { color: oklch(70% 0.15 28); }
+.arc-rounds { font-family: var(--font-mono), monospace; }
+.arc-reward { white-space: nowrap; }
+.arc-ended { color: var(--accent); }
+
 /* Mission brief — sits in .table-preamble above 最新對話 */
 .objective {
   padding: 16px 18px 17px;
