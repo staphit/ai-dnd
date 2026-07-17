@@ -311,6 +311,21 @@ export interface SceneSlotPayload {
   createdAt: number;
 }
 
+// One scene-image slot per DM beat: the prompt captured at turn time plus the
+// generated image, if the player has rendered it yet.
+export interface SceneSlotInfo {
+  id: string;
+  scene: string;
+  imagePrompt: string;
+  imageUrl: string;
+  imageModel: string;
+  createdAt: number;
+}
+
+export function listSceneSlots(id: string): Promise<{ slots: SceneSlotInfo[] }> {
+  return apiFetch(campaignPath(id, '/scene-slots'));
+}
+
 export interface DmTurnResponse {
   view: Campaign;
   text: string;

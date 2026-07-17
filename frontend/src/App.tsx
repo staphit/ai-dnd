@@ -18,7 +18,7 @@ import { PartyWipeModal } from './components/PartyWipeModal';
 import { ShopModal } from './components/ShopModal';
 import { StoryRevisionPanel, type RevisionChatLine } from './components/StoryRevisionPanel';
 import * as api from './api';
-import { ApiError, type ActionIssue, type CombatConclusion } from './api';
+import { ApiError, type ActionIssue, type CombatConclusion, type SceneSlotInfo } from './api';
 import { getActiveCampaignId, readLegacyVault, setActiveCampaignId } from './campaign-storage';
 
 const CharacterManager = lazy(() => import('./components/CharacterManager').then((module) => ({ default: module.CharacterManager })));
@@ -101,6 +101,8 @@ export default function App() {
   const [revisionChat, setRevisionChat] = useState<RevisionChatLine[]>([]);
   const [revising, setRevising] = useState(false);
   const [pendingSceneSlotId, setPendingSceneSlotId] = useState('');
+  const [sceneSlots, setSceneSlots] = useState<SceneSlotInfo[]>([]);
+  const [generatingSlotId, setGeneratingSlotId] = useState('');
   const [codexConn, setCodexConn] = useState<{ alive: boolean; storyId: string } | null>(null);
   const [connecting, setConnecting] = useState(false);
   const advancingRef = useRef(false);
@@ -128,6 +130,15 @@ export default function App() {
     ]);
   }
 
+  // refreshSceneSlots reloads the per-beat scene-image row; failures are
+  // non-fatal (the gallery just stays stale).
+  async function refreshSceneSlots(id: string) {
+    try {
+      const { slots } = await api.listSceneSlots(id);
+      setSceneSlots(slots);
+    } catch { /* non-fatal */ }
+  }
+
   // adoptCampaign switches to another campaign: resets per-campaign UI state.
   function adoptCampaign(view: Campaign) {
     setCampaign(view);
@@ -136,6 +147,8 @@ export default function App() {
     setViewer('public');
     setSpellRoll(null);
     retryTurnRef.current = null;
+    setSceneSlots([]);
+    if (view.id) void refreshSceneSlots(view.id);
   }
 
   async function refreshCampaigns() {
@@ -502,7 +515,7 @@ export default function App() {
     const slotId = sceneSlotId || pendingSceneSlotId;
     const narration = narrationOverride || latestDm?.text;
     if (!narration && !slotId) return setImageError('目前沒有可供繪製的公開 DM 場景敘事。');
-    setImageLoading(true); setImageError('');
+    setImageLoading(true); setImageError(''); setGeneratingSlotId(slotId || '');
     try {
       // Async job mode: the server answers immediately with a job id and
       // renders in the background, so DM turns and actions never wait.
@@ -539,7 +552,8 @@ export default function App() {
       if (!url) throw new Error('場景插圖生成失敗');
       appendSceneImage({ url, scene: sceneOverride || campaignRef.current.scene, createdAt: now(), model: model || status?.imageModel || 'Image' });
       if (slotId && slotId === pendingSceneSlotId) setPendingSceneSlotId('');
-    } catch (caught) { setImageError(message(caught)); } finally { setImageLoading(false); }
+      if (campaignRef.current.id) void refreshSceneSlots(campaignRef.current.id);
+    } catch (caught) { setImageError(message(caught)); } finally { setImageLoading(false); setGeneratingSlotId(''); }
   }
 
   async function generatePortrait(player: PlayerCharacter, appearance: string) {
@@ -678,6 +692,7 @@ export default function App() {
       }
       setCampaign(resp.view);
       if (resp.sceneSlot?.id) setPendingSceneSlotId(resp.sceneSlot.id);
+      void refreshSceneSlots(campaignId); // new beat = new slot in the row
       const rejectedIssues = resp.actionIssues || [];
       if (rejectedIssues.length > 0) {
         // AI narrative veto: the view already carries the 【行動駁回】 entry and
@@ -898,12 +913,15 @@ export default function App() {
             <SceneVisual
               image={sceneImage}
               images={settings.sceneImages || []}
+              slots={sceneSlots}
+              generatingSlotId={generatingSlotId}
               scene={campaign.scene}
               loading={imageLoading}
               error={imageError}
               canGenerate={canGenerateImages}
               onGenerate={() => void generateImage()}
               onSelect={setSceneImage}
+              onGenerateSlot={(slotId) => void generateImage(undefined, undefined, undefined, slotId)}
             />
           </div>
 

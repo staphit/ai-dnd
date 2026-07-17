@@ -758,6 +758,40 @@ func (s *Server) handleSceneImageJob(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// handleListSceneSlots returns the story's scene-image slots oldest-first —
+// one per DM beat, each carrying the prompt captured at turn time, generated
+// or still waiting for the player to render it.
+func (s *Server) handleListSceneSlots(w http.ResponseWriter, r *http.Request) {
+	if s.Store == nil {
+		writeJSON(w, http.StatusOK, map[string]any{"slots": []any{}})
+		return
+	}
+	id := sanitizeStoryID(chi.URLParam(r, "id"))
+	if id == "" {
+		writeJSON(w, http.StatusBadRequest, errorBody{Error: "缺少有效的戰役 ID。"})
+		return
+	}
+	limit := 48
+	if v, err := strconv.Atoi(r.URL.Query().Get("limit")); err == nil && v > 0 && v <= 200 {
+		limit = v
+	}
+	list, err := s.Store.ListSceneSlots(id, limit)
+	if err != nil {
+		writeErr(w, err, http.StatusServiceUnavailable)
+		return
+	}
+	// Store returns newest-first; the gallery reads left → right in story order.
+	out := make([]map[string]any, 0, len(list))
+	for i := len(list) - 1; i >= 0; i-- {
+		slot := list[i]
+		out = append(out, map[string]any{
+			"id": slot.ID, "scene": slot.Scene, "imagePrompt": slot.ImagePrompt,
+			"imageUrl": slot.ImageURL, "imageModel": slot.ImageModel, "createdAt": slot.CreatedAt,
+		})
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"slots": out})
+}
+
 func (s *Server) handleListImageMeta(w http.ResponseWriter, r *http.Request) {
 	if s.Store == nil {
 		writeJSON(w, http.StatusOK, map[string]any{"images": []any{}})

@@ -603,6 +603,30 @@ button:not(:disabled):active:where(.tip-dismiss, .notice-banner button, .error-b
 .scene-gallery-delete { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; display: grid; place-items: center; padding: 0; border: 1px solid var(--line); background: oklch(18% 0.022 55 / 0.88); color: var(--color-danger); cursor: pointer; }
 .scene-gallery-delete:hover:not(:disabled) { border-color: var(--color-danger); }
 .scene-gallery-delete:disabled { opacity: .5; cursor: not-allowed; }
+/* Per-beat slot row: pending tiles show a dashed generate button; the main
+   caption echoes the prompt recorded for the selected beat. */
+.scene-slot-pending .scene-slot-generate {
+  width: 100%;
+  padding: 0;
+  border: 1px dashed oklch(55% 0.08 72 / 0.55);
+  background: oklch(18% 0.022 55 / 0.9);
+  color: var(--muted);
+  text-align: left;
+  cursor: pointer;
+}
+.scene-slot-pending .scene-slot-generate:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.scene-slot-pending .scene-slot-generate:disabled { opacity: .55; cursor: not-allowed; }
+.scene-caption-prompt {
+  display: block;
+  max-width: 72ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  font-family: var(--font-mono), monospace;
+  font-size: 9px;
+}
+
 /* Pending scene slots live in the same gallery strip as finished images. */
 .scene-gallery-pending > .scene-gallery-placeholder {
   width: 100%;

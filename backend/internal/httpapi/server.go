@@ -276,6 +276,7 @@ func (s *Server) Router() http.Handler {
 	r.Post("/api/dm", s.handleDm)
 	r.Post("/api/scene-image", s.handleSceneImage)
 	r.Get("/api/scene-image/job/{jobId}", s.handleSceneImageJob)
+	r.Get("/api/campaign/{id}/scene-slots", s.handleListSceneSlots)
 	r.Post("/api/character-image", s.handleCharacterImage)
 	r.Delete("/api/generated/{filename}", s.handleDeleteGenerated)
 	r.Get("/api/images/meta", s.handleListImageMeta)
