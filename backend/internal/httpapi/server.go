@@ -194,6 +194,7 @@ func (s *Server) Router() http.Handler {
 	r.Get("/api/rules/catalog", s.handleRulesCatalog)
 	r.Post("/api/campaign/{id}/players/{pid}/cast", s.handleCast)
 	r.Post("/api/campaign/{id}/players/{pid}/rest", s.handleRest)
+	r.Post("/api/campaign/{id}/players/{pid}/revive", s.handleRevive)
 	r.Post("/api/campaign/{id}/players/{pid}/level-up", s.handleLevelUp)
 	r.Post("/api/campaign/{id}/players/{pid}/ability-point", s.handleAbilityPoint)
 	r.Post("/api/campaign/{id}/players/{pid}/prepared-spells", s.handlePreparedSpells)

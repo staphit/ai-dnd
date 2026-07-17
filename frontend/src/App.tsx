@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowClockwise, CloudArrowUp, Compass, Lightbulb, LockKey, MapTrifold, Plugs, ShieldWarning, Sword, XCircle } from '@phosphor-icons/react';
+import { ArrowClockwise, CloudArrowUp, Compass, Heartbeat, Lightbulb, LockKey, MapTrifold, Plugs, ShieldWarning, Sword, XCircle } from '@phosphor-icons/react';
 import { initialCampaign, storyPresets } from './data';
 import type { AbilityKey, AiStatus, Campaign, CampaignSettings, CampaignSummary, CharacterSpell, Choice, ForgeSettings, MessageAudience, Page, PlayerCharacter, PlayerId, RequiredCheck, RestType, SceneImage, StoryEntry } from './types';
 import { Sidebar } from './components/Sidebar';
@@ -419,6 +419,16 @@ export default function App() {
       const result = await api.combatConclude(campaign.id);
       setCampaign(result.view);
       void advance({ combatConclusion: { ...result.conclusion, final } });
+    } catch (caught) { setError(message(caught)); }
+  }
+
+  // Out-of-combat rescue: rescuer spends 1 exploration action point, the
+  // downed character spends hit dice to stand back up.
+  async function reviveDowned(targetId: PlayerId, rescuerId: PlayerId) {
+    if (!campaign.id || loading) return;
+    try {
+      setCampaign(await api.revive(campaign.id, targetId, rescuerId));
+      setError('');
     } catch (caught) { setError(message(caught)); }
   }
 
@@ -915,6 +925,25 @@ export default function App() {
                   <button type="button" className="retry-turn" onClick={retryLastTurn}><ArrowClockwise />重試上一步</button>
                 )}
                 <button type="button" onClick={() => setError('')}><XCircle /></button>
+              </div>
+            )}
+
+            {!campaign.combat?.active && campaign.id && campaign.players.some((player) => player.hp === 0) && (
+              <div className="model-notice revive-notice">
+                <Heartbeat size={20} />
+                <div>
+                  <strong>有隊友倒地</strong>
+                  <span>救援會消耗 1 點探索行動時間；倒地者最多花費 2 顆生命骰回復生命後重新站起。</span>
+                </div>
+                {campaign.players.filter((player) => player.hp === 0).map((target) => {
+                  const rescuer = campaign.players.find((player) => player.hp > 0 && player.id !== target.id);
+                  if (!rescuer) return null;
+                  return (
+                    <MagneticButton key={target.id} variant="quiet" disabled={loading} onClick={() => void reviveDowned(target.id, rescuer.id)}>
+                      {rescuer.name}救援{target.name}
+                    </MagneticButton>
+                  );
+                })}
               </div>
             )}
 

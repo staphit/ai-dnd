@@ -187,6 +187,12 @@ export function unlockAction(id: string, playerId: PlayerId | string): Promise<C
   return apiFetch(playerPath(id, playerId, '/action'), { method: 'DELETE' });
 }
 
+// Revive a downed (0 HP) character: costs the rescuer's combat action in
+// combat, or 1 exploration action point outside combat.
+export function revive(id: string, targetId: PlayerId | string, rescuerId: PlayerId | string): Promise<Campaign> {
+  return apiFetch(playerPath(id, targetId, '/revive'), { method: 'POST', body: JSON.stringify({ rescuerId }) });
+}
+
 // ---------------------------------------------------------------------------
 // Combat
 

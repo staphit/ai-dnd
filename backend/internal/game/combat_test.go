@@ -159,6 +159,73 @@ func TestRetryCombatRestoresSnapshot(t *testing.T) {
 	}
 }
 
+func TestReviveDownedAlly(t *testing.T) {
+	s := newTestService(t)
+	view := createSample(t, s)
+	id := view.ID
+
+	// Nobody is down yet.
+	if _, err := s.Revive(id, "player1", "player2"); apperr.StatusOf(err, 0) != 400 {
+		t.Fatalf("expected 400 when target standing, got %v", err)
+	}
+
+	// Down player2 via import-free path: enemy first, huge damage.
+	s.WithDice(seq(0.01, 0.02, 0.99))
+	if _, err := s.StartCombatManual(id, []EnemySpec{{Name: "巨魔", AC: 12, HP: 40, AttackBonus: 30, Damage: "6d6+20", DamageType: "鈍擊"}}); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	s.WithDice(seq(0.95))
+	runner := func(ctx context.Context, input dm.TacticsInput) (dm.Tactic, error) {
+		return dm.Tactic{TargetID: "player2", Attack: "重擊", Intent: "巨魔掄起巨棒砸向牧師。"}, nil
+	}
+	result, err := s.EnemyTurn(context.Background(), id, runner)
+	if err != nil {
+		t.Fatalf("enemy turn: %v", err)
+	}
+	var downed bool
+	for _, p := range result.View.Players {
+		if p.ID == "player2" && p.HP == 0 {
+			downed = true
+		}
+	}
+	if !downed {
+		t.Fatalf("player2 should be at 0 HP: %+v", result.View.Players)
+	}
+
+	// It is now a party member's turn; player1 spends the action to revive.
+	roundBefore := result.View.Round
+	revived, err := s.Revive(id, "player1", "player2")
+	if err != nil {
+		t.Fatalf("revive: %v", err)
+	}
+	for _, p := range revived.Players {
+		if p.ID == "player2" {
+			if p.HP <= 0 {
+				t.Fatalf("player2 not revived: %+v", p)
+			}
+			if p.Condition == "倒地" {
+				t.Fatalf("condition not cleared: %+v", p)
+			}
+		}
+	}
+	for _, c := range revived.Combat.Combatants {
+		if c.PlayerID == "player2" && (c.Defeated || c.HP <= 0) {
+			t.Fatalf("combatant not stood up: %+v", c)
+		}
+	}
+	if revived.Round != roundBefore {
+		t.Fatalf("combat revive must not consume exploration time: %d -> %d", roundBefore, revived.Round)
+	}
+	// The action is spent: attacking now must fail.
+	if _, err := s.Attack(id, AttackParams{}); apperr.StatusOf(err, 0) != 400 {
+		t.Fatalf("expected action-used 400 after revive, got %v", err)
+	}
+	last := revived.Story[len(revived.Story)-1]
+	if !strings.Contains(last.Text, "救援倒地的") {
+		t.Fatalf("missing revive log: %q", last.Text)
+	}
+}
+
 func TestEnemyTurnAIAndFallback(t *testing.T) {
 	s := newTestService(t)
 	view := createSample(t, s)

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowClockwise, Crosshair, MagicWand, Plus, Shield, Skull, Sword, X } from '@phosphor-icons/react';
 import type { Campaign, CharacterSpell, CombatState, PlayerCharacter, PlayerId } from '../types';
-import { combatAttack, combatEndTurn, combatEnemyTurn, combatStart, type EnemySpec } from '../api';
+import { combatAttack, combatEndTurn, combatEnemyTurn, combatStart, revive, type EnemySpec } from '../api';
 
 interface CombatTrackerProps {
   campaignId: string;
@@ -37,6 +37,13 @@ export function CombatTracker({ campaignId, players, combat, onView, onEnd, onCa
     return list.filter((spell) => spell.level === 0 || spell.prepared || spell.alwaysPrepared);
   }, [currentPlayer]);
   const validTargets = useMemo(() => combat?.combatants.filter((entry) => !entry.defeated && entry.id !== current?.id && entry.side !== current?.side) || [], [combat, current]);
+  // Downed party members the current player can spend their action to revive.
+  const downedAllies = useMemo(
+    () => (current?.side === 'party'
+      ? combat?.combatants.filter((entry) => entry.side === 'party' && entry.defeated && entry.playerId && entry.playerId !== current?.playerId) || []
+      : []),
+    [combat, current],
+  );
   const currentEconomy = current ? combat?.turnEconomy?.[current.id] || { actionUsed: false, bonusActionUsed: false, reactionUsed: false } : undefined;
   const enemyTurnKey = combat?.active && current?.side === 'enemy' && !current.defeated
     ? `${combat.round}:${combat.turnIndex}:${current.id}`
@@ -165,6 +172,20 @@ export function CombatTracker({ campaignId, players, combat, onView, onEnd, onCa
             <button type="button" className="primary-action" onClick={attack} disabled={busy || !validTargets.length || currentEconomy?.actionUsed}>
               <Crosshair />攻擊（使用動作）
             </button>
+            {downedAllies.length > 0 && currentPlayer && (
+              <button
+                type="button"
+                className="revive-action"
+                disabled={busy || currentEconomy?.actionUsed}
+                onClick={() => {
+                  const target = downedAllies[0];
+                  if (!target.playerId) return;
+                  void run(() => revive(campaignId, target.playerId!, currentPlayer.id), (view) => onView(view));
+                }}
+              >
+                <Shield />救援 {downedAllies[0].name}（使用動作）
+              </button>
+            )}
             {onCastSpell && currentPlayer && castableSpells.length > 0 && (
               <div className="combat-spell-cast">
                 <label>
