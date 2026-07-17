@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "title": { "type": "string", "minLength": 1, "maxLength": 120 },
+    "novel": { "type": "string", "minLength": 200, "maxLength": 24000 }
+  },
+  "required": ["title", "novel"],
+  "additionalProperties": false
+}

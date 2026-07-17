@@ -111,6 +111,8 @@ export default function App() {
   const [revisionOpen, setRevisionOpen] = useState(false);
   const [shopOpen, setShopOpen] = useState(false);
   const [shopBusy, setShopBusy] = useState(false);
+  const [novelBusy, setNovelBusy] = useState(false);
+  const [novelPlayerId, setNovelPlayerId] = useState<PlayerId | ''>('');
   const [revisionChat, setRevisionChat] = useState<RevisionChatLine[]>([]);
   const [revising, setRevising] = useState(false);
   const [pendingSceneSlotId, setPendingSceneSlotId] = useState('');
@@ -449,6 +451,24 @@ export default function App() {
       setCampaign(result.view);
       void advance({ combatConclusion: { ...result.conclusion, final } });
     } catch (caught) { setError(message(caught)); }
+  }
+
+  // Export the whole adventure as a first-person novel .txt (AI rewrite from
+  // the chosen character's point of view, dialogue included).
+  async function exportNovel(playerId: PlayerId) {
+    if (!campaign.id || novelBusy) return;
+    setNovelBusy(true); setError('');
+    try {
+      const resp = await api.exportNovel(campaign.id, playerId, activeDmProvider, settings.selectedModel || '');
+      const blob = new Blob([`${resp.title}\n\n${resp.novel}\n`], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `${campaign.title}－${resp.narrator}視角劇本.txt`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+      setNotice(`劇本「${resp.title}」已輸出為 txt 檔。`);
+    } catch (caught) { setError(message(caught)); } finally { setNovelBusy(false); }
   }
 
   async function shopAction(run: () => Promise<Campaign>) {
@@ -1209,7 +1229,22 @@ export default function App() {
         </motion.main>
         )}
         {page === 'characters' && <motion.div key="characters" initial={{ opacity: 0 }} animate={{ opacity: 1 }}><Suspense fallback={<main className="single-page lazy-page-loading" role="status"><span>正在載入角色成長資料…</span></main>}><CharacterManager players={campaign.players} xpProgress={campaign.xpProgress} showStatHints={settings.showStatHints !== false} onLevelUp={(playerId, className) => { if (!campaign.id) return; api.levelUp(campaign.id, playerId, className).then(setCampaign).catch((caught) => setError(message(caught))); }} onSpendAbilityPoint={(playerId, ability: AbilityKey) => { if (!campaign.id) return; api.spendAbilityPoint(campaign.id, playerId, ability).then(setCampaign).catch((caught) => setError(message(caught))); }} onSetPreparedSpells={(playerId, spellIds) => { if (!campaign.id) return; api.setPreparedSpells(campaign.id, playerId, spellIds).then(setCampaign).catch((caught) => setError(message(caught))); }} onSaveProfile={(playerId, patch) => { if (!campaign.id) return; api.patchPlayer(campaign.id, playerId, patch).then((view) => { setCampaign(view); setNotice('角色配置已儲存。'); }).catch((caught) => setError(message(caught))); }} onGeneratePortrait={generatePortrait} /></Suspense></motion.div>}
-        {page === 'journal' && <motion.main key="journal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="single-page"><div className="page-intro"><p className="eyebrow">戰役記憶</p><h2>{campaign.title}</h2><p>公開與私密訊息都保存在伺服器戰役資料庫與匯出檔中。</p></div><div className="journal-list">{visibleStory.map((entry, index) => <article key={entry.id} className={entry.audience && entry.audience !== 'public' ? 'journal-private' : ''}><span>{String(index + 1).padStart(2, '0')}</span><div><small>{entry.time}／{speakerLabel(entry)}</small><p>{entry.text}</p></div></article>)}</div></motion.main>}
+        {page === 'journal' && <motion.main key="journal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="single-page"><div className="page-intro"><p className="eyebrow">戰役記憶</p><h2>{campaign.title}</h2><p>公開與私密訊息都保存在伺服器戰役資料庫與匯出檔中。</p></div>
+          {campaign.id && campaign.players.length > 0 && (
+            <section className="novel-export" aria-label="輸出劇本">
+              <div>
+                <strong>輸出第一人稱劇本</strong>
+                <span>AI 會把整場冒險改寫成所選角色視角的小說（含對話），下載為 txt。故事完結後輸出最完整。</span>
+              </div>
+              <select value={novelPlayerId || campaign.players[0].id} onChange={(event) => setNovelPlayerId(event.target.value as PlayerId)}>
+                {campaign.players.map((player) => <option key={player.id} value={player.id}>{player.name}的視角</option>)}
+              </select>
+              <MagneticButton disabled={novelBusy} onClick={() => void exportNovel((novelPlayerId || campaign.players[0].id) as PlayerId)}>
+                {novelBusy ? 'AI 撰寫中（約 1–2 分鐘）…' : '輸出劇本 TXT'}
+              </MagneticButton>
+            </section>
+          )}
+          <div className="journal-list">{visibleStory.map((entry, index) => <article key={entry.id} className={entry.audience && entry.audience !== 'public' ? 'journal-private' : ''}><span>{String(index + 1).padStart(2, '0')}</span><div><small>{entry.time}／{speakerLabel(entry)}</small><p>{entry.text}</p></div></article>)}</div></motion.main>}
         {page === 'settings' && <motion.main key="settings" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="single-page settings-page"><div className="page-intro"><p className="eyebrow">戰役設定</p><h2>地城主與戰役</h2><p>設定會即時保存在伺服器上的這個戰役；匯入預設不切換。</p></div>
           <section className="settings-row"><div><strong>示範 DM</strong><span>完全不呼叫模型。</span></div><button type="button" className={`switch ${demoMode ? 'switch-on' : ''}`} onClick={() => setDemoMode((value) => !value)}><i /></button></section>
           <section className="settings-row model-selector"><div><strong>DM 資料源</strong><span>Codex（ChatGPT 登入）或 Grok（`grok login`／XAI_API_KEY）。切換後請重新連線該故事。</span></div><select value={activeDmProvider} onChange={(event) => { updateSettings({ dmProvider: event.target.value, selectedModel: '', selectedEffort: '' }); setCodexConn(null); }}>{(status?.dmProviders?.length ? status.dmProviders : [{ id: 'codex', label: 'Codex CLI', connected: true }]).map((p) => <option key={p.id} value={p.id}>{p.label}{'connected' in p && !p.connected ? '（未就緒）' : ''}</option>)}</select></section>

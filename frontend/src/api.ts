@@ -226,6 +226,12 @@ export function useItem(id: string, playerId: PlayerId | string, itemName: strin
   return apiFetch(playerPath(id, playerId, '/use-item'), { method: 'POST', body: JSON.stringify({ itemName }) });
 }
 
+// Rewrite the whole adventure as a first-person novel from one character's
+// point of view; the caller saves the returned text as a .txt file.
+export function exportNovel(id: string, playerId: PlayerId | string, dmProvider?: string, model?: string): Promise<{ title: string; novel: string; narrator: string }> {
+  return apiFetch(campaignPath(id, '/export-novel'), { method: 'POST', body: JSON.stringify({ playerId, dmProvider, model }) });
+}
+
 // ---------------------------------------------------------------------------
 // Combat
 

@@ -283,6 +283,7 @@ func (s *Server) Router() http.Handler {
 	r.Delete("/api/generated/{filename}", s.handleDeleteGenerated)
 	r.Get("/api/images/meta", s.handleListImageMeta)
 	r.Post("/api/campaign/{id}/revise-story", s.handleReviseStory)
+	r.Post("/api/campaign/{id}/export-novel", s.handleExportNovel)
 	r.Post("/api/tts", s.handleTTS)
 	r.Get("/generated/*", s.serveGenerated)
 	r.NotFound(s.serveStatic)
