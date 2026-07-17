@@ -18,6 +18,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"dndduet/internal/apperr"
+	"dndduet/internal/game"
 	"dndduet/internal/images"
 	"dndduet/internal/memory"
 	"dndduet/internal/provider"
@@ -34,6 +35,10 @@ type Server struct {
 	WebDist     string // absolute path to the built frontend
 	SchemaPath  string // absolute path to the DM output schema
 	ProviderCWD string // absolute working directory for the CLI's --cd flag
+
+	// TacticsSchemaPath is the combat-tactics output schema; empty disables
+	// AI enemy turns (mechanical fallback targeting only).
+	TacticsSchemaPath string
 
 	// ImageRenderers maps a backend id ("codex", "local") to its renderer; the
 	// request body's imageBackend field picks one per generation.
@@ -52,6 +57,10 @@ type Server struct {
 	// Memory persists per-story narrative memory and materialises the file the
 	// DM turn's Codex reads; nil disables the memory pipeline (full-context mode).
 	Memory *memory.Manager
+
+	// Game orchestrates server-authoritative campaign state (characters,
+	// combat, story journal) on top of Store.
+	Game *game.Service
 }
 
 // imageGateMinGap is the minimum spacing between image generations.
@@ -136,6 +145,28 @@ func (s *Server) Router() http.Handler {
 	r.Get("/api/status", s.handleStatus)
 	r.Get("/api/codex/connection", s.handleCodexConnection)
 	r.Post("/api/codex/connect", s.handleCodexConnect)
+	r.Get("/api/campaigns", s.handleCampaignList)
+	r.Post("/api/campaigns", s.handleCampaignCreate)
+	r.Post("/api/campaigns/import", s.handleCampaignImport)
+	r.Get("/api/campaign/{id}", s.handleCampaignGet)
+	r.Delete("/api/campaign/{id}", s.handleCampaignDelete)
+	r.Get("/api/campaign/{id}/export", s.handleCampaignExport)
+	r.Patch("/api/campaign/{id}/settings", s.handleCampaignSettings)
+	r.Get("/api/rules/catalog", s.handleRulesCatalog)
+	r.Post("/api/campaign/{id}/players/{pid}/cast", s.handleCast)
+	r.Post("/api/campaign/{id}/players/{pid}/rest", s.handleRest)
+	r.Post("/api/campaign/{id}/players/{pid}/level-up", s.handleLevelUp)
+	r.Post("/api/campaign/{id}/players/{pid}/ability-point", s.handleAbilityPoint)
+	r.Post("/api/campaign/{id}/players/{pid}/prepared-spells", s.handlePreparedSpells)
+	r.Post("/api/campaign/{id}/players/{pid}/resource", s.handleResource)
+	r.Patch("/api/campaign/{id}/players/{pid}", s.handleCharacterPatch)
+	r.Post("/api/campaign/{id}/players/{pid}/action", s.handleActionSubmit)
+	r.Delete("/api/campaign/{id}/players/{pid}/action", s.handleActionUnlock)
+	r.Post("/api/campaign/{id}/combat/start", s.handleCombatStart)
+	r.Post("/api/campaign/{id}/combat/attack", s.handleCombatAttack)
+	r.Post("/api/campaign/{id}/combat/end-turn", s.handleCombatEndTurn)
+	r.Post("/api/campaign/{id}/combat/enemy-turn", s.handleCombatEnemyTurn)
+	r.Post("/api/campaign/{id}/combat/conclude", s.handleCombatConclude)
 	r.Post("/api/dm", s.handleDm)
 	r.Post("/api/scene-image", s.handleSceneImage)
 	r.Post("/api/character-image", s.handleCharacterImage)

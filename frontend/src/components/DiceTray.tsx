@@ -3,11 +3,10 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { DiceFive } from '@phosphor-icons/react';
 import { MagneticButton } from './MagneticButton';
 import type { PlayerCharacter, RequiredCheck } from '../types';
-import { getCheckBonus } from '../rules/characters';
+import { getCheckBonus } from '../labels';
 
 interface DiceTrayProps {
   players: PlayerCharacter[];
-  onResult: (result: string) => void;
   requiredCheck: RequiredCheck;
   onRequiredRoll: (result: DiceRollResult) => void;
   onRoll?: (result: DiceRollResult) => void;
@@ -27,11 +26,15 @@ function randomD20() {
   return (values[0] % 20) + 1;
 }
 
-export function DiceTray({ players, onResult, requiredCheck, onRequiredRoll, onRoll }: DiceTrayProps) {
+export function DiceTray({ players, requiredCheck, onRequiredRoll, onRoll }: DiceTrayProps) {
   const [result, setResult] = useState<{ natural: number; total: number } | null>(null);
   const timerRef = useRef<number | null>(null);
-  const player = players.find((entry) => entry.name === requiredCheck.character) || players[0];
+  const player = players.find((entry) => entry.id === requiredCheck.playerId)
+    || players.find((entry) => entry.name === requiredCheck.character)
+    || players[0];
   const checkLabel = requiredCheck.skill || requiredCheck.ability;
+  // The server computes the modifier for required checks; the local lookup is
+  // only a display fallback when the field is absent (e.g. modifier 0 omitted).
   const bonus = requiredCheck.modifier ?? (player ? getCheckBonus(player, checkLabel) : 0);
 
   // Clear the pending advance timer if the tray unmounts (e.g. page change)
@@ -46,7 +49,6 @@ export function DiceTray({ players, onResult, requiredCheck, onRequiredRoll, onR
     const text = `${player.name}進行 ${requiredCheck.ability}（${requiredCheck.skill}）檢定：d20 ${bonus >= 0 ? '+' : ''}${bonus} = ${total}（骰面 ${natural}），目標 DC ${requiredCheck.dc}，${success ? '成功' : '失敗'}。`;
     const rollResult = { natural, total, modifier: bonus, success, text };
     setResult({ natural, total });
-    onResult(text);
     onRoll?.(rollResult);
     timerRef.current = window.setTimeout(() => { timerRef.current = null; onRequiredRoll(rollResult); }, 900);
   }

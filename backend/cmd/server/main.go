@@ -19,6 +19,7 @@ import (
 
 	"dndduet/internal/codex"
 	"dndduet/internal/forge"
+	"dndduet/internal/game"
 	"dndduet/internal/httpapi"
 	"dndduet/internal/images"
 	"dndduet/internal/memory"
@@ -64,6 +65,10 @@ func main() {
 	imagePromptSchemaPath, err := schema.WriteImagePromptTempFile()
 	if err != nil {
 		log.Fatalf("cannot materialise image-prompt schema: %v", err)
+	}
+	tacticsSchemaPath, err := schema.WriteCombatTacticsTempFile()
+	if err != nil {
+		log.Fatalf("cannot materialise combat-tactics schema: %v", err)
 	}
 
 	db, err := store.Open(filepath.Join(dataDir, "dnd-duet.db"))
@@ -154,15 +159,17 @@ func main() {
 	}
 
 	srv := &httpapi.Server{
-		Provider:    client,
-		Store:       db,
-		WebDist:     webDist,
-		SchemaPath:  schemaPath,
-		ProviderCWD: codexCWD,
-		ImageRenderers: imageRenderers,
+		Provider:            client,
+		Store:               db,
+		WebDist:             webDist,
+		SchemaPath:          schemaPath,
+		ProviderCWD:         codexCWD,
+		ImageRenderers:      imageRenderers,
 		DefaultImageBackend: defaultImageBackend,
 		TTS:                 tts.NewClientFromEnv(),
 		Memory:              mem,
+		Game:                game.New(db, nil),
+		TacticsSchemaPath:   tacticsSchemaPath,
 	}
 	log.Printf("語音朗讀：GPT-SoVITS %s（未啟動時 /api/tts 會回報連線錯誤）", srv.TTS.BaseURL)
 

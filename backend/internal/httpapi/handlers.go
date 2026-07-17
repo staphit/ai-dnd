@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -12,6 +13,7 @@ import (
 	"time"
 
 	"dndduet/internal/dm"
+	"dndduet/internal/game"
 	"dndduet/internal/images"
 	"dndduet/internal/jsutil"
 	"dndduet/internal/provider"
@@ -110,73 +112,117 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 type dmResponse struct {
-	Text             string               `json:"text"`
-	Scene            string               `json:"scene"`
-	ImagePrompt      string               `json:"imagePrompt"`
-	Objective        string               `json:"objective"`
-	ObjectiveContext string               `json:"objectiveContext"`
-	Stakes           string               `json:"stakes"`
-	Choices          []dm.Choice          `json:"choices"`
-	RequiresCheck    bool                 `json:"requiresCheck"`
-	Check            *dm.Check            `json:"check"`
-	PrivateMessages  []dm.PrivateMessage  `json:"privateMessages"`
-	Effects          []dm.Effect          `json:"effects"`
-	Combat           dm.Combat            `json:"combat"`
-	ActionIssues     []dm.ActionIssue     `json:"actionIssues"`
-	ExperienceAwards []dm.ExperienceAward `json:"experienceAwards"`
-	Model            string               `json:"model"`
+	View            *game.View          `json:"view,omitempty"`
+	Text            string              `json:"text"`
+	Choices         []dm.Choice         `json:"choices"`
+	RequiresCheck   bool                `json:"requiresCheck"`
+	Check           *dm.Check           `json:"check"`
+	PrivateMessages []dm.PrivateMessage `json:"privateMessages"`
+	ActionIssues    []game.ActionIssue  `json:"actionIssues"`
+	Model           string              `json:"model"`
+}
+
+// dmRequest is the slim /api/dm body: everything else (characters, combat,
+// history, campaign meta) now comes from the server's own store.
+type dmRequest struct {
+	CampaignID string `json:"campaignId"`
+	Model      string `json:"model"`
+	Effort     string `json:"effort"`
+	Actions    []struct {
+		PlayerID string `json:"playerId"`
+		Text     string `json:"text"`
+	} `json:"actions"`
+	Intents   map[string]game.Intent `json:"intents"`
+	CheckRoll *struct {
+		Natural int `json:"natural"`
+	} `json:"checkRoll"`
+	CombatConclusion *struct {
+		Outcome string `json:"outcome"`
+		Summary string `json:"summary"`
+	} `json:"combatConclusion"`
 }
 
 func (s *Server) handleDm(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 210*time.Second)
 	defer cancel()
 
-	body, err := readJSONBody(w, r)
+	raw, err := readRawBody(w, r)
 	if err != nil {
 		writeErr(w, err, http.StatusServiceUnavailable)
 		return
 	}
-
-	storyID := sanitizeStoryID(jsutil.StrOr(jsutil.Get(body, "campaignId"), ""))
+	var req dmRequest
+	if err := json.Unmarshal(raw, &req); err != nil {
+		writeJSON(w, http.StatusBadRequest, errorBody{Error: "請求格式錯誤。"})
+		return
+	}
+	storyID := sanitizeStoryID(req.CampaignID)
 	if storyID == "" {
 		writeJSON(w, http.StatusBadRequest, errorBody{Error: "缺少有效的 campaignId。"})
 		return
 	}
 
+	// Prepare the turn from server-authoritative state. Mechanical validation
+	// failures return 422 without ever calling the AI.
+	var prepared game.PreparedDMTurn
+	switch {
+	case req.CheckRoll != nil:
+		prepared, err = s.Game.PrepareCheckTurn(storyID, req.CheckRoll.Natural)
+	case req.CombatConclusion != nil:
+		prepared, err = s.Game.PrepareConclusionTurn(storyID, req.CombatConclusion.Outcome, req.CombatConclusion.Summary)
+	default:
+		actions := map[string]string{}
+		for _, a := range req.Actions {
+			actions[a.PlayerID] = a.Text
+		}
+		prepared, err = s.Game.PrepareActionsTurn(storyID, actions, req.Intents)
+	}
+	if err != nil {
+		var issues *game.ActionIssuesError
+		if errors.As(err, &issues) {
+			writeJSON(w, http.StatusUnprocessableEntity, map[string]any{
+				"error":        "有行動未通過規則驗證，故事尚未推進。",
+				"actionIssues": issues.Issues,
+			})
+			return
+		}
+		writeErr(w, err, http.StatusServiceUnavailable)
+		return
+	}
+
 	// Delta mode: only when a live connection is bound to this story and memory
-	// is enabled, so Codex has the persistent thread and can read the memory file
-	// for prior context. Otherwise fall back to the full-context prompt.
-	deltaMode := false
-	memRef := ""
+	// is enabled, so Codex has the persistent thread and can read the memory +
+	// rules files for prior context and the full ruleset. Otherwise fall back
+	// to the full inline preamble.
 	if s.Memory != nil {
 		if cs := s.Provider.ConnectionState(); cs.Alive && cs.StoryID == storyID {
 			if err := s.Memory.Materialise(storyID); err == nil {
-				deltaMode = true
-				memRef = s.Memory.Ref(storyID)
+				prepared.Input.DeltaMode = true
+				prepared.Input.MemRef = s.Memory.Ref(storyID)
+				if dossier, err := s.Game.BuildRulesDossier(storyID); err == nil {
+					if err := s.Memory.MaterialiseRules(storyID, dossier); err == nil {
+						prepared.Input.RulesRef = s.Memory.RulesRef(storyID)
+					}
+				}
 			}
 		}
 	}
 
-	prompt, players, err := dm.BuildDMRequest(body, deltaMode, memRef)
+	prompt := dm.BuildDMRequestV2(prepared.Input)
+	selectedModel, err := s.Provider.NormalizeModel(req.Model)
 	if err != nil {
 		writeErr(w, err, http.StatusServiceUnavailable)
 		return
 	}
-	// Match `typeof value === 'string' ? value.trim() : ''`: only a string
-	// model value is honoured, anything else falls back to the default.
-	modelInput, _ := body["model"].(string)
-	selectedModel, err := s.Provider.NormalizeModel(modelInput)
+	selectedEffort, err := s.Provider.NormalizeEffort(req.Effort)
 	if err != nil {
 		writeErr(w, err, http.StatusServiceUnavailable)
 		return
 	}
-	effortInput, _ := body["effort"].(string)
-	selectedEffort, err := s.Provider.NormalizeEffort(effortInput)
-	if err != nil {
-		writeErr(w, err, http.StatusServiceUnavailable)
-		return
-	}
-	output, err := dm.RunDungeonMaster(ctx, s.Provider, prompt, selectedModel, selectedEffort, s.SchemaPath, s.ProviderCWD, storyID)
+	// The mini-preamble is safe only when the full ruleset is readable from
+	// the rules file (delta mode); otherwise the complete preamble ships inline.
+	slim := prepared.Input.DeltaMode && prepared.Input.RulesRef != ""
+	output, err := dm.RunDungeonMaster(ctx, s.Provider, prompt, selectedModel, selectedEffort, s.SchemaPath, s.ProviderCWD, storyID, slim)
 	if err != nil {
 		log.Printf("[dm] generation failed: %v", err)
 		if errors.Is(err, provider.ErrNeedsConsent) {
@@ -187,9 +233,16 @@ func (s *Server) handleDm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Persist this turn to memory (raw events sync; compaction is async).
-	if s.Memory != nil {
-		s.recordMemory(storyID, body, players, output)
+	applied, err := s.Game.ApplyDMTurn(storyID, prepared, output)
+	if err != nil {
+		writeErr(w, err, http.StatusServiceUnavailable)
+		return
+	}
+
+	// Persist this turn to memory (raw events sync; compaction is async). The
+	// AI-vetoed case did not advance the story, so nothing is recorded.
+	if s.Memory != nil && len(applied.Rejected) == 0 {
+		s.recordMemory(storyID, prepared, output)
 	}
 
 	checkText := ""
@@ -211,22 +264,19 @@ func (s *Server) handleDm(w http.ResponseWriter, r *http.Request) {
 		model = status.Model
 	}
 
+	text := output.Narration + checkText + choiceText
+	if len(applied.Rejected) > 0 {
+		text = ""
+	}
 	writeJSON(w, http.StatusOK, dmResponse{
-		Text:             output.Narration + checkText + choiceText,
-		Scene:            output.Scene,
-		ImagePrompt:      output.ImagePrompt,
-		Objective:        output.Objective,
-		ObjectiveContext: output.ObjectiveContext,
-		Stakes:           output.Stakes,
-		Choices:          output.Choices,
-		RequiresCheck:    output.RequiresCheck,
-		Check:            output.Check,
-		PrivateMessages:  output.PrivateMessages,
-		Effects:          output.Effects,
-		Combat:           output.Combat,
-		ActionIssues:     output.ActionIssues,
-		ExperienceAwards: output.ExperienceAwards,
-		Model:            model,
+		View:            &applied.View,
+		Text:            text,
+		Choices:         output.Choices,
+		RequiresCheck:   output.RequiresCheck,
+		Check:           output.Check,
+		PrivateMessages: output.PrivateMessages,
+		ActionIssues:    applied.Rejected,
+		Model:           model,
 	})
 }
 
@@ -288,20 +338,15 @@ func parseForgeOptions(body map[string]any, renderer images.Renderer) (*images.F
 // recordMemory writes this turn's player actions and DM narration into the
 // story's memory log. Continuation turns (check resolution / combat conclusion)
 // carry no new player declaration, so only the narration is recorded.
-func (s *Server) recordMemory(storyID string, body map[string]any, players []dm.SanitizedPlayer, output *dm.Turn) {
-	round := 1
-	if f, ok := jsutil.Get(body, "campaign", "round").(float64); ok && f >= 1 {
-		round = int(f)
+func (s *Server) recordMemory(storyID string, prepared game.PreparedDMTurn, output *dm.Turn) {
+	round := prepared.Round
+	if round < 1 {
+		round = 1
 	}
-	_, isRes := body["resolution"].(map[string]any)
-	_, isCombat := body["combatConclusion"].(map[string]any)
-	isContinuation := isRes || isCombat
-
 	var events []store.MemoryEvent
-	if !isContinuation {
-		actions := collectActions(body)
-		for _, p := range players {
-			if txt := strings.TrimSpace(actions[p.ID]); txt != "" {
+	if !prepared.IsContinuation {
+		for _, p := range prepared.Players {
+			if txt := strings.TrimSpace(prepared.Actions[p.ID]); txt != "" {
 				events = append(events, store.MemoryEvent{Round: round, Role: "player", Text: p.Name + "：" + txt})
 			}
 		}
@@ -310,22 +355,6 @@ func (s *Server) recordMemory(storyID string, body map[string]any, players []dm.
 		events = append(events, store.MemoryEvent{Round: round, Role: "dm", Text: txt})
 	}
 	_ = s.Memory.Record(storyID, events)
-}
-
-// collectActions extracts playerId -> action text, accepting either the array or
-// object shape the frontend may send (mirrors dm.BuildDMRequest).
-func collectActions(body map[string]any) map[string]string {
-	out := map[string]string{}
-	if arr, ok := jsutil.AsSlice(jsutil.Get(body, "actions")); ok {
-		for _, a := range arr {
-			out[jsutil.StrOr(jsutil.Get(a, "playerId"), "")] = jsutil.StrOr(jsutil.Get(a, "text"), "")
-		}
-	} else if m, ok := jsutil.Get(body, "actions").(map[string]any); ok {
-		for pid, v := range m {
-			out[pid] = jsutil.StrOr(v, "")
-		}
-	}
-	return out
 }
 
 func (s *Server) handleSceneImage(w http.ResponseWriter, r *http.Request) {
@@ -350,18 +379,37 @@ func (s *Server) handleSceneImage(w http.ResponseWriter, r *http.Request) {
 	// the image backend uses it directly instead of translating again.
 	imagePrompt := jsutil.JSSlice(strings.TrimSpace(jsutil.StrOr(jsutil.Get(body, "imagePrompt"), "")), 600)
 
+	// Party visuals come from the server-authoritative sheets when the body
+	// names a campaign; the legacy body players list stays as a fallback.
 	var players []images.ScenePlayer
-	if arr, ok := jsutil.AsSlice(jsutil.Get(body, "players")); ok {
-		if len(arr) > 4 {
-			arr = arr[:4]
+	if campaignID := sanitizeStoryID(jsutil.StrOr(jsutil.Get(body, "campaignId"), "")); campaignID != "" {
+		if view, err := s.Game.View(campaignID); err == nil {
+			for i, p := range view.Players {
+				if i >= 4 {
+					break
+				}
+				players = append(players, images.ScenePlayer{
+					Name:       jsutil.JSSlice(p.Name, 100),
+					ClassName:  jsutil.JSSlice(p.ClassName, 100),
+					Species:    jsutil.JSSlice(p.Species, 100),
+					Appearance: jsutil.JSSlice(p.Appearance, 500),
+				})
+			}
 		}
-		for _, p := range arr {
-			players = append(players, images.ScenePlayer{
-				Name:       jsutil.JSSlice(jsutil.StrOr(jsutil.Get(p, "name"), "冒險者"), 100),
-				ClassName:  jsutil.JSSlice(jsutil.StrOr(jsutil.Get(p, "className"), "旅人"), 100),
-				Species:    jsutil.JSSlice(jsutil.StrOr(jsutil.Get(p, "species"), ""), 100),
-				Appearance: jsutil.JSSlice(jsutil.StrOr(jsutil.Get(p, "appearance"), ""), 500),
-			})
+	}
+	if len(players) == 0 {
+		if arr, ok := jsutil.AsSlice(jsutil.Get(body, "players")); ok {
+			if len(arr) > 4 {
+				arr = arr[:4]
+			}
+			for _, p := range arr {
+				players = append(players, images.ScenePlayer{
+					Name:       jsutil.JSSlice(jsutil.StrOr(jsutil.Get(p, "name"), "冒險者"), 100),
+					ClassName:  jsutil.JSSlice(jsutil.StrOr(jsutil.Get(p, "className"), "旅人"), 100),
+					Species:    jsutil.JSSlice(jsutil.StrOr(jsutil.Get(p, "species"), ""), 100),
+					Appearance: jsutil.JSSlice(jsutil.StrOr(jsutil.Get(p, "appearance"), ""), 500),
+				})
+			}
 		}
 	}
 

@@ -117,6 +117,7 @@ export interface RequiredCheck {
   dc: number;
   reason: string;
   modifier?: number;
+  playerId?: string;
 }
 
 // A DM-suggested next action. playerId ties it to the character it suits;
@@ -202,12 +203,45 @@ export interface ForgeSettings {
   Height: number;
 }
 
+// Per-player experience progress, computed server-side (view.xpProgress).
+export interface XpProgress {
+  current: number;
+  required: number;
+  remaining: number;
+  ready: boolean;
+  progress: number;
+}
+
+export interface SceneImage {
+  url: string;
+  scene: string;
+  createdAt: string;
+  model: string;
+}
+
+// Typed shape of the per-campaign settings document stored server-side in
+// campaign.settings (shallow-merged via PATCH /api/campaign/{id}/settings).
+export interface CampaignSettings {
+  storyId?: string;
+  selectedModel?: string;
+  selectedEffort?: string;
+  imageBackend?: string;
+  forgeSettings?: ForgeSettings;
+  fontScale?: number;
+  showStatHints?: boolean;
+  autoSceneImages?: boolean;
+  ttsEnabled?: boolean;
+  dismissedTips?: string[];
+  sceneImages?: SceneImage[];
+}
+
+// Campaign mirrors the server View (backend/internal/game/service.go): every
+// mutating endpoint returns this whole shape and the client renders it as-is.
 export interface Campaign {
   schemaVersion?: number;
   id?: string;
   updatedAt?: string;
   setupComplete: boolean;
-  storyId?: string;
   title: string;
   chapter: string;
   scene: string;
@@ -215,10 +249,6 @@ export interface Campaign {
   objective: string;
   objectiveContext: string;
   stakes: string;
-  selectedModel?: string;
-  selectedEffort?: string;
-	imageBackend?: string;
-  forgeSettings?: ForgeSettings;
   players: PlayerCharacter[];
   story: StoryEntry[];
   pending: Partial<Record<PlayerId, string>>;
@@ -227,29 +257,15 @@ export interface Campaign {
   // reused by scene-image generation.
   imagePrompt?: string;
   requiredCheck?: RequiredCheck | null;
-  fontScale?: number;
-  showStatHints?: boolean;
-  autoSceneImages?: boolean;
-  ttsEnabled?: boolean;
-  dismissedTips?: string[];
   combat?: CombatState;
-  sceneImage?: {
-    url: string;
-    scene: string;
-    createdAt: string;
-    model: string;
-  };
-  sceneImages?: Array<{
-    url: string;
-    scene: string;
-    createdAt: string;
-    model: string;
-  }>;
+  settings?: Record<string, unknown>;
+  xpProgress?: Partial<Record<PlayerId, XpProgress>>;
 }
 
 export interface CampaignSummary {
   id: string;
   title: string;
+  scene?: string;
   updatedAt: string;
   round: number;
 }

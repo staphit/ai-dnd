@@ -72,6 +72,24 @@ func (m *Manager) filePath(storyID string) string {
 	return filepath.Join(m.dir, storyID+".md")
 }
 
+// RulesRef returns the story's rules-dossier file path relative to the Codex
+// CWD, to embed in the DM prompt next to the memory pointer.
+func (m *Manager) RulesRef(storyID string) string {
+	return filepath.ToSlash(filepath.Join(m.relDir, storyID+".rules.md"))
+}
+
+// MaterialiseRules writes the full DM ruleset + static party dossier file the
+// slim delta prompt points at, so the per-turn payload carries only a short
+// mini-preamble. Call it before running a delta-mode turn.
+func (m *Manager) MaterialiseRules(storyID, content string) error {
+	path := filepath.Join(m.dir, storyID+".rules.md")
+	tmp := path + ".tmp"
+	if err := os.WriteFile(tmp, []byte(content), 0o644); err != nil {
+		return err
+	}
+	return os.Rename(tmp, path)
+}
+
 // Materialise writes the story's current compacted memory + recent raw tail to
 // its Markdown file, so a Codex turn started right after can read prior context.
 // Call it before running the turn.
