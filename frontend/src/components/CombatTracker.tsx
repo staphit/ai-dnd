@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowClockwise, Crosshair, MagicWand, Plus, Shield, Skull, Sword, X } from '@phosphor-icons/react';
+import { ArrowClockwise, Crosshair, Lightning, MagicWand, Plus, Shield, Skull, Sword, X } from '@phosphor-icons/react';
 import type { Campaign, CharacterSpell, CombatState, PlayerCharacter, PlayerId } from '../types';
 import { combatAttack, combatEndTurn, combatEnemyTurn, combatStart, revive, type EnemySpec } from '../api';
 
@@ -13,11 +13,13 @@ interface CombatTrackerProps {
   onEnd: () => void;
   /** Open spell-cast modal for a party member (combat or exploration). */
   onCastSpell?: (playerId: PlayerId, spell: CharacterSpell) => void;
+  /** Spend one use of a class resource (回氣、動作如潮…) from the combat menu. */
+  onUseResource?: (playerId: PlayerId, resourceId: string) => void;
 }
 
 const emptyEnemy: EnemySpec = { name: '骸骨守衛', ac: 13, hp: 13, initiativeBonus: 2, attackBonus: 4, damage: '1d6+2', damageType: '穿刺' };
 
-export function CombatTracker({ campaignId, players, combat, onView, onEnd, onCastSpell }: CombatTrackerProps) {
+export function CombatTracker({ campaignId, players, combat, onView, onEnd, onCastSpell, onUseResource }: CombatTrackerProps) {
   const [enemies, setEnemies] = useState<EnemySpec[]>([]);
   const [draft, setDraft] = useState(emptyEnemy);
   const [targetId, setTargetId] = useState('');
@@ -185,6 +187,22 @@ export function CombatTracker({ campaignId, players, combat, onView, onEnd, onCa
               >
                 <Shield />救援 {downedAllies[0].name}（使用動作）
               </button>
+            )}
+            {onUseResource && currentPlayer && currentPlayer.resources.length > 0 && (
+              <div className="combat-resources" aria-label="職業資源">
+                {currentPlayer.resources.map((resource) => (
+                  <button
+                    key={resource.id}
+                    type="button"
+                    disabled={busy || resource.current === 0}
+                    title={resource.description || resource.name}
+                    onClick={() => onUseResource(currentPlayer.id, resource.id)}
+                  >
+                    <Lightning size={14} weight="fill" />
+                    {resource.name} {resource.current}/{resource.max}
+                  </button>
+                ))}
+              </div>
             )}
             {onCastSpell && currentPlayer && castableSpells.length > 0 && (
               <div className="combat-spell-cast">

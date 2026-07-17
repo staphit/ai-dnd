@@ -1109,6 +1109,7 @@ export default function App() {
                 onView={setCampaign}
                 onEnd={() => void endCombat()}
                 onCastSpell={(playerId, spell) => openSpellCast(playerId, spell)}
+                onUseResource={(playerId, resourceId) => void changeClassResource(playerId, resourceId, -1)}
               />
             </section>
           )}

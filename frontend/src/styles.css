@@ -2004,6 +2004,22 @@ button:not(:disabled):active:where(.tip-dismiss, .notice-banner button, .error-b
 .required-roll-result { display: flex; align-items: baseline; gap: 10px; padding: 10px 0; border-top: 1px solid var(--accent-soft); border-bottom: 1px solid var(--accent-soft); }
 .required-roll-result strong { font: 600 32px var(--font-mono),monospace; }
 .required-roll-result span { color: var(--muted); font-size: 10px; }
+/* Class-resource buttons (回氣、動作如潮…) in the combat action menu. */
+.combat-resources { display: flex; flex-wrap: wrap; gap: 8px; }
+.combat-resources button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 11px;
+  border: 1px solid var(--accent-soft);
+  background: oklch(74% 0.13 72 / 0.06);
+  color: var(--accent);
+  font-size: 12px;
+  cursor: pointer;
+}
+.combat-resources button:hover:not(:disabled) { background: oklch(74% 0.13 72 / 0.14); }
+.combat-resources button:disabled { opacity: .45; cursor: not-allowed; }
+
 .inline-combat { margin-top: 22px; padding: 18px; border: 1px solid oklch(55% 0.145 28 / 0.55); background: linear-gradient(180deg, oklch(55% 0.145 28 / 0.12), oklch(18% 0.022 55 / 0.4)); box-shadow: 0 0 0 1px oklch(55% 0.1 28 / 0.08) inset; }
 .inline-combat > .combat-console { margin-top: 14px; }
 .inline-combat .section-heading h2 { color: oklch(82% 0.08 28); }
