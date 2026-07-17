@@ -144,6 +144,12 @@ func (s *Service) assembleView(row store.CampaignRow) (View, error) {
 	if err != nil {
 		return View{}, err
 	}
+	// Read path sees the same backfill as the write path (loadState), so a
+	// weapon bought before shop weapons granted attacks shows up immediately;
+	// it persists on the next state-mutating call.
+	for i := range players {
+		ensureShopWeaponAttacks(&players[i])
+	}
 
 	var combat *rules.CombatState
 	if data, ok, err := s.store.Combat(row.ID); err != nil {
