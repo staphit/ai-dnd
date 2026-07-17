@@ -216,6 +216,16 @@ export function sellItem(id: string, playerId: PlayerId | string, itemName: stri
   return apiFetch(playerPath(id, playerId, '/sell'), { method: 'POST', body: JSON.stringify({ itemName }) });
 }
 
+// Blacksmith: enhance one weapon (+1 hit/+1 damage per level) or armor (+1 AC).
+export function forgeUpgrade(id: string, playerId: PlayerId | string, kind: 'weapon' | 'armor', attackId?: string): Promise<Campaign> {
+  return apiFetch(playerPath(id, playerId, '/forge-upgrade'), { method: 'POST', body: JSON.stringify({ kind, attackId }) });
+}
+
+// Consume a carried consumable (治療藥水 heals; bonus action in combat).
+export function useItem(id: string, playerId: PlayerId | string, itemName: string): Promise<Campaign> {
+  return apiFetch(playerPath(id, playerId, '/use-item'), { method: 'POST', body: JSON.stringify({ itemName }) });
+}
+
 // ---------------------------------------------------------------------------
 // Combat
 

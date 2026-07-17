@@ -8,6 +8,7 @@ import (
 
 	"dndduet/internal/apperr"
 	"dndduet/internal/dm"
+	"dndduet/internal/rules"
 )
 
 // seq returns a slice-backed random source; it repeats the last value once
@@ -220,6 +221,96 @@ func TestActionSurgeRestoresAction(t *testing.T) {
 	}
 	if _, err := s.ChangeResourceAction(id, "player1", "second_wind", -1); apperr.StatusOf(err, 0) != 400 {
 		t.Fatalf("second wind twice in one turn should 400 (bonus action used), got %v", err)
+	}
+}
+
+func TestForgeUpgradeWeapon(t *testing.T) {
+	s := newTestService(t)
+	view := createSample(t, s)
+	id := view.ID
+
+	var before rules.Attack
+	for _, a := range view.Players[0].Attacks {
+		if a.ID == "shortsword" {
+			before = a
+		}
+	}
+	forged, err := s.ForgeUpgrade(id, "player1", "weapon", "shortsword")
+	if err != nil {
+		t.Fatalf("forge: %v", err)
+	}
+	p := forged.Players[0]
+	if p.Gold != 0 {
+		t.Fatalf("gold not spent: %d", p.Gold)
+	}
+	for _, a := range p.Attacks {
+		if a.ID == "shortsword" {
+			if a.UpgradeLevel != 1 || a.AttackBonus != before.AttackBonus+1 {
+				t.Fatalf("upgrade not applied: before %+v after %+v", before, a)
+			}
+			if a.AttacksPerAction != 2 {
+				t.Fatalf("shortsword should strike twice: %+v", a)
+			}
+		}
+	}
+	// Broke now: second upgrade must fail on cost.
+	if _, err := s.ForgeUpgrade(id, "player1", "weapon", "shortsword"); apperr.StatusOf(err, 0) != 400 {
+		t.Fatalf("expected 400 for missing gold, got %v", err)
+	}
+}
+
+func TestLightWeaponStrikesTwice(t *testing.T) {
+	s := newTestService(t)
+	view := createSample(t, s)
+	id := view.ID
+
+	s.WithDice(seq(0.99, 0.5, 0.01))
+	if _, err := s.StartCombatManual(id, []EnemySpec{{Name: "石像", AC: 5, HP: 60, AttackBonus: 2, Damage: "1d4", DamageType: "鈍擊"}}); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	s.WithDice(seq(0.9, 0.5))
+	result, err := s.Attack(id, AttackParams{AttackID: "shortsword"})
+	if err != nil {
+		t.Fatalf("attack: %v", err)
+	}
+	var attackLog string
+	for _, e := range result.View.Story {
+		if strings.Contains(e.Text, "第 2 擊") {
+			attackLog = e.Text
+		}
+	}
+	if attackLog == "" {
+		t.Fatalf("missing second strike in log: %+v", result.View.Story[len(result.View.Story)-1])
+	}
+}
+
+func TestUseHealingPotion(t *testing.T) {
+	s := newTestService(t)
+	view := createSample(t, s)
+	id := view.ID
+
+	if _, err := s.BuyItem(id, "player1", "healing-potion"); err != nil {
+		t.Fatalf("buy: %v", err)
+	}
+	used, err := s.UseItem(id, "player1", "治療藥水")
+	if err != nil {
+		t.Fatalf("use: %v", err)
+	}
+	for _, item := range used.Players[0].Equipment {
+		if item == "治療藥水" {
+			t.Fatalf("potion not consumed: %v", used.Players[0].Equipment)
+		}
+	}
+	last := used.Story[len(used.Story)-1]
+	if !strings.Contains(last.Text, "治療藥水") {
+		t.Fatalf("missing potion log: %q", last.Text)
+	}
+	// Unknown items are narrative-only.
+	if _, err := s.BuyItem(id, "player1", "rope"); err != nil {
+		t.Fatalf("buy rope: %v", err)
+	}
+	if _, err := s.UseItem(id, "player1", "麻繩（50 呎）"); apperr.StatusOf(err, 0) != 400 {
+		t.Fatalf("expected 400 for non-consumable, got %v", err)
 	}
 }
 

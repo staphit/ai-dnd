@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowClockwise, Crosshair, Lightning, MagicWand, Plus, Shield, Skull, Sword, X } from '@phosphor-icons/react';
+import { ArrowClockwise, Crosshair, Flask, Lightning, MagicWand, Plus, Shield, Skull, Sword, X } from '@phosphor-icons/react';
 import type { Campaign, CharacterSpell, CombatState, PlayerCharacter, PlayerId } from '../types';
 import { combatAttack, combatEndTurn, combatEnemyTurn, combatStart, revive, type EnemySpec } from '../api';
 
@@ -15,11 +15,16 @@ interface CombatTrackerProps {
   onCastSpell?: (playerId: PlayerId, spell: CharacterSpell) => void;
   /** Spend one use of a class resource (回氣、動作如潮…) from the combat menu. */
   onUseResource?: (playerId: PlayerId, resourceId: string) => void;
+  /** Use a carried consumable (治療藥水…) — bonus action in combat. */
+  onUseItem?: (playerId: PlayerId, itemName: string) => void;
 }
+
+// Carried items the server can resolve as consumables in combat.
+const combatConsumables = new Set(['治療藥水', '解毒劑']);
 
 const emptyEnemy: EnemySpec = { name: '骸骨守衛', ac: 13, hp: 13, initiativeBonus: 2, attackBonus: 4, damage: '1d6+2', damageType: '穿刺' };
 
-export function CombatTracker({ campaignId, players, combat, onView, onEnd, onCastSpell, onUseResource }: CombatTrackerProps) {
+export function CombatTracker({ campaignId, players, combat, onView, onEnd, onCastSpell, onUseResource, onUseItem }: CombatTrackerProps) {
   const [enemies, setEnemies] = useState<EnemySpec[]>([]);
   const [draft, setDraft] = useState(emptyEnemy);
   const [targetId, setTargetId] = useState('');
@@ -155,10 +160,12 @@ export function CombatTracker({ campaignId, players, combat, onView, onEnd, onCa
           <>
             {availableAttacks.length > 0 && (
               <label>
-                攻擊方式
+                攻擊方式（可切換武器）
                 <select value={attackId || availableAttacks[0]?.id} onChange={(event) => setAttackId(event.target.value)}>
                   {availableAttacks.map((entry) => (
-                    <option key={entry.id} value={entry.id}>{entry.name}／命中 +{entry.attackBonus}／{entry.damage}</option>
+                    <option key={entry.id} value={entry.id}>
+                      {entry.name}{(entry.upgradeLevel || 0) > 0 ? ` +${entry.upgradeLevel}` : ''}／命中 +{entry.attackBonus}／{entry.damage}{(entry.attacksPerAction || 1) > 1 ? `／每動作 ${entry.attacksPerAction} 擊` : ''}
+                    </option>
                   ))}
                 </select>
               </label>
@@ -187,6 +194,22 @@ export function CombatTracker({ campaignId, players, combat, onView, onEnd, onCa
               >
                 <Shield />救援 {downedAllies[0].name}（使用動作）
               </button>
+            )}
+            {onUseItem && currentPlayer && currentPlayer.equipment.some((item) => combatConsumables.has(item)) && (
+              <div className="combat-resources combat-consumables" aria-label="消耗品">
+                {currentPlayer.equipment.filter((item) => combatConsumables.has(item)).map((item, index) => (
+                  <button
+                    key={`${item}-${index}`}
+                    type="button"
+                    disabled={busy || currentEconomy?.bonusActionUsed}
+                    title={currentEconomy?.bonusActionUsed ? '本輪附贈動作已使用' : '使用消耗品（附贈動作）'}
+                    onClick={() => onUseItem(currentPlayer.id, item)}
+                  >
+                    <Flask size={14} weight="fill" />
+                    {item}
+                  </button>
+                ))}
+              </div>
             )}
             {onUseResource && currentPlayer && currentPlayer.resources.length > 0 && (
               <div className="combat-resources" aria-label="職業資源">

@@ -1110,6 +1110,10 @@ export default function App() {
                 onEnd={() => void endCombat()}
                 onCastSpell={(playerId, spell) => openSpellCast(playerId, spell)}
                 onUseResource={(playerId, resourceId) => void changeClassResource(playerId, resourceId, -1)}
+                onUseItem={(playerId, itemName) => {
+                  if (!campaign.id) return;
+                  api.useItem(campaign.id, playerId, itemName).then(setCampaign).catch((caught) => setError(message(caught)));
+                }}
               />
             </section>
           )}
@@ -1156,6 +1160,7 @@ export default function App() {
               onClose={() => setShopOpen(false)}
               onBuy={(playerId, itemId) => void shopAction(() => api.buyItem(campaign.id!, playerId, itemId))}
               onSell={(playerId, itemName) => void shopAction(() => api.sellItem(campaign.id!, playerId, itemName))}
+              onForge={(playerId, kind, attackId) => void shopAction(() => api.forgeUpgrade(campaign.id!, playerId, kind, attackId))}
             />
           )}
           {spellModal && (() => {

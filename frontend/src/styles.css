@@ -350,7 +350,8 @@ button:not(:disabled):active:where(.tip-dismiss, .notice-banner button, .error-b
 .shop-players button.active { border-color: var(--accent); background: oklch(74% 0.13 72 / 0.1); }
 .shop-gold { display: inline-flex; align-items: center; gap: 4px; color: var(--accent); font-family: var(--font-mono), monospace; font-size: 11px; }
 .shop-error { color: oklch(70% 0.15 28); font-size: 12px; }
-.shop-columns { display: grid; grid-template-columns: 3fr 2fr; gap: 18px; }
+.shop-columns { display: grid; grid-template-columns: 3fr 3fr 2fr; gap: 18px; }
+.shop-columns h3 { display: inline-flex; align-items: center; gap: 6px; }
 .shop-columns h3 { margin: 0 0 10px; font-size: 13px; color: var(--muted); letter-spacing: .08em; }
 .shop-list { display: grid; gap: 8px; }
 .shop-item {

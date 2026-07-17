@@ -28,6 +28,10 @@ export interface CharacterAttack {
   damage: string;
   damageType: string;
   properties: string[];
+  /** Blacksmith enhancement level (+1 hit / +1 damage each). */
+  upgradeLevel?: number;
+  /** Light weapons strike twice per action; others once. */
+  attacksPerAction?: number;
 }
 
 export interface CharacterResource {
@@ -155,6 +159,8 @@ export interface PlayerCharacter {
   equipment: string[];
   /** Carried gold (gp); chests, quest rewards, and the merchant move it. */
   gold?: number;
+  /** Blacksmith armor enhancement already folded into AC. */
+  armorUpgrade?: number;
   resources: CharacterResource[];
   features: ClassFeature[];
   spellcasting?: CharacterSpellcasting;

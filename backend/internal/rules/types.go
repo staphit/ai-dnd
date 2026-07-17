@@ -83,6 +83,12 @@ type Attack struct {
 	Damage      string   `json:"damage"`
 	DamageType  string   `json:"damageType"`
 	Properties  []string `json:"properties"`
+	// UpgradeLevel is the blacksmith enhancement (+1 hit and +1 damage per
+	// level, capped by the forge); Recalculate folds it into the numbers.
+	UpgradeLevel int `json:"upgradeLevel,omitempty"`
+	// AttacksPerAction is derived in Recalculate: light (輕型) weapons strike
+	// twice per action, everything else once.
+	AttacksPerAction int `json:"attacksPerAction,omitempty"`
 }
 
 // ShortRestRecovery mirrors the TS union `number | 'all'`. All=true means the
@@ -225,6 +231,8 @@ type Character struct {
 	Attacks          []Attack      `json:"attacks"`
 	Equipment        []string      `json:"equipment"`
 	Gold             int           `json:"gold"`
+	// ArmorUpgrade is the blacksmith armor enhancement already folded into AC.
+	ArmorUpgrade int `json:"armorUpgrade,omitempty"`
 	Resources        []Resource    `json:"resources"`
 	Features         []Feature     `json:"features"`
 	Spellcasting     *Spellcasting `json:"spellcasting,omitempty"`

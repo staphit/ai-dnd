@@ -260,6 +260,8 @@ func (s *Server) Router() http.Handler {
 	r.Get("/api/shop/catalog", s.handleShopCatalog)
 	r.Post("/api/campaign/{id}/players/{pid}/buy", s.handleBuyItem)
 	r.Post("/api/campaign/{id}/players/{pid}/sell", s.handleSellItem)
+	r.Post("/api/campaign/{id}/players/{pid}/forge-upgrade", s.handleForgeUpgrade)
+	r.Post("/api/campaign/{id}/players/{pid}/use-item", s.handleUseItem)
 	r.Post("/api/campaign/{id}/players/{pid}/level-up", s.handleLevelUp)
 	r.Post("/api/campaign/{id}/players/{pid}/ability-point", s.handleAbilityPoint)
 	r.Post("/api/campaign/{id}/players/{pid}/prepared-spells", s.handlePreparedSpells)

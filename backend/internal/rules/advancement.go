@@ -35,6 +35,18 @@ var ExperienceThresholds = []int{
 	19000,
 }
 
+// WeaponAttacksPerAction: light (輕型) weapons are fast enough to strike twice
+// per action; everything else lands one heavier blow. House rule so a
+// shortsword plays differently from a greatsword.
+func WeaponAttacksPerAction(attack Attack) int {
+	for _, p := range attack.Properties {
+		if strings.Contains(p, "輕型") {
+			return 2
+		}
+	}
+	return 1
+}
+
 // abilityPointsPerLevel: this duet grants ability points on EVERY level-up
 // (house rule replacing the official 4/8/12/16/19 ASI schedule) so growth is
 // felt each level.
@@ -223,9 +235,11 @@ func Recalculate(c Character) Character {
 		if diePart == "" {
 			diePart = entry.Damage
 		}
-		entry.AttackBonus = proficiencyBonus + modifier
-		// `${diePart}${modifier >= 0 ? '+' : ''}${modifier}`
-		entry.Damage = fmt.Sprintf("%s%+d", diePart, modifier)
+		// Blacksmith enhancement adds +1 hit and +1 damage per upgrade level.
+		entry.AttackBonus = proficiencyBonus + modifier + entry.UpgradeLevel
+		damageMod := modifier + entry.UpgradeLevel
+		entry.Damage = fmt.Sprintf("%s%+d", diePart, damageMod)
+		entry.AttacksPerAction = WeaponAttacksPerAction(entry)
 		attacks[i] = entry
 	}
 	// skills.find((skill) => skill.name === '察覺')?.bonus || abilityModifier(wis)
