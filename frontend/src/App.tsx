@@ -92,6 +92,19 @@ export default function App() {
   const [imageError, setImageError] = useState('');
   // True while a TTS narration clip is playing; drives the 3D DM's talking pose.
   const [dmSpeaking, setDmSpeaking] = useState(false);
+  // Dice animation on the 3D DM table: set when a d20 lands, cleared after
+  // the success/fail clip has had time to play.
+  const [diceAnim, setDiceAnim] = useState<{ rolling: boolean; outcome: 'success' | 'fail' | null }>({ rolling: false, outcome: null });
+  const diceAnimTimerRef = useRef<number | null>(null);
+
+  function playDiceAnim(success: boolean) {
+    setDiceAnim({ rolling: true, outcome: success ? 'success' : 'fail' });
+    if (diceAnimTimerRef.current !== null) window.clearTimeout(diceAnimTimerRef.current);
+    diceAnimTimerRef.current = window.setTimeout(() => {
+      diceAnimTimerRef.current = null;
+      setDiceAnim({ rolling: false, outcome: null });
+    }, 2600);
+  }
   const [sceneImage, setSceneImage] = useState<SceneImage | null>(null);
   const [spellRoll, setSpellRoll] = useState<{ check: RequiredCheck; casterId: PlayerId; spell: CharacterSpell; asRitual: boolean; targetId: string } | null>(null);
   const [spellModal, setSpellModal] = useState<{ playerId: PlayerId; spell: CharacterSpell } | null>(null);
@@ -1073,7 +1086,16 @@ export default function App() {
 
           <div className={`story-workspace ${revisionOpen ? 'story-workspace-revision' : ''}`}>
             <div className="story-workspace-main">
-              <StoryFeed story={campaign.story} players={campaign.players} loading={loading} viewer={viewer} />
+              <StoryFeed
+                story={campaign.story}
+                players={campaign.players}
+                loading={loading}
+                viewer={viewer}
+                combatActive={campaign.combat?.active === true}
+                checkPending={Boolean(activeRequiredCheck)}
+                diceRolling={diceAnim.rolling}
+                diceOutcome={diceAnim.outcome}
+              />
               <div className="story-revision-toggle-row">
                 <button
                   type="button"
@@ -1096,7 +1118,7 @@ export default function App() {
               onSubmit={(note) => void submitStoryRevision(note)}
             />
           </div>
-          {activeRequiredCheck && <DiceTray players={campaign.players} requiredCheck={activeRequiredCheck} onRoll={({ total }) => { if (spellRoll) void resolveSpellAttack(total); }} onRequiredRoll={(roll) => { if (spellRoll) { setSpellRoll(null); return; } if (campaign.requiredCheck) void advance({ checkRoll: { natural: roll.natural, success: roll.success } }); }} />}
+          {activeRequiredCheck && <DiceTray players={campaign.players} requiredCheck={activeRequiredCheck} onRoll={(roll) => { playDiceAnim(roll.success); if (spellRoll) void resolveSpellAttack(roll.total); }} onRequiredRoll={(roll) => { if (spellRoll) { setSpellRoll(null); return; } if (campaign.requiredCheck) void advance({ checkRoll: { natural: roll.natural, success: roll.success } }); }} />}
           {campaign.combat?.active && campaign.id && (
             <section className="inline-combat">
               <div className="section-heading">
