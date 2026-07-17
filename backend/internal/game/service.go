@@ -389,6 +389,7 @@ func (s *Service) Create(p CreateParams) (View, error) {
 			Background: clampStr(seed.Background, 60),
 			Abilities:  seed.Abilities,
 		})
+		c.Gold = 100 // starting purse; chests and quest rewards add more
 		players = append(players, c)
 	}
 

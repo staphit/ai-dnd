@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowClockwise, CloudArrowUp, Compass, Heartbeat, Lightbulb, LockKey, MapTrifold, Plugs, ShieldWarning, Sword, XCircle } from '@phosphor-icons/react';
+import { ArrowClockwise, CloudArrowUp, Compass, Heartbeat, Lightbulb, LockKey, MapTrifold, Plugs, ShieldWarning, Storefront, Sword, XCircle } from '@phosphor-icons/react';
 import { initialCampaign, storyPresets } from './data';
 import type { AbilityKey, AiStatus, Campaign, CampaignSettings, CampaignSummary, CharacterSpell, Choice, ForgeSettings, MessageAudience, Page, PlayerCharacter, PlayerId, RequiredCheck, RestType, SceneImage, StoryEntry } from './types';
 import { Sidebar } from './components/Sidebar';
@@ -15,6 +15,7 @@ import { CombatTracker } from './components/CombatTracker';
 import { CampaignManager } from './components/CampaignManager';
 import { SpellCastModal } from './components/SpellCastModal';
 import { PartyWipeModal } from './components/PartyWipeModal';
+import { ShopModal } from './components/ShopModal';
 import { StoryRevisionPanel, type RevisionChatLine } from './components/StoryRevisionPanel';
 import * as api from './api';
 import { ApiError, type ActionIssue, type CombatConclusion } from './api';
@@ -95,6 +96,8 @@ export default function App() {
   const [spellRoll, setSpellRoll] = useState<{ check: RequiredCheck; casterId: PlayerId; spell: CharacterSpell; asRitual: boolean; targetId: string } | null>(null);
   const [spellModal, setSpellModal] = useState<{ playerId: PlayerId; spell: CharacterSpell } | null>(null);
   const [revisionOpen, setRevisionOpen] = useState(false);
+  const [shopOpen, setShopOpen] = useState(false);
+  const [shopBusy, setShopBusy] = useState(false);
   const [revisionChat, setRevisionChat] = useState<RevisionChatLine[]>([]);
   const [revising, setRevising] = useState(false);
   const [pendingSceneSlotId, setPendingSceneSlotId] = useState('');
@@ -420,6 +423,15 @@ export default function App() {
       setCampaign(result.view);
       void advance({ combatConclusion: { ...result.conclusion, final } });
     } catch (caught) { setError(message(caught)); }
+  }
+
+  async function shopAction(run: () => Promise<Campaign>) {
+    if (!campaign.id || shopBusy) return;
+    setShopBusy(true);
+    try {
+      setCampaign(await run());
+      setError('');
+    } catch (caught) { setError(message(caught)); } finally { setShopBusy(false); }
   }
 
   // Out-of-combat rescue: rescuer spends 1 exploration action point, the
@@ -986,6 +998,15 @@ export default function App() {
                 <span>{campaign.combat?.active ? '戰鬥輪' : '探索回合'}</span>
                 <strong>{String(campaign.combat?.active ? campaign.combat.round : campaign.round).padStart(2, '0')}</strong>
               </div>
+              <button
+                type="button"
+                className="shop-open"
+                disabled={Boolean(campaign.combat?.active)}
+                title={campaign.combat?.active ? '戰鬥中無法交易' : '向裝備商買賣裝備'}
+                onClick={() => setShopOpen(true)}
+              >
+                <Storefront size={16} />裝備商店
+              </button>
             </section>
 
             <section className="objective objective-preamble" aria-label="任務摘要">
@@ -1096,6 +1117,15 @@ export default function App() {
           </div>
           {partyWiped && campaign.id && (
             <PartyWipeModal busy={loading} onRetry={() => void retryCombat()} onEndStory={() => void endCombat(true)} />
+          )}
+          {shopOpen && campaign.id && (
+            <ShopModal
+              players={campaign.players}
+              busy={shopBusy}
+              onClose={() => setShopOpen(false)}
+              onBuy={(playerId, itemId) => void shopAction(() => api.buyItem(campaign.id!, playerId, itemId))}
+              onSell={(playerId, itemName) => void shopAction(() => api.sellItem(campaign.id!, playerId, itemName))}
+            />
           )}
           {spellModal && (() => {
             const caster = campaign.players.find((p) => p.id === spellModal.playerId);

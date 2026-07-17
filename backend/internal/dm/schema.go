@@ -82,6 +82,19 @@ type ArcSignal struct {
 	NextGoal      string `json:"nextGoal"`
 }
 
+// LootItem is one physical item found in the scene, granted to a player.
+type LootItem struct {
+	PlayerID string `json:"playerId"`
+	Name     string `json:"name"`
+}
+
+// Loot is treasure the DM hands out this turn: gold is a party total the
+// server splits evenly; items go to the named players' equipment.
+type Loot struct {
+	Gold  int        `json:"gold"`
+	Items []LootItem `json:"items"`
+}
+
 // Turn is the validated DM output.
 type Turn struct {
 	Narration        string
@@ -99,6 +112,7 @@ type Turn struct {
 	ActionIssues     []ActionIssue
 	ExperienceAwards []ExperienceAward
 	Arc              ArcSignal
+	Loot             Loot
 }
 
 var playerIDPattern = regexp.MustCompile(`^player[1-4]$`)
@@ -283,6 +297,21 @@ func validateDMTurn(raw json.RawMessage) (*Turn, error) {
 		turn.Arc = ArcSignal{
 			PhaseComplete: am["phaseComplete"] == true,
 			NextGoal:      jsSlice(strOr(am["nextGoal"], ""), 240),
+		}
+	}
+
+	// Optional treasure: party gold plus named items for individual players.
+	if lm := asMap(v["loot"]); lm != nil {
+		turn.Loot.Gold = floorClampInt(numOr(lm["gold"], 0), 0, 5000)
+		if arr, ok := asSlice(lm["items"]); ok {
+			for _, item := range arrTake(arr, 6) {
+				playerID, _ := get(item, "playerId").(string)
+				name := strings.TrimSpace(strOr(get(item, "name"), ""))
+				if !playerIDPattern.MatchString(playerID) || name == "" {
+					continue
+				}
+				turn.Loot.Items = append(turn.Loot.Items, LootItem{PlayerID: playerID, Name: jsSlice(name, 60)})
+			}
 		}
 	}
 

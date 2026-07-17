@@ -153,6 +153,8 @@ export interface PlayerCharacter {
   skills: CharacterSkill[];
   attacks: CharacterAttack[];
   equipment: string[];
+  /** Carried gold (gp); chests, quest rewards, and the merchant move it. */
+  gold?: number;
   resources: CharacterResource[];
   features: ClassFeature[];
   spellcasting?: CharacterSpellcasting;

@@ -194,6 +194,29 @@ export function revive(id: string, targetId: PlayerId | string, rescuerId: Playe
 }
 
 // ---------------------------------------------------------------------------
+// Equipment merchant
+
+export interface ShopItem {
+  id: string;
+  name: string;
+  kind: 'weapon' | 'armor' | 'gear' | 'potion';
+  price: number;
+  note: string;
+}
+
+export function shopCatalog(): Promise<{ items: ShopItem[] }> {
+  return apiFetch('/api/shop/catalog');
+}
+
+export function buyItem(id: string, playerId: PlayerId | string, itemId: string): Promise<Campaign> {
+  return apiFetch(playerPath(id, playerId, '/buy'), { method: 'POST', body: JSON.stringify({ itemId }) });
+}
+
+export function sellItem(id: string, playerId: PlayerId | string, itemName: string): Promise<Campaign> {
+  return apiFetch(playerPath(id, playerId, '/sell'), { method: 'POST', body: JSON.stringify({ itemName }) });
+}
+
+// ---------------------------------------------------------------------------
 // Combat
 
 export interface EnemySpec {
