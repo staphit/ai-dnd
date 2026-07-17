@@ -35,6 +35,54 @@ var ExperienceThresholds = []int{
 	19000,
 }
 
+// armorDexContribution applies 5e armor rules to a DEX modifier: heavy armor
+// ignores DEX, medium caps it at +2, light/unarmored takes it in full.
+func armorDexContribution(mod int, kind string) int {
+	switch kind {
+	case "heavy":
+		return 0
+	case "medium":
+		if mod > 2 {
+			return 2
+		}
+		return mod
+	default:
+		return mod
+	}
+}
+
+// armorKindForEquipment infers the worn armor's weight class from the class
+// starting equipment names.
+func armorKindForEquipment(equipment []string) string {
+	for _, e := range equipment {
+		if strings.Contains(e, "鏈甲") || strings.Contains(e, "板甲") || strings.Contains(e, "全身甲") {
+			return "heavy"
+		}
+	}
+	for _, e := range equipment {
+		if strings.Contains(e, "鎖子衫") || strings.Contains(e, "鱗甲") || strings.Contains(e, "半身甲") || strings.Contains(e, "胸甲") {
+			return "medium"
+		}
+	}
+	return "light"
+}
+
+// computeAC keeps the class base AC (which assumes the class's default DEX)
+// and carries over the armor-appropriate share of any DEX the player has
+// gained since creation, plus blacksmith armor levels. (Monk WIS-to-AC is not
+// modelled; their base already reflects the template scores.)
+func computeAC(c Character) int {
+	primary := normalizedClasses(c)[0]
+	def, ok := ClassDefinitions[primary.ClassName]
+	if !ok || def.AC == 0 {
+		return c.AC // unknown class: keep the stored AC untouched
+	}
+	kind := armorKindForEquipment(def.Equipment)
+	baseDex := armorDexContribution(AbilityModifier(def.Abilities.Dex), kind)
+	nowDex := armorDexContribution(AbilityModifier(c.Abilities.Dex), kind)
+	return def.AC + (nowDex - baseDex) + c.ArmorUpgrade
+}
+
 // WeaponAttacksPerAction: light (輕型) weapons are fast enough to strike twice
 // per action; everything else lands one heavier blow. House rule so a
 // shortsword plays differently from a greatsword.
@@ -331,6 +379,7 @@ func Recalculate(c Character) Character {
 	c.MaxHitDice = c.Level
 	c.Passive = 10 + perception
 	c.Initiative = AbilityModifier(c.Abilities.Dex)
+	c.AC = computeAC(c)
 	c.Skills = skills
 	c.Attacks = attacks
 	c.Spellcasting = spellcasting

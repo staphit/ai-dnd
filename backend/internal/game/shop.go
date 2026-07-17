@@ -139,7 +139,7 @@ func (s *Service) ForgeUpgrade(id, playerID, kind, attackID string) (View, error
 		}
 		player.Gold -= cost
 		player.ArmorUpgrade++
-		player.AC++
+		*player = rules.Recalculate(*player) // folds the armor level into AC
 		return s.persist(st, []string{fmt.Sprintf("%s委託鍛造商強化護甲至 +%d（%d gp）：AC 現在 %d。", player.Name, player.ArmorUpgrade, cost, player.AC)})
 	default:
 		return View{}, apperr.New(400, "鍛造類型必須是 weapon 或 armor。")
