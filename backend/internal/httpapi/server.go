@@ -206,6 +206,7 @@ func (s *Server) Router() http.Handler {
 	r.Post("/api/campaign/{id}/combat/end-turn", s.handleCombatEndTurn)
 	r.Post("/api/campaign/{id}/combat/enemy-turn", s.handleCombatEnemyTurn)
 	r.Post("/api/campaign/{id}/combat/conclude", s.handleCombatConclude)
+	r.Post("/api/campaign/{id}/combat/retry", s.handleCombatRetry)
 	r.Post("/api/dm", s.handleDm)
 	r.Post("/api/scene-image", s.handleSceneImage)
 	r.Post("/api/character-image", s.handleCharacterImage)

@@ -241,6 +241,7 @@ type dmRequest struct {
 	CombatConclusion *struct {
 		Outcome string `json:"outcome"`
 		Summary string `json:"summary"`
+		Final   bool   `json:"final"`
 	} `json:"combatConclusion"`
 }
 
@@ -277,7 +278,7 @@ func (s *Server) handleDm(w http.ResponseWriter, r *http.Request) {
 	case req.CheckRoll != nil:
 		prepared, err = s.Game.PrepareCheckTurn(storyID, req.CheckRoll.Natural)
 	case req.CombatConclusion != nil:
-		prepared, err = s.Game.PrepareConclusionTurn(storyID, req.CombatConclusion.Outcome, req.CombatConclusion.Summary)
+		prepared, err = s.Game.PrepareConclusionTurn(storyID, req.CombatConclusion.Outcome, req.CombatConclusion.Summary, req.CombatConclusion.Final)
 	default:
 		actions := map[string]string{}
 		for _, a := range req.Actions {

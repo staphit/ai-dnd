@@ -91,6 +91,74 @@ func TestCombatFlowAndVictoryXP(t *testing.T) {
 	}
 }
 
+func TestRetryCombatRestoresSnapshot(t *testing.T) {
+	s := newTestService(t)
+	view := createSample(t, s)
+	id := view.ID
+
+	// No active combat yet: retry must 400.
+	if _, err := s.RetryCombat(id); apperr.StatusOf(err, 0) != 400 {
+		t.Fatalf("expected 400 without combat, got %v", err)
+	}
+
+	// Party acts first against a tough enemy.
+	s.WithDice(seq(0.99, 0.5, 0.01))
+	view2, err := s.StartCombatManual(id, []EnemySpec{{Name: "石像鬼", AC: 5, HP: 30, AttackBonus: 4, Damage: "1d6", DamageType: "鈍擊"}})
+	if err != nil {
+		t.Fatalf("start combat: %v", err)
+	}
+	startHP := map[string]int{}
+	for _, c := range view2.Combat.Combatants {
+		startHP[c.ID] = c.HP
+	}
+	startOrder := initiativeOrder(*view2.Combat)
+
+	// A hit damages the enemy, diverging from the snapshot.
+	s.WithDice(seq(0.9, 0.9))
+	result, err := s.Attack(id, AttackParams{})
+	if err != nil {
+		t.Fatalf("attack: %v", err)
+	}
+	enemyHurt := false
+	for _, c := range result.View.Combat.Combatants {
+		if c.Side == "enemy" && c.HP < startHP[c.ID] {
+			enemyHurt = true
+		}
+	}
+	if !enemyHurt {
+		t.Fatalf("enemy should be damaged before retry: %+v", result.View.Combat.Combatants)
+	}
+
+	retried, err := s.RetryCombat(id)
+	if err != nil {
+		t.Fatalf("retry: %v", err)
+	}
+	if retried.Combat == nil || !retried.Combat.Active {
+		t.Fatalf("combat should stay active after retry: %+v", retried.Combat)
+	}
+	for _, c := range retried.Combat.Combatants {
+		if c.HP != startHP[c.ID] {
+			t.Fatalf("%s HP not restored: got %d want %d", c.Name, c.HP, startHP[c.ID])
+		}
+	}
+	if got := initiativeOrder(*retried.Combat); got != startOrder {
+		t.Fatalf("initiative order changed: got %q want %q", got, startOrder)
+	}
+	last := retried.Story[len(retried.Story)-1]
+	if !strings.Contains(last.Text, "戰鬥重來") {
+		t.Fatalf("missing retry log: %q", last.Text)
+	}
+
+	// Conclude drops the snapshot: a later retry (new combat, missing
+	// snapshot) is impossible only when no combat is active.
+	if _, err := s.Conclude(id); err != nil {
+		t.Fatalf("conclude: %v", err)
+	}
+	if _, err := s.RetryCombat(id); apperr.StatusOf(err, 0) != 400 {
+		t.Fatalf("expected 400 after conclude, got %v", err)
+	}
+}
+
 func TestEnemyTurnAIAndFallback(t *testing.T) {
 	s := newTestService(t)
 	view := createSample(t, s)

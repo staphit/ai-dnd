@@ -212,6 +212,8 @@ export interface AttackResolution {
 export interface CombatConclusion {
   outcome: 'victory' | 'defeat' | 'withdrawal';
   summary: string;
+  /** Party wipe where the players chose to end the story: DM writes a final chapter. */
+  final?: boolean;
 }
 
 export function combatStart(id: string, enemies: EnemySpec[]): Promise<Campaign> {
@@ -232,6 +234,10 @@ export function combatEnemyTurn(id: string): Promise<{ view: Campaign; resolutio
 
 export function combatConclude(id: string): Promise<{ view: Campaign; conclusion: CombatConclusion }> {
   return apiFetch(campaignPath(id, '/combat/conclude'), { method: 'POST' });
+}
+
+export function combatRetry(id: string): Promise<Campaign> {
+  return apiFetch(campaignPath(id, '/combat/retry'), { method: 'POST' });
 }
 
 // ---------------------------------------------------------------------------

@@ -1523,6 +1523,61 @@ button:not(:disabled):active:where(.tip-dismiss, .notice-banner button, .error-b
 .spell-unprepared { opacity: .62; }
 
 /* Spell cast modal */
+/* Party-wipe dialog: end the story or replay the fight from its snapshot. */
+.party-wipe-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 44;
+  display: grid;
+  place-items: center;
+  padding: 24px 16px;
+  background: oklch(6% 0.03 28 / 0.84);
+  backdrop-filter: blur(10px);
+}
+.party-wipe-modal {
+  position: relative;
+  width: min(460px, 100%);
+  padding: 26px 24px 22px;
+  text-align: center;
+  border: 1px solid oklch(55% 0.145 28 / 0.55);
+  border-top: 2px solid oklch(62% 0.16 28);
+  background:
+    radial-gradient(circle at 50% 0%, oklch(55% 0.145 28 / 0.18), transparent 46%),
+    linear-gradient(180deg, oklch(20% 0.03 28 / 0.98), var(--color-paper-2));
+  box-shadow: 0 40px 100px -40px oklch(0% 0 0 / 0.9);
+}
+.party-wipe-sigil {
+  width: 54px;
+  height: 54px;
+  margin: 0 auto 10px;
+  display: grid;
+  place-items: center;
+  color: oklch(70% 0.15 28);
+  border: 1px solid oklch(55% 0.145 28 / 0.55);
+  border-radius: 50%;
+  background: oklch(55% 0.145 28 / 0.12);
+}
+.party-wipe-modal h2 { margin: 0 0 8px; color: oklch(78% 0.09 28); }
+.party-wipe-modal > p { margin: 0 0 18px; color: var(--muted); font-size: 13px; line-height: 1.7; }
+.party-wipe-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.party-wipe-actions button {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 14px 12px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.02);
+  color: var(--color-ink);
+  cursor: pointer;
+  font-size: 14px;
+}
+.party-wipe-actions button small { color: var(--muted); font-size: 10.5px; }
+.party-wipe-actions button:hover:not(:disabled) { border-color: var(--accent); background: oklch(74% 0.13 72 / 0.08); }
+.party-wipe-actions button:disabled { opacity: .55; cursor: wait; }
+.party-wipe-retry { border-color: var(--accent-soft) !important; }
+.party-wipe-end:hover:not(:disabled) { border-color: oklch(62% 0.16 28) !important; background: oklch(55% 0.145 28 / 0.1) !important; }
+@media (max-width: 560px) { .party-wipe-actions { grid-template-columns: 1fr; } }
+
 .spell-cast-backdrop {
   position: fixed;
   inset: 0;

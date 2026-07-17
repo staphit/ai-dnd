@@ -111,6 +111,13 @@ CREATE TABLE IF NOT EXISTS combats (
 	data        TEXT NOT NULL,
 	updated_at  INTEGER NOT NULL
 );
+-- Party + combat state captured at combat start, so a wiped party can retry
+-- the encounter from its opening state.
+CREATE TABLE IF NOT EXISTS combat_snapshots (
+	campaign_id TEXT PRIMARY KEY,
+	data        TEXT NOT NULL,
+	updated_at  INTEGER NOT NULL
+);
 CREATE TABLE IF NOT EXISTS story_entries (
 	campaign_id TEXT NOT NULL,
 	seq         INTEGER NOT NULL,

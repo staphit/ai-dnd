@@ -14,6 +14,7 @@ import { PartySetup } from './components/PartySetup';
 import { CombatTracker } from './components/CombatTracker';
 import { CampaignManager } from './components/CampaignManager';
 import { SpellCastModal } from './components/SpellCastModal';
+import { PartyWipeModal } from './components/PartyWipeModal';
 import { StoryRevisionPanel, type RevisionChatLine } from './components/StoryRevisionPanel';
 import * as api from './api';
 import { ApiError, type ActionIssue, type CombatConclusion } from './api';
@@ -242,6 +243,12 @@ export default function App() {
   const appStyle = { '--font-scale': String(settings.fontScale || 1) } as CSSProperties;
   const activeRequiredCheck = spellRoll?.check || campaign.requiredCheck;
   const currentCombatant = campaign.combat?.active ? campaign.combat.combatants[campaign.combat.turnIndex] : undefined;
+  // Party wipe: combat is live and every party-side combatant is down.
+  const partyWiped = useMemo(() => {
+    if (!campaign.combat?.active) return false;
+    const party = campaign.combat.combatants.filter((entry) => entry.side === 'party');
+    return party.length > 0 && party.every((entry) => entry.defeated);
+  }, [campaign.combat]);
   const selectedImageBackend = settings.imageBackend || status?.imageBackend || 'codex';
   const forgeDefaults = status?.ForgeDefaults?.[selectedImageBackend];
   const forgeSettings = settings.forgeSettings || (forgeDefaults ? { ...forgeDefaults, Enabled: false } : undefined);
@@ -406,12 +413,23 @@ export default function App() {
     } catch (caught) { setError(message(caught)); }
   }
 
-  async function endCombat() {
+  async function endCombat(final = false) {
     if (loading || !campaign.id) return;
     try {
       const result = await api.combatConclude(campaign.id);
       setCampaign(result.view);
-      void advance({ combatConclusion: result.conclusion });
+      void advance({ combatConclusion: { ...result.conclusion, final } });
+    } catch (caught) { setError(message(caught)); }
+  }
+
+  // 戰鬥重來: restore party + enemies to the snapshot taken when this combat
+  // started (same initiative order), taken from the party-wipe dialog.
+  async function retryCombat() {
+    if (loading || !campaign.id) return;
+    try {
+      setCampaign(await api.combatRetry(campaign.id));
+      setError('');
+      setNotice('戰鬥重來：隊伍與敵人已回到本場戰鬥開始時的狀態。');
     } catch (caught) { setError(message(caught)); }
   }
 
@@ -1013,6 +1031,9 @@ export default function App() {
               </section>
             ))}
           </div>
+          {partyWiped && campaign.id && (
+            <PartyWipeModal busy={loading} onRetry={() => void retryCombat()} onEndStory={() => void endCombat(true)} />
+          )}
           {spellModal && (() => {
             const caster = campaign.players.find((p) => p.id === spellModal.playerId);
             if (!caster) return null;

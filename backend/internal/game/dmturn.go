@@ -258,7 +258,7 @@ func (s *Service) PrepareCheckTurn(id string, natural int) (PreparedDMTurn, erro
 
 // PrepareConclusionTurn builds the post-combat narration turn from a
 // conclusion the server computed in Conclude.
-func (s *Service) PrepareConclusionTurn(id, outcome, summary string) (PreparedDMTurn, error) {
+func (s *Service) PrepareConclusionTurn(id, outcome, summary string, final bool) (PreparedDMTurn, error) {
 	unlock := s.Lock(id)
 	defer unlock()
 	st, err := s.loadState(id)
@@ -269,7 +269,7 @@ func (s *Service) PrepareConclusionTurn(id, outcome, summary string) (PreparedDM
 		outcome = "withdrawal"
 	}
 	input := s.prepareBase(st)
-	input.Conclusion = &dm.ConclusionV2{Outcome: outcome, Summary: clampStr(strings.TrimSpace(summary), 3000)}
+	input.Conclusion = &dm.ConclusionV2{Outcome: outcome, Summary: clampStr(strings.TrimSpace(summary), 3000), Final: final}
 	return PreparedDMTurn{Input: input, Players: input.Players, Round: st.row.Round, IsContinuation: true}, nil
 }
 

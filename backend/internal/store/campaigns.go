@@ -133,6 +133,7 @@ func (s *Store) DeleteCampaign(id string) error {
 	for _, stmt := range []string{
 		`DELETE FROM story_entries WHERE campaign_id = ?`,
 		`DELETE FROM combats WHERE campaign_id = ?`,
+		`DELETE FROM combat_snapshots WHERE campaign_id = ?`,
 		`DELETE FROM characters WHERE campaign_id = ?`,
 		`DELETE FROM campaigns WHERE id = ?`,
 	} {
@@ -213,6 +214,39 @@ func (s *Store) Combat(campaignID string) (string, bool, error) {
 // DeleteCombat clears the combat document for a campaign.
 func (s *Store) DeleteCombat(campaignID string) error {
 	_, err := s.db.Exec(`DELETE FROM combats WHERE campaign_id = ?`, campaignID)
+	return err
+}
+
+// SaveCombatSnapshot upserts the combat-start snapshot for a campaign.
+func (s *Store) SaveCombatSnapshot(campaignID, data string, updatedAt int64) error {
+	if campaignID == "" {
+		return errors.New("campaign id is required")
+	}
+	_, err := s.db.Exec(
+		`INSERT INTO combat_snapshots (campaign_id, data, updated_at) VALUES (?, ?, ?)
+		 ON CONFLICT(campaign_id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at`,
+		campaignID, data, updatedAt,
+	)
+	return err
+}
+
+// CombatSnapshot returns the combat-start snapshot; ok is false when none.
+func (s *Store) CombatSnapshot(campaignID string) (string, bool, error) {
+	row := s.db.QueryRow(`SELECT data FROM combat_snapshots WHERE campaign_id = ?`, campaignID)
+	var data string
+	err := row.Scan(&data)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", false, nil
+	}
+	if err != nil {
+		return "", false, err
+	}
+	return data, true, nil
+}
+
+// DeleteCombatSnapshot clears the combat-start snapshot for a campaign.
+func (s *Store) DeleteCombatSnapshot(campaignID string) error {
+	_, err := s.db.Exec(`DELETE FROM combat_snapshots WHERE campaign_id = ?`, campaignID)
 	return err
 }
 

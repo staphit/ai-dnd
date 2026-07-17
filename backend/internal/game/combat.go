@@ -1,6 +1,7 @@
 package game
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
 	"strings"
@@ -52,6 +53,13 @@ func (s *Service) enemyCombatants(specs []EnemySpec) []rules.Combatant {
 	return out
 }
 
+// combatSnapshot is the party + combat state captured the moment combat
+// starts, so a wiped party can retry the encounter from its opening state.
+type combatSnapshot struct {
+	Players []rules.Character `json:"players"`
+	Combat  rules.CombatState `json:"combat"`
+}
+
 // startCombatLocked builds and persists a fresh combat state; the campaign
 // lock must already be held.
 func (s *Service) startCombatLocked(st *gameState, enemies []EnemySpec, firstTurn string) error {
@@ -66,7 +74,39 @@ func (s *Service) startCombatLocked(st *gameState, enemies []EnemySpec, firstTur
 	}
 	combat := rules.StartCombat(append(rules.PartyCombatants(st.players), s.enemyCombatants(enemies)...), s.dice, firstTurn)
 	st.combat = &combat
+	if data, err := json.Marshal(combatSnapshot{Players: st.players, Combat: combat}); err == nil {
+		// Best-effort: a missing snapshot only disables 戰鬥重來 for this fight.
+		_ = s.store.SaveCombatSnapshot(st.row.ID, string(data), s.now().UnixMilli())
+	}
 	return nil
+}
+
+// RetryCombat restores the party and combat to the snapshot captured when the
+// current combat started (same enemies, HP, resources, and initiative order).
+func (s *Service) RetryCombat(id string) (View, error) {
+	unlock := s.Lock(id)
+	defer unlock()
+	st, err := s.loadState(id)
+	if err != nil {
+		return View{}, err
+	}
+	if st.combat == nil || !st.combat.Active {
+		return View{}, apperr.New(400, "目前沒有進行中的戰鬥。")
+	}
+	data, ok, err := s.store.CombatSnapshot(id)
+	if err != nil {
+		return View{}, err
+	}
+	if !ok {
+		return View{}, apperr.New(400, "找不到本場戰鬥的開場紀錄，無法重來。")
+	}
+	var snap combatSnapshot
+	if err := json.Unmarshal([]byte(data), &snap); err != nil {
+		return View{}, fmt.Errorf("combat snapshot for %s is corrupt: %w", id, err)
+	}
+	st.players = snap.Players
+	*st.combat = snap.Combat
+	return s.persist(st, []string{fmt.Sprintf("戰鬥重來：隊伍與敵人回到本場戰鬥開始時的狀態。先攻順序：%s", initiativeOrder(*st.combat))})
 }
 
 func initiativeOrder(state rules.CombatState) string {
@@ -320,6 +360,7 @@ func (s *Service) Conclude(id string) (ConcludeResult, error) {
 
 	st.players = rules.SyncPlayersFromCombat(st.players, *st.combat)
 	st.combat.Active = false
+	_ = s.store.DeleteCombatSnapshot(id) // combat over; retry window closed
 
 	resultLabel := map[string]string{"victory": "隊伍勝利", "defeat": "隊伍戰敗", "withdrawal": "戰鬥中止或撤退"}[outcome]
 	view, err := s.persist(st, []string{fmt.Sprintf("戰鬥結束：%s。%s", resultLabel, summary)})

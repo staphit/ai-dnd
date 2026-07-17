@@ -19,10 +19,12 @@ type ResolutionV2 struct {
 }
 
 // ConclusionV2 is a server-computed combat conclusion feeding a continuation
-// turn.
+// turn. Final marks a party-wipe where the players chose to end the story:
+// the DM writes a closing chapter instead of continuing.
 type ConclusionV2 struct {
 	Outcome string // victory | defeat | withdrawal
 	Summary string
+	Final   bool
 }
 
 // TurnInputV2 is everything the slim DM prompt needs, assembled from the
@@ -116,11 +118,19 @@ func BuildDMRequestV2(in TurnInputV2) string {
 		case "defeat":
 			outcomeText = "隊伍戰敗"
 		}
-		lines = append(lines,
-			"戰鬥追蹤器剛剛完成戰鬥，這不是新的玩家行動：",
-			"戰鬥結果："+outcomeText+"。"+jsSlice(in.Conclusion.Summary, 3000),
-			"請直接敘述戰鬥結束後的現場、存活者反應、立即後果與新局勢，並更新目標背景和風險。不可插入、假設或要求新的玩家行動；不可再次結算傷害或 XP；combat.starts 必須為 false、actionIssues 必須為空陣列。",
-		)
+		if in.Conclusion.Final {
+			lines = append(lines,
+				"全隊已失去戰鬥能力，玩家選擇在此結束整個故事：",
+				"戰鬥結果："+outcomeText+"。"+jsSlice(in.Conclusion.Summary, 3000),
+				"請為這個冒險寫下終章：描述隊伍倒下的結局、他們留下的影響，以及這個世界接下來的走向，給故事一個完整而有餘韻的收尾。不可插入、假設或要求新的玩家行動；不可再次結算傷害或 XP；不可提供 choices 或新的 check；combat.starts 必須為 false、actionIssues 必須為空陣列。",
+			)
+		} else {
+			lines = append(lines,
+				"戰鬥追蹤器剛剛完成戰鬥，這不是新的玩家行動：",
+				"戰鬥結果："+outcomeText+"。"+jsSlice(in.Conclusion.Summary, 3000),
+				"請直接敘述戰鬥結束後的現場、存活者反應、立即後果與新局勢，並更新目標背景和風險。不可插入、假設或要求新的玩家行動；不可再次結算傷害或 XP；combat.starts 必須為 false、actionIssues 必須為空陣列。",
+			)
+		}
 	default:
 		lines = append(lines, "本輪宣告（已通過系統驗證）：")
 		for _, p := range in.Players {
