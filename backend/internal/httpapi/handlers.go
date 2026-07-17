@@ -569,15 +569,6 @@ func (s *Server) recordMemory(storyID string, prepared game.PreparedDMTurn, outp
 }
 
 func (s *Server) handleSceneImage(w http.ResponseWriter, r *http.Request) {
-	if err := s.imgGate.acquire(imageGateMinGap); err != nil {
-		writeJSON(w, http.StatusTooManyRequests, errorBody{Error: err.Error()})
-		return
-	}
-	defer s.imgGate.release()
-
-	ctx, cancel := context.WithTimeout(r.Context(), 450*time.Second)
-	defer cancel()
-
 	body, err := readJSONBody(w, r)
 	if err != nil {
 		writeErr(w, err, http.StatusServiceUnavailable)
@@ -667,7 +658,7 @@ func (s *Server) handleSceneImage(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, err, http.StatusBadRequest)
 		return
 	}
-	result, err := images.GenerateScene(ctx, renderer, s.Store, images.SceneInput{
+	input := images.SceneInput{
 		Title:        title,
 		Scene:        scene,
 		Narration:    narration,
@@ -676,7 +667,26 @@ func (s *Server) handleSceneImage(w http.ResponseWriter, r *http.Request) {
 		Forge:        forgeOptions,
 		CampaignID:   campaignID,
 		SourceSlotID: slotID,
-	})
+	}
+
+	// Async mode: return a job id immediately and generate in the background,
+	// so the story flow (DM turns, actions) never waits on the image.
+	if jsutil.Get(body, "async") == true {
+		jobID, _ := s.imgJobs.create()
+		go s.runSceneImageJob(jobID, input, renderer, slotID)
+		writeJSON(w, http.StatusAccepted, map[string]any{"jobId": jobID})
+		return
+	}
+
+	// Legacy synchronous mode.
+	if err := s.imgGate.acquire(imageGateMinGap); err != nil {
+		writeJSON(w, http.StatusTooManyRequests, errorBody{Error: err.Error()})
+		return
+	}
+	defer s.imgGate.release()
+	ctx, cancel := context.WithTimeout(r.Context(), 450*time.Second)
+	defer cancel()
+	result, err := images.GenerateScene(ctx, renderer, s.Store, input)
 	if err != nil {
 		writeErr(w, err, http.StatusServiceUnavailable)
 		return
@@ -688,6 +698,51 @@ func (s *Server) handleSceneImage(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"url": result.URL, "prompt": result.Prompt, "model": result.Model, "sceneSlotId": slotID,
+	})
+}
+
+// runSceneImageJob executes one async scene-image generation. The image gate
+// is taken inside the goroutine: a busy gate fails the job with the same
+// user-facing message the sync path returns as 429.
+func (s *Server) runSceneImageJob(jobID string, input images.SceneInput, renderer images.Renderer, slotID string) {
+	if err := s.imgGate.acquire(imageGateMinGap); err != nil {
+		s.imgJobs.finish(jobID, func(j *imageJob) { j.Status = "error"; j.Err = err.Error() })
+		return
+	}
+	defer s.imgGate.release()
+	ctx, cancel := context.WithTimeout(context.Background(), 450*time.Second)
+	defer cancel()
+	result, err := images.GenerateScene(ctx, renderer, s.Store, input)
+	if err != nil {
+		log.Printf("[scene-image] async job %s failed: %v", jobID, err)
+		s.imgJobs.finish(jobID, func(j *imageJob) { j.Status = "error"; j.Err = err.Error() })
+		return
+	}
+	if slotID != "" && s.Store != nil {
+		if err := s.Store.BindSceneSlotImage(slotID, result.URL, result.Model); err != nil {
+			log.Printf("[scene-image] bind slot image failed id=%s: %v", slotID, err)
+		}
+	}
+	s.imgJobs.finish(jobID, func(j *imageJob) {
+		j.Status = "done"
+		j.URL = result.URL
+		j.Prompt = result.Prompt
+		j.Model = result.Model
+		j.SlotID = slotID
+	})
+}
+
+// handleSceneImageJob reports one async job's progress.
+func (s *Server) handleSceneImageJob(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "jobId")
+	job, ok := s.imgJobs.get(id)
+	if !ok {
+		writeJSON(w, http.StatusNotFound, errorBody{Error: "找不到這個圖片生成工作。"})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"status": job.Status, "url": job.URL, "prompt": job.Prompt,
+		"model": job.Model, "sceneSlotId": job.SlotID, "error": job.Err,
 	})
 }
 

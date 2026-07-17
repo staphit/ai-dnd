@@ -492,10 +492,13 @@ export default function App() {
     if (!narration && !slotId) return setImageError('目前沒有可供繪製的公開 DM 場景敘事。');
     setImageLoading(true); setImageError('');
     try {
+      // Async job mode: the server answers immediately with a job id and
+      // renders in the background, so DM turns and actions never wait.
       const response = await fetch('/api/scene-image', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
+          async: true,
           imageBackend: settings.imageBackend || '',
           campaignId: campaign.id || '',
           campaign: { title: campaign.title, scene: sceneOverride || campaign.scene },
@@ -505,9 +508,24 @@ export default function App() {
           forge: forgeDefaults ? forgeRequest(settings.forgeSettings) : undefined,
         }),
       });
-      const data = await response.json().catch(() => ({} as { url?: string; model?: string; error?: string }));
+      const data = await response.json().catch(() => ({} as { jobId?: string; url?: string; model?: string; error?: string }));
       if (!response.ok) throw new Error(data.error || '場景插圖生成失敗');
-      appendSceneImage({ url: data.url!, scene: sceneOverride || campaignRef.current.scene, createdAt: now(), model: data.model || status?.imageModel || 'Image' });
+      let url = data.url;
+      let model = data.model;
+      if (data.jobId) {
+        const started = Date.now();
+        for (;;) {
+          await new Promise((resolve) => window.setTimeout(resolve, 4000));
+          if (Date.now() - started > 600000) throw new Error('場景插圖生成逾時，請再試一次。');
+          const jobResponse = await fetch(`/api/scene-image/job/${data.jobId}`);
+          const job = await jobResponse.json().catch(() => ({} as { status?: string; url?: string; model?: string; error?: string }));
+          if (!jobResponse.ok) throw new Error(job.error || '查詢圖片生成進度失敗');
+          if (job.status === 'done') { url = job.url; model = job.model; break; }
+          if (job.status === 'error') throw new Error(job.error || '場景插圖生成失敗');
+        }
+      }
+      if (!url) throw new Error('場景插圖生成失敗');
+      appendSceneImage({ url, scene: sceneOverride || campaignRef.current.scene, createdAt: now(), model: model || status?.imageModel || 'Image' });
       if (slotId && slotId === pendingSceneSlotId) setPendingSceneSlotId('');
     } catch (caught) { setImageError(message(caught)); } finally { setImageLoading(false); }
   }
