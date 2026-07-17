@@ -405,6 +405,9 @@ func (s *Service) SetPrepared(id, playerID string, spellIDs []string) (View, err
 }
 
 // ChangeResourceAction adjusts a class resource by delta (clamped in rules).
+// Spending (delta < 0) also applies the mechanical effect of resources the
+// server understands: 動作如潮 restores the current turn's action, 回氣 heals
+// 1d10 + level as a bonus action.
 func (s *Service) ChangeResourceAction(id, playerID, resourceID string, delta int) (View, error) {
 	unlock := s.Lock(id)
 	defer unlock()
@@ -416,8 +419,94 @@ func (s *Service) ChangeResourceAction(id, playerID, resourceID string, delta in
 	if err != nil {
 		return View{}, err
 	}
+	combatActive := st.combat != nil && st.combat.Active
+
+	resourceAt := func(c rules.Character) (current int, name string) {
+		for _, r := range c.Resources {
+			if r.ID == resourceID {
+				return r.Current, r.Name
+			}
+		}
+		return 0, resourceID
+	}
+	prev, name := resourceAt(*player)
+
+	// Pre-validate effects that have combat requirements, before spending.
+	spending := delta < 0
+	if spending && prev <= 0 {
+		return View{}, apperr.New(400, fmt.Sprintf("%s的「%s」已用盡。", player.Name, name))
+	}
+	if spending && resourceID == "action_surge" {
+		if !combatActive {
+			return View{}, apperr.New(400, "動作如潮只能在戰鬥中自己的回合使用。")
+		}
+		if st.combat.TurnIndex < 0 || st.combat.TurnIndex >= len(st.combat.Combatants) ||
+			st.combat.Combatants[st.combat.TurnIndex].PlayerID != playerID {
+			return View{}, apperr.New(400, "現在不是"+player.Name+"的回合，無法發動動作如潮。")
+		}
+	}
+	if spending && resourceID == "second_wind" && combatActive {
+		// Bonus action cost; dry-run so an illegal use fails before the spend.
+		if _, err := rules.SpendCombatResource(*st.combat, playerID, "bonusAction"); err != nil {
+			return View{}, apperr.New(400, err.Error())
+		}
+	}
+
 	*player = rules.ChangeResource(*player, resourceID, delta)
-	return s.persist(st, nil)
+	next, _ := resourceAt(*player)
+
+	var logs []string
+	if spending && next < prev {
+		switch resourceID {
+		case "action_surge":
+			actor := st.combat.Combatants[st.combat.TurnIndex]
+			economy := make(map[string]rules.TurnEconomy, len(st.combat.TurnEconomy)+1)
+			for k, v := range st.combat.TurnEconomy {
+				economy[k] = v
+			}
+			usage := economy[actor.ID]
+			usage.ActionUsed = false
+			economy[actor.ID] = usage
+			st.combat.TurnEconomy = economy
+			logs = append(logs, fmt.Sprintf("%s發動「動作如潮」：本回合可以再進行一個動作。", player.Name))
+		case "second_wind":
+			heal := rules.Die(10, s.dice) + player.Level
+			healed := min(player.MaxHP-player.HP, heal)
+			if healed < 0 {
+				healed = 0
+			}
+			player.HP += healed
+			if combatActive {
+				spent, err := rules.SpendCombatResource(*st.combat, playerID, "bonusAction")
+				if err == nil {
+					*st.combat = spent
+				}
+				for i := range st.combat.Combatants {
+					if st.combat.Combatants[i].PlayerID == playerID {
+						st.combat.Combatants[i].HP = player.HP
+						break
+					}
+				}
+			}
+			suffix := ""
+			if combatActive {
+				suffix = "（已使用附贈動作）"
+			}
+			logs = append(logs, fmt.Sprintf("%s使用「回氣」恢復 %d 生命，現在 HP %d/%d%s。", player.Name, healed, player.HP, player.MaxHP, suffix))
+		default:
+			logs = append(logs, fmt.Sprintf("%s使用「%s」（剩 %d/%d）。", player.Name, name, next, resourceMax(*player, resourceID)))
+		}
+	}
+	return s.persist(st, logs)
+}
+
+func resourceMax(c rules.Character, resourceID string) int {
+	for _, r := range c.Resources {
+		if r.ID == resourceID {
+			return r.Max
+		}
+	}
+	return 0
 }
 
 // CharacterPatch carries cosmetic/customize edits.

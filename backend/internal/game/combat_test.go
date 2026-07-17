@@ -159,6 +159,70 @@ func TestRetryCombatRestoresSnapshot(t *testing.T) {
 	}
 }
 
+func TestActionSurgeRestoresAction(t *testing.T) {
+	s := newTestService(t)
+	view, err := s.Create(CreateParams{
+		Title: "動作如潮測試", Scene: "校場", Objective: "測試", ObjectiveContext: "ctx", Stakes: "無",
+		Players: []PlayerSeed{
+			{Name: "鐵手", ClassName: "戰士", Level: 3},
+			{Name: "米芮", ClassName: "牧師"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	id := view.ID
+
+	// Out of combat: action surge is rejected and the use is not consumed.
+	if _, err := s.ChangeResourceAction(id, "player1", "action_surge", -1); apperr.StatusOf(err, 0) != 400 {
+		t.Fatalf("expected 400 out of combat, got %v", err)
+	}
+
+	// Party first; attack spends the action.
+	s.WithDice(seq(0.99, 0.5, 0.01))
+	if _, err := s.StartCombatManual(id, []EnemySpec{{Name: "石守衛", AC: 5, HP: 40, AttackBonus: 2, Damage: "1d4", DamageType: "鈍擊"}}); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	s.WithDice(seq(0.9, 0.5))
+	if _, err := s.Attack(id, AttackParams{}); err != nil {
+		t.Fatalf("attack: %v", err)
+	}
+	if _, err := s.Attack(id, AttackParams{}); apperr.StatusOf(err, 0) != 400 {
+		t.Fatalf("second attack should be blocked, got %v", err)
+	}
+
+	surged, err := s.ChangeResourceAction(id, "player1", "action_surge", -1)
+	if err != nil {
+		t.Fatalf("action surge: %v", err)
+	}
+	for _, p := range surged.Players {
+		if p.ID == "player1" {
+			for _, r := range p.Resources {
+				if r.ID == "action_surge" && r.Current != 0 {
+					t.Fatalf("surge use not consumed: %+v", r)
+				}
+			}
+		}
+	}
+	// Action restored: attacking again works.
+	s.WithDice(seq(0.9, 0.5))
+	if _, err := s.Attack(id, AttackParams{}); err != nil {
+		t.Fatalf("attack after surge should succeed: %v", err)
+	}
+	last := surged.Story[len(surged.Story)-1]
+	if !strings.Contains(last.Text, "動作如潮") {
+		t.Fatalf("missing surge log: %q", last.Text)
+	}
+
+	// Second wind heals and spends the bonus action.
+	if _, err := s.ChangeResourceAction(id, "player1", "second_wind", -1); err != nil {
+		t.Fatalf("second wind: %v", err)
+	}
+	if _, err := s.ChangeResourceAction(id, "player1", "second_wind", -1); apperr.StatusOf(err, 0) != 400 {
+		t.Fatalf("second wind twice in one turn should 400 (bonus action used), got %v", err)
+	}
+}
+
 func TestShopBuySell(t *testing.T) {
 	s := newTestService(t)
 	view := createSample(t, s)
