@@ -26,10 +26,13 @@ var halfCasters = map[string]bool{
 
 // ExperienceThresholds mirrors advancement.ts experienceThresholds: the total
 // XP required to reach each level, indexed by level (index 0 unused).
+// Deliberately far below the official 5e table (~1/10–1/18): this duet plays
+// short sessions with modest per-turn awards, so levels should land every few
+// encounters, not after hundreds of rounds.
 var ExperienceThresholds = []int{
-	0, 0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000,
-	64000, 85000, 100000, 120000, 140000, 165000, 195000, 225000, 265000, 305000,
-	355000,
+	0, 0, 100, 250, 500, 900, 1400, 2000, 2700, 3500,
+	4400, 5400, 6500, 7700, 9000, 10400, 11900, 13500, 15200, 17000,
+	19000,
 }
 
 // abilityImprovementLevels mirrors the advancement.ts abilityImprovementLevels
