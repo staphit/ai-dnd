@@ -11,6 +11,7 @@ import {
   saveStoredDmScale,
 } from './dmAvatarScale';
 import { formatStoryText } from '../formatStoryText';
+import { useI18n } from '../i18n';
 
 const DMTable = lazy(() => import('./DMTable').then((m) => ({ default: m.DMTable })));
 
@@ -43,6 +44,7 @@ export function StoryFeed({
   diceOutcome = null,
   dialogueNotices,
 }: StoryFeedProps) {
+  const { lang, tz } = useI18n();
   const [showHistory, setShowHistory] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [dmScale, setDmScale] = useState(loadStoredDmScale);
@@ -64,9 +66,9 @@ export function StoryFeed({
   }, [latestPublicDmId, loading]);
 
   function speakerName(entry: StoryEntry) {
-    if (entry.speaker === 'dm') return '地城主';
-    if (entry.speaker === 'system') return '紀錄';
-    return players.find((player) => player.id === entry.speaker)?.name || '冒險者';
+    if (entry.speaker === 'dm') return tz('地城主');
+    if (entry.speaker === 'system') return tz('紀錄');
+    return players.find((player) => player.id === entry.speaker)?.name || tz('冒險者');
   }
 
   const visibleStory = story.filter((entry) => !entry.audience || entry.audience === 'public' || entry.audience === viewer);
@@ -83,17 +85,17 @@ export function StoryFeed({
   const hiddenCount = Math.max(0, visibleStory.length - latestStory.length);
 
   return (
-    <section className="story-panel" aria-label="冒險敘事">
+    <section className="story-panel" aria-label={tz('冒險敘事')}>
       <div className="section-heading">
         <div>
-          <p className="eyebrow">最新對話</p>
-          <h2>{viewer === 'public' ? '公開頻道' : `${players.find((player) => player.id === viewer)?.name || '玩家'}的私密頻道`}</h2>
+          <p className="eyebrow">{tz('最新對話')}</p>
+          <h2>{viewer === 'public' ? tz('公開頻道') : lang === 'en' ? `${players.find((player) => player.id === viewer)?.name || 'Player'}'s private channel` : `${players.find((player) => player.id === viewer)?.name || '玩家'}的私密頻道`}</h2>
         </div>
         <div className="story-heading-actions">
           {hiddenCount > 0 && (
             <button type="button" aria-expanded={showHistory} onClick={() => setShowHistory((value) => !value)}>
               <ClockCounterClockwise />
-              {showHistory ? '收起歷史' : `歷史對話（${hiddenCount}）`}
+              {showHistory ? tz('收起歷史') : lang === 'en' ? `History (${hiddenCount})` : `歷史對話（${hiddenCount}）`}
             </button>
           )}
           {viewer === 'public' ? <Scroll size={20} /> : <LockKey size={20} />}
@@ -118,7 +120,7 @@ export function StoryFeed({
           <label className="dm-scale-control">
             <span className="dm-scale-label">
               <ArrowsOutSimple size={14} weight="bold" />
-              DM 大小
+              {tz('DM 大小')}
               <strong>{Math.round((dmScale / DM_AVATAR_SCALE_DEFAULT) * 100)}%</strong>
             </span>
             <input
@@ -130,7 +132,7 @@ export function StoryFeed({
               aria-valuemin={DM_AVATAR_SCALE_MIN}
               aria-valuemax={DM_AVATAR_SCALE_MAX}
               aria-valuenow={dmScale}
-              aria-label="地城主模型大小"
+              aria-label={tz('地城主模型大小')}
               onInput={(event) => {
                 const next = clampDmAvatarScale(Number((event.target as HTMLInputElement).value));
                 setDmScale(next);
@@ -151,7 +153,7 @@ export function StoryFeed({
                   saveStoredDmScale(next);
                 }}
               >
-                縮小
+                {tz('縮小')}
               </button>
               <button
                 type="button"
@@ -162,7 +164,7 @@ export function StoryFeed({
                   saveStoredDmScale(next);
                 }}
               >
-                放大
+                {tz('放大')}
               </button>
               <button
                 type="button"
@@ -172,7 +174,7 @@ export function StoryFeed({
                   saveStoredDmScale(DM_AVATAR_SCALE_DEFAULT);
                 }}
               >
-                重設
+                {tz('重設')}
               </button>
             </div>
           </label>
@@ -180,7 +182,7 @@ export function StoryFeed({
 
         <div className="story-feed" aria-live="polite">
           <p className="story-view-hint">
-            肖像操作：左鍵旋轉・右鍵平移・滾輪縮放・雙擊重設視角
+            {tz('肖像操作：左鍵旋轉・右鍵平移・滾輪縮放・雙擊重設視角')}
           </p>
           {dialogueNotices ? <div className="story-dialogue-notices">{dialogueNotices}</div> : null}
           <AnimatePresence initial={false}>
@@ -197,7 +199,7 @@ export function StoryFeed({
                 <div className="story-meta">
                   <span>
                     {speakerName(entry)}
-                    {entry.audience && entry.audience !== 'public' ? '／私密' : ''}
+                    {entry.audience && entry.audience !== 'public' ? tz('／私密') : ''}
                   </span>
                   <time>{entry.time}</time>
                 </div>
@@ -214,7 +216,7 @@ export function StoryFeed({
                     // body), so the chip and prose must share one grid cell.
                     return (
                       <div className="story-body">
-                        <p className="story-choice-chip">▸ 選擇：{choiceLine}</p>
+                        <p className="story-choice-chip">▸ {tz('選擇：')}{choiceLine}</p>
                         {rest && <p className="story-prose">{rest}</p>}
                       </div>
                     );
@@ -227,7 +229,7 @@ export function StoryFeed({
               <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="dm-loading">
                 <HourglassMedium size={18} className="hourglass" />
                 <div>
-                  <span>地城主正在裁定</span>
+                  <span>{tz('地城主正在裁定')}</span>
                   <div className="loading-lines">
                     <i />
                     <i />
