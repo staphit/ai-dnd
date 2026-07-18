@@ -21,6 +21,13 @@ export interface StoryPreset {
   stakes: string;
   opening: string;
   demoBeats: DemoBeat[];
+  /** English variants applied when the UI language is en (campaign creation + setup cards). */
+  en?: Pick<StoryPreset, 'title' | 'genre' | 'summary' | 'tags' | 'chapter' | 'scene' | 'objective' | 'objectiveContext' | 'stakes' | 'opening'>;
+}
+
+/** View of a preset in the requested language; zh returns the preset as-is. */
+export function localizedPreset(preset: StoryPreset, lang: string): StoryPreset {
+  return lang === 'en' && preset.en ? { ...preset, ...preset.en } : preset;
 }
 
 /** Open-table custom story id — not in storyPresets; fields come from setup form. */
@@ -107,6 +114,18 @@ export const storyPresets: StoryPreset[] = [
         objectiveContext: '祭壇下的暗門已開啟，伊薩克的羅盤留在第一級階梯，指針卻異常指向隊伍中央。',
       },
     ],
+    en: {
+      title: 'The Ashen Crown',
+      genre: 'Gothic mystery',
+      summary: 'Trace a missing cartographer and uncover the secret of the lightless chapel and the Sunken Crown.',
+      tags: ['Investigation', 'Dungeon', 'City intrigue'],
+      chapter: 'Chapter I / Night of the Sunken Bell',
+      scene: 'Lowtown · The Lightless Chapel',
+      objective: 'Find the missing cartographer Isaac before the midnight bell',
+      objectiveContext: 'Cartographer Isaac went silent while investigating the Lowtown disappearances. His last map points to the lightless chapel — and an unnatural knocking sounds from beneath its altar.',
+      stakes: 'After the midnight bell the waterways flood; the clues Isaac left may drown, and the missing will be far harder to bring back.',
+      opening: 'The chapel door swings shut behind the party. There is no wind, yet every candle flame leans toward the altar at once; a trail of mud runs across the flagstones to the altar, and from behind it come three slow knocks.',
+    },
   },
   {
     id: 'last-light-of-frostharbor',
@@ -141,6 +160,18 @@ export const storyPresets: StoryPreset[] = [
         objectiveContext: '燈塔以女孩的記憶為燃料，守塔人因此讓火焰熄滅；艦隊已抵達防波堤。',
       },
     ],
+    en: {
+      title: 'The Last Light of Frostharbor',
+      genre: 'Arctic survival',
+      summary: 'A blizzard seals the lonely port while the dead lighthouse draws a fleet of the drowned back to shore.',
+      tags: ['Survival', 'Seafaring', 'Supernatural'],
+      chapter: 'Chapter I / The White Tide Closes the Port',
+      scene: 'Frostharbor · Icebreaker Quay',
+      objective: 'Relight the North Cape lighthouse before the ghost fleet makes landfall',
+      objectiveContext: "Frostharbor's lighthouse went dark in a hundred-year blizzard and its keeper is missing, yet black sails are beating upwind across the water. The only ice bridge to North Cape is breaking apart fast.",
+      stakes: 'If the lighthouse is still dark at dawn, the fleet of the dead will follow the townsfolk’s warmth ashore, and all of Frostharbor becomes a new ghost port.',
+      opening: 'The blizzard swallows the end of the quay, yet the harbour bell rings seven times with no hand on the rope. Beneath the ice glides the shadow of a black ship sailing upside down — and far off, the last spark of the lighthouse goes out at that very moment.',
+    },
   },
   {
     id: 'emerald-slumber',
@@ -175,6 +206,18 @@ export const storyPresets: StoryPreset[] = [
         objectiveContext: '瑟芙既是夢疫核心也是森林的囚徒；喚醒全村必須犧牲記憶、摧毀夢根，或找到第三條路。',
       },
     ],
+    en: {
+      title: 'The Emerald Slumber',
+      genre: 'Wilderness folktale',
+      summary: 'A whole village falls into a shared dream, and the forest begins growing the memories its people refuse to face.',
+      tags: ['Exploration', 'Dreams', 'Moral choice'],
+      chapter: 'Chapter I / The Village That Will Not Wake',
+      scene: 'Greensleep Forest · Mossbell Village',
+      objective: 'Wake Mossbell Village before sundown and find the source of the dream-plague',
+      objectiveContext: 'A caravan found every villager asleep at the same instant, vines trailing from the houses toward the deep forest. Every sleeper keeps repeating a name that has been erased from the village records.',
+      stakes: 'After sundown the dream overwrites reality for good: the villagers will forget they were ever awake, and the forest will fold more travellers into the same dream.',
+      opening: 'Every door in the village stands open. Soup still steams on the tables, yet the people sleep where they sat. The old tree on the square has burst into emerald flowers overnight — and one of them is whispering for help in the voice of someone in your party.',
+    },
   },
   {
     id: 'blood-moon-express',
@@ -209,6 +252,18 @@ export const storyPresets: StoryPreset[] = [
         objectiveContext: '列車本身是移動祭壇，列車長參與儀式；隧道入口已近，煞車與封印都需要立即行動。',
       },
     ],
+    en: {
+      title: 'The Blood Moon Express',
+      genre: 'Arcane rail thriller',
+      summary: 'A locked-room murder, a stolen relic, and an arcane train that no longer stops at any station of the living world.',
+      tags: ['Mystery', 'Chase', 'High tempo'],
+      chapter: 'Chapter I / Car Thirteen',
+      scene: 'The Blood Moon Express, crossing the Rift',
+      objective: 'Recover the stolen Starfire Casket before the train enters the Blood Moon Tunnel',
+      objectiveContext: 'The royal envoy lies dead inside a locked compartment and the Starfire Casket he escorted is gone. The conductor swears no one boarded or left, yet the passenger manifest lists one person who does not exist.',
+      stakes: 'Once the train enters the Blood Moon Tunnel it leaves the living world; if the casket opens on the far side, every passenger aboard is offered to the ancient thing waiting at the platform.',
+      opening: 'The train lurches hard crossing the Rift, and every lamp in Car Thirteen turns red. Inside the locked compartment the envoy lies on a floor without a drop of blood; clutched in his hand is a ticket, and the passenger name on it is slowly becoming one of the adventurers’.',
+    },
   },
 ];
 

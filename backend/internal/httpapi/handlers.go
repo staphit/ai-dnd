@@ -431,7 +431,7 @@ func (s *Server) handleDm(w http.ResponseWriter, r *http.Request) {
 
 	checkText := ""
 	if output.RequiresCheck && output.Check != nil {
-		checkText = "\n\n檢定：" + output.Check.Character + " 進行 DC " + strconv.Itoa(output.Check.DC) + " 的" + output.Check.Ability + "（" + output.Check.Skill + "）檢定。" + output.Check.Reason
+		checkText = checkStoryLine(output.Check, prepared.Input.Language)
 	}
 
 	status := api.Status(ctx)
@@ -505,6 +505,16 @@ func (s *Server) handleDm(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// checkStoryLine renders the required-check suffix appended to the public
+// narration, in the campaign language. Ability/skill names stay as authored
+// (mechanical identifiers).
+func checkStoryLine(check *dm.Check, lang string) string {
+	if lang == "en" {
+		return "\n\nCheck: " + check.Character + " makes a DC " + strconv.Itoa(check.DC) + " " + check.Ability + " (" + check.Skill + ") check. " + check.Reason
+	}
+	return "\n\n檢定：" + check.Character + " 進行 DC " + strconv.Itoa(check.DC) + " 的" + check.Ability + "（" + check.Skill + "）檢定。" + check.Reason
+}
+
 // respondDMTurn applies a server-built (no-AI) turn and writes the standard
 // dmResponse. Used by the scripted-campaign local resolver; skips the memory
 // pipeline (it exists to feed the AI) but still captures a scene-image slot —
@@ -518,7 +528,7 @@ func (s *Server) respondDMTurn(w http.ResponseWriter, storyID string, prepared g
 	}
 	publicText := FormatDialogueBreaks(strings.TrimSpace(output.Narration))
 	if output.RequiresCheck && output.Check != nil {
-		publicText += "\n\n檢定：" + output.Check.Character + " 進行 DC " + strconv.Itoa(output.Check.DC) + " 的" + output.Check.Ability + "（" + output.Check.Skill + "）檢定。" + output.Check.Reason
+		publicText += checkStoryLine(output.Check, prepared.Input.Language)
 	}
 	rejected := applied.Rejected
 	if rejected == nil {
@@ -1088,11 +1098,19 @@ func (s *Server) handleReviseStory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	prompt := strings.Join([]string{
+	promptLines := []string{
 		"規則版本：2024 第五版／SRD 5.2.1。這是對你上一則 DM 對話訊息的就地修正，不是新的玩家行動，也不是重寫敘事的機會。",
 		"戰役：" + view.Title,
 		"場景：" + view.Scene,
 		"目前目標：" + view.Objective,
+	}
+	if strings.EqualFold(strings.TrimSpace(jsutil.StrOr(jsutil.Get(body, "language"), "")), "en") {
+		promptLines = append(promptLines,
+			"語言指令（優先於守則中的繁體中文要求）：本戰役語言為英文，修正後的 narration 一律以英文書寫。",
+			"LANGUAGE OVERRIDE: this campaign is played in English; the revised narration must be written in natural English.",
+		)
+	}
+	promptLines = append(promptLines,
 		"",
 		"你先前輸出、玩家在對話中看到的訊息原文：",
 		lastDM,
@@ -1102,7 +1120,8 @@ func (s *Server) handleReviseStory(w http.ResponseWriter, r *http.Request) {
 		"",
 		"請以上面的訊息原文為底本做最小幅度修改：只更動玩家指出的部分（事實錯誤、對白、語氣或遺漏），其餘句子逐字保留原文；不可重新創作場景、不可增刪事件、不可改變已確立的事實或對話結構。narration 輸出的就是修正後的同一則對話訊息。",
 		"不可推進新場景、不可開始戰鬥、不可要求新檢定、不可發放 XP 或套用 effects。actionIssues、choices 可為空。combat.starts 必須為 false。",
-	}, "\n")
+	)
+	prompt := strings.Join(promptLines, "\n")
 
 	// Revision keeps mechanical state; prefer compact rules when session is warm.
 	revRules := dm.RulesFull

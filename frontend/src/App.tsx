@@ -303,6 +303,7 @@ export default function App() {
         model: settings.selectedModel || '',
         effort: settings.selectedEffort || '',
         dmProvider: activeDmProvider,
+        language: lang === 'en' ? 'en' : '',
       });
       setCampaign(resp.view);
       setRevisionChat((chat) => [...chat, { id: `${Date.now()}-s`, role: 'system', text: '已依你的說明就地修正上一則 DM 對話。', time: now() }]);

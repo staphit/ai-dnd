@@ -479,7 +479,7 @@ func scriptPromptLines(mod *ScriptModule, state *ScriptState, combatActive bool)
 // threshold — otherwise the same door leads to the fall. Side effects on the
 // entered node (treasure, scripted combat) are the caller's job via the
 // returned node, gated on first entry.
-func advanceScript(mod *ScriptModule, state *ScriptState, choice *ScriptChoice) (*ScriptNode, []string) {
+func advanceScript(mod *ScriptModule, state *ScriptState, choice *ScriptChoice, lang string) (*ScriptNode, []string) {
 	if mod == nil || state == nil || choice == nil || state.Ended {
 		return nil, nil
 	}
@@ -501,7 +501,9 @@ func advanceScript(mod *ScriptModule, state *ScriptState, choice *ScriptChoice) 
 		for _, alt := range from.Choices {
 			if fallen := mod.node(alt.Next); fallen != nil && fallen.Type == "ending" && fallen.EndingKind == "bad" {
 				next = fallen
-				logs = append(logs, "命運的重量壓過了最後的抉擇：過往的選擇已將結局引向幽暗。")
+				logs = append(logs, pick(lang,
+					"命運的重量壓過了最後的抉擇：過往的選擇已將結局引向幽暗。",
+					"The weight of fate overrules the final choice: what came before has already bent the ending toward the dark."))
 				break
 			}
 		}
@@ -513,7 +515,11 @@ func advanceScript(mod *ScriptModule, state *ScriptState, choice *ScriptChoice) 
 	if next.Type == "ending" {
 		state.Ended = true
 		state.Ending = next.EndingKind
-		logs = append(logs, fmt.Sprintf("劇本抵達%s「%s」。", endingKindLabel(next.EndingKind), next.Title))
+		if lang == "en" {
+			logs = append(logs, fmt.Sprintf("The script reaches %s: 「%s」.", endingKindLabelLang(next.EndingKind, lang), next.title(lang)))
+		} else {
+			logs = append(logs, fmt.Sprintf("劇本抵達%s「%s」。", endingKindLabel(next.EndingKind), next.Title))
+		}
 	}
 	return next, logs
 }
@@ -542,6 +548,26 @@ func endingKindLabelLang(kind, lang string) string {
 		return "the neutral ending"
 	default:
 		return "the bad ending"
+	}
+}
+
+// stageLabelLang renders a stage enum (前期/中期/後期/結局) for player-facing
+// text; the stored enum itself always stays Chinese.
+func stageLabelLang(stage, lang string) string {
+	if lang != "en" {
+		return stage
+	}
+	switch stage {
+	case "前期":
+		return "Act I"
+	case "中期":
+		return "Act II"
+	case "後期":
+		return "Act III"
+	case "結局":
+		return "the finale"
+	default:
+		return stage
 	}
 }
 

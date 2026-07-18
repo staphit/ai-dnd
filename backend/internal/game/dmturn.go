@@ -392,6 +392,10 @@ func (s *Service) ApplyDMTurn(id string, prepared PreparedDMTurn, turn *dm.Turn)
 	if st.row.DocVersion != prepared.ExpectedVersion {
 		return ApplyResult{}, apperr.New(409, "戰役在地城主思考期間已更新；舊裁定未套用，請重新送出目前行動。")
 	}
+	// Journal lines follow the campaign language of this turn; mechanical
+	// identifiers (skills, item names) stay as authored.
+	lang := prepared.Input.Language
+	tr := func(zh, en string) string { return pick(lang, zh, en) }
 
 	// Narrative action rejection: unlock the vetoed players, log, stop.
 	if len(turn.ActionIssues) > 0 {
@@ -412,7 +416,7 @@ func (s *Service) ApplyDMTurn(id string, prepared PreparedDMTurn, turn *dm.Turn)
 			details = append(details, name+"："+issue.Message)
 			rejected = append(rejected, ActionIssue{PlayerID: issue.PlayerID, Message: issue.Message})
 		}
-		view, err := s.persistEntries(st, []store.StoryRow{{Speaker: "dm", Text: "【行動駁回】" + strings.Join(details, "；") + "。故事尚未推進；請依照理由修改後重新鎖定。"}})
+		view, err := s.persistEntries(st, []store.StoryRow{{Speaker: "dm", Text: "【行動駁回】" + strings.Join(details, "；") + tr("。故事尚未推進；請依照理由修改後重新鎖定。", ". The story has not advanced; adjust the flagged actions and lock them in again.")}})
 		if err != nil {
 			return ApplyResult{}, err
 		}
@@ -424,7 +428,7 @@ func (s *Service) ApplyDMTurn(id string, prepared PreparedDMTurn, turn *dm.Turn)
 		for _, p := range st.players {
 			text := prepared.Actions[p.ID]
 			if strings.TrimSpace(text) == "" {
-				text = "本回合不行動，保持警戒。"
+				text = tr("本回合不行動，保持警戒。", "Holding this turn, staying alert.")
 			}
 			entries = append(entries, store.StoryRow{Speaker: p.ID, Text: text})
 		}
@@ -436,7 +440,7 @@ func (s *Service) ApplyDMTurn(id string, prepared PreparedDMTurn, turn *dm.Turn)
 		for i := range st.players {
 			if st.players[i].ID == prepared.InspirationPlayerID && st.players[i].PendingInspiration > 0 {
 				st.players[i].PendingInspiration = 0
-				entries = append(entries, store.StoryRow{Speaker: "system", Text: st.players[i].Name + "的「吟遊激勵」已用於這次檢定。"})
+				entries = append(entries, store.StoryRow{Speaker: "system", Text: tr(st.players[i].Name+"的「吟遊激勵」已用於這次檢定。", st.players[i].Name+"'s Bardic Inspiration was spent on this check.")})
 				break
 			}
 		}
@@ -457,7 +461,7 @@ func (s *Service) ApplyDMTurn(id string, prepared PreparedDMTurn, turn *dm.Turn)
 		settled, logs := rules.ApplyDmEffects(st.players, effects)
 		st.players = settled
 		for _, l := range logs {
-			entries = append(entries, store.StoryRow{Speaker: "system", Text: "自動結算：" + l})
+			entries = append(entries, store.StoryRow{Speaker: "system", Text: tr("自動結算：", "Auto-resolved: ") + l})
 		}
 	}
 	if !isConclusion {
@@ -468,7 +472,7 @@ func (s *Service) ApplyDMTurn(id string, prepared PreparedDMTurn, turn *dm.Turn)
 			for i := range st.players {
 				if st.players[i].ID == award.PlayerID {
 					st.players[i] = rules.GrantExperience(st.players[i], award.Amount)
-					entries = append(entries, store.StoryRow{Speaker: "system", Text: fmt.Sprintf("%s獲得 %d XP：%s", st.players[i].Name, award.Amount, award.Reason)})
+					entries = append(entries, store.StoryRow{Speaker: "system", Text: fmt.Sprintf(tr("%s獲得 %d XP：%s", "%s gains %d XP: %s"), st.players[i].Name, award.Amount, award.Reason)})
 					break
 				}
 			}
@@ -487,7 +491,7 @@ func (s *Service) ApplyDMTurn(id string, prepared PreparedDMTurn, turn *dm.Turn)
 			}
 			st.players[i].Gold += gain
 		}
-		entries = append(entries, store.StoryRow{Speaker: "system", Text: fmt.Sprintf("拾獲 %d 金幣，已平分給隊伍。", turn.Loot.Gold)})
+		entries = append(entries, store.StoryRow{Speaker: "system", Text: fmt.Sprintf(tr("拾獲 %d 金幣，已平分給隊伍。", "Found %d gold, split evenly across the party."), turn.Loot.Gold)})
 	}
 	for _, item := range turn.Loot.Items {
 		for i := range st.players {
@@ -504,7 +508,7 @@ func (s *Service) ApplyDMTurn(id string, prepared PreparedDMTurn, turn *dm.Turn)
 			}
 			if !owned {
 				p.Equipment = append(p.Equipment, item.Name)
-				entries = append(entries, store.StoryRow{Speaker: "system", Text: fmt.Sprintf("%s獲得物品：%s。", p.Name, item.Name)})
+				entries = append(entries, store.StoryRow{Speaker: "system", Text: fmt.Sprintf(tr("%s獲得物品：%s。", "%s receives an item: %s."), p.Name, item.Name)})
 			}
 			// Items with weapon stats become usable attacks (also the path for
 			// "identifying" an already-carried story item: same name + stats).
@@ -526,7 +530,7 @@ func (s *Service) ApplyDMTurn(id string, prepared PreparedDMTurn, turn *dm.Turn)
 						Damage: item.Damage, DamageType: damageType, Properties: item.Properties,
 					})
 					*p = rules.Recalculate(*p)
-					entries = append(entries, store.StoryRow{Speaker: "system", Text: fmt.Sprintf("「%s」帶有武器數值（%s %s），已加入%s的攻擊選項。", item.Name, item.Damage, damageType, p.Name)})
+					entries = append(entries, store.StoryRow{Speaker: "system", Text: fmt.Sprintf(tr("「%s」帶有武器數值（%s %s），已加入%s的攻擊選項。", "「%s」 has weapon stats (%s %s) and was added to %s's attack options."), item.Name, item.Damage, damageType, p.Name)})
 				}
 			}
 			break
@@ -544,9 +548,9 @@ func (s *Service) ApplyDMTurn(id string, prepared PreparedDMTurn, turn *dm.Turn)
 				for i := range st.players {
 					st.players[i] = rules.GrantExperience(st.players[i], p.RewardXP)
 				}
-				entries = append(entries, store.StoryRow{Speaker: "system", Text: fmt.Sprintf("階段達成：%s目標「%s」於期限內完成（第 %d/%d 回合）！每位角色獲得 %d XP。", p.Stage, p.Goal, st.row.Round, p.DeadlineRound, p.RewardXP)})
+				entries = append(entries, store.StoryRow{Speaker: "system", Text: fmt.Sprintf(tr("階段達成：%s目標「%s」於期限內完成（第 %d/%d 回合）！每位角色獲得 %d XP。", "Act complete: the %s goal 「%s」 was met within the deadline (round %d/%d)! Every character gains %d XP."), stageLabelLang(p.Stage, lang), p.Goal, st.row.Round, p.DeadlineRound, p.RewardXP)})
 			} else {
-				entries = append(entries, store.StoryRow{Speaker: "system", Text: fmt.Sprintf("階段達成：%s目標「%s」完成，但已超過期限（第 %d 回合／期限第 %d 回合），沒有限時獎勵。", p.Stage, p.Goal, st.row.Round, p.DeadlineRound)})
+				entries = append(entries, store.StoryRow{Speaker: "system", Text: fmt.Sprintf(tr("階段達成：%s目標「%s」完成，但已超過期限（第 %d 回合／期限第 %d 回合），沒有限時獎勵。", "Act complete: the %s goal 「%s」 was met, but past its deadline (round %d / deadline round %d) — no timed reward."), stageLabelLang(p.Stage, lang), p.Goal, st.row.Round, p.DeadlineRound)})
 			}
 			st.arc.Current++
 			nextStage := "結局"
@@ -560,10 +564,10 @@ func (s *Service) ApplyDMTurn(id string, prepared PreparedDMTurn, turn *dm.Turn)
 					goal = clampStr(turn.Objective, 240)
 				}
 				next.Goal = goal
-				entries = append(entries, store.StoryRow{Speaker: "system", Text: fmt.Sprintf("劇本進入%s：目標「%s」，期限第 %d 回合，期限內達成每人獎勵 %d XP。", next.Stage, next.Goal, next.DeadlineRound, next.RewardXP)})
+				entries = append(entries, store.StoryRow{Speaker: "system", Text: fmt.Sprintf(tr("劇本進入%s：目標「%s」，期限第 %d 回合，期限內達成每人獎勵 %d XP。", "The story enters %s: goal 「%s」, deadline round %d; meeting it in time rewards %d XP each."), stageLabelLang(next.Stage, lang), next.Goal, next.DeadlineRound, next.RewardXP)})
 			} else {
 				st.arc.Ended = true
-				entries = append(entries, store.StoryRow{Speaker: "system", Text: "劇本三階段目標全部完成！故事進入尾聲。"})
+				entries = append(entries, store.StoryRow{Speaker: "system", Text: tr("劇本三階段目標全部完成！故事進入尾聲。", "All three act goals are complete — the story heads to its close.")})
 			}
 		}
 	}
@@ -591,10 +595,10 @@ func (s *Service) ApplyDMTurn(id string, prepared PreparedDMTurn, turn *dm.Turn)
 		fromNode := mod.node(st.script.NodeID)
 		choice := matchScriptChoice(fromNode, turn.Script.ChosenOption, ordered)
 		var logs []string
-		if scriptNode, logs = advanceScript(mod, st.script, choice); scriptNode != nil {
+		if scriptNode, logs = advanceScript(mod, st.script, choice, lang); scriptNode != nil {
 			// Crossing an act boundary is announced by popup, not journal.
 			if fromNode != nil && fromNode.Stage != scriptNode.Stage {
-				stageClear = &StageClear{Cleared: fromNode.Stage, Next: scriptNode.Stage, Title: scriptNode.Title}
+				stageClear = &StageClear{Cleared: fromNode.Stage, Next: scriptNode.Stage, Title: scriptNode.title(lang)}
 			}
 			// Visited already holds every node the party has left, so a node
 			// present there is a revisit: loot and ambushes fire only once.
@@ -603,7 +607,7 @@ func (s *Service) ApplyDMTurn(id string, prepared PreparedDMTurn, turn *dm.Turn)
 				entries = append(entries, store.StoryRow{Speaker: "system", Text: l})
 			}
 			if scriptFirstEntry {
-				entries = append(entries, applyScriptTreasure(st, scriptNode.Treasure)...)
+				entries = append(entries, applyScriptTreasure(st, scriptNode.Treasure, lang)...)
 			}
 			if scriptNode.Type == "ending" && st.arc != nil && !st.arc.Ended {
 				st.arc.Ended = true
@@ -615,7 +619,7 @@ func (s *Service) ApplyDMTurn(id string, prepared PreparedDMTurn, turn *dm.Turn)
 	// node, scaled to party size; it outranks any DM-declared encounter.
 	if scriptNode != nil && scriptFirstEntry && scriptNode.Combat != nil && (scriptNode.Type == "combat" || scriptNode.Type == "boss") && (st.combat == nil || !st.combat.Active) {
 		if err := s.startCombatLocked(st, scriptNode.Combat.scaledEnemies(len(st.players)), "initiative"); err == nil {
-			entries = append(entries, store.StoryRow{Speaker: "system", Text: "戰鬥開始。先攻順序：" + initiativeOrder(*st.combat)})
+			entries = append(entries, store.StoryRow{Speaker: "system", Text: tr("戰鬥開始。先攻順序：", "Combat begins. Initiative order: ") + initiativeOrder(*st.combat)})
 		}
 	}
 
@@ -649,7 +653,7 @@ func (s *Service) ApplyDMTurn(id string, prepared PreparedDMTurn, turn *dm.Turn)
 			})
 		}
 		if err := s.startCombatLocked(st, enemies, turn.Combat.FirstTurn); err == nil {
-			entries = append(entries, store.StoryRow{Speaker: "system", Text: "戰鬥開始。先攻順序：" + initiativeOrder(*st.combat)})
+			entries = append(entries, store.StoryRow{Speaker: "system", Text: tr("戰鬥開始。先攻順序：", "Combat begins. Initiative order: ") + initiativeOrder(*st.combat)})
 		}
 	}
 
@@ -748,10 +752,11 @@ func (s *Service) ApplyDMTurn(id string, prepared PreparedDMTurn, turn *dm.Turn)
 // (remainder to the front of the marching order), items land on the lead
 // character, and weapon-statted items become usable attacks — the same rules
 // as DM-awarded loot.
-func applyScriptTreasure(st *gameState, t *ScriptTreasure) []store.StoryRow {
+func applyScriptTreasure(st *gameState, t *ScriptTreasure, lang string) []store.StoryRow {
 	if t == nil || len(st.players) == 0 {
 		return nil
 	}
+	tr := func(zh, en string) string { return pick(lang, zh, en) }
 	var entries []store.StoryRow
 	if t.Gold > 0 {
 		share := t.Gold / len(st.players)
@@ -763,7 +768,7 @@ func applyScriptTreasure(st *gameState, t *ScriptTreasure) []store.StoryRow {
 			}
 			st.players[i].Gold += gain
 		}
-		entries = append(entries, store.StoryRow{Speaker: "system", Text: fmt.Sprintf("拾獲 %d 金幣，已平分給隊伍。", t.Gold)})
+		entries = append(entries, store.StoryRow{Speaker: "system", Text: fmt.Sprintf(tr("拾獲 %d 金幣，已平分給隊伍。", "Found %d gold, split evenly across the party."), t.Gold)})
 	}
 	lead := &st.players[0]
 	for _, item := range t.Items {
@@ -776,7 +781,7 @@ func applyScriptTreasure(st *gameState, t *ScriptTreasure) []store.StoryRow {
 		}
 		if !owned {
 			lead.Equipment = append(lead.Equipment, item.Name)
-			entries = append(entries, store.StoryRow{Speaker: "system", Text: fmt.Sprintf("%s獲得物品：%s。", lead.Name, item.Name)})
+			entries = append(entries, store.StoryRow{Speaker: "system", Text: fmt.Sprintf(tr("%s獲得物品：%s。", "%s receives an item: %s."), lead.Name, item.Name)})
 		}
 		if lootDicePattern.MatchString(item.Damage) {
 			hasAttack := false
@@ -802,7 +807,7 @@ func applyScriptTreasure(st *gameState, t *ScriptTreasure) []store.StoryRow {
 					Damage: item.Damage, DamageType: damageType, Properties: props,
 				})
 				*lead = rules.Recalculate(*lead)
-				entries = append(entries, store.StoryRow{Speaker: "system", Text: fmt.Sprintf("「%s」帶有武器數值（%s %s），已加入%s的攻擊選項。", item.Name, item.Damage, damageType, lead.Name)})
+				entries = append(entries, store.StoryRow{Speaker: "system", Text: fmt.Sprintf(tr("「%s」帶有武器數值（%s %s），已加入%s的攻擊選項。", "「%s」 has weapon stats (%s %s) and was added to %s's attack options."), item.Name, item.Damage, damageType, lead.Name)})
 			}
 		}
 	}

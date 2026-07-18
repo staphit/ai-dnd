@@ -370,7 +370,7 @@ export function dmTurn(body: DmTurnRequest, signal?: AbortSignal): Promise<DmTur
 
 export function reviseStory(
   campaignId: string,
-  body: { note: string; model?: string; effort?: string; dmProvider?: string },
+  body: { note: string; model?: string; effort?: string; dmProvider?: string; language?: string },
   signal?: AbortSignal,
 ): Promise<{ view: Campaign; text: string; model: string }> {
   return apiFetch(campaignPath(campaignId, '/revise-story'), {
