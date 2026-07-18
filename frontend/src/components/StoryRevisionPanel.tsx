@@ -47,13 +47,13 @@ export function StoryRevisionPanel({
   }
 
   return (
-    <aside className="story-revision-panel" aria-label="修正 AI 敘事">
+    <aside className="story-revision-panel" aria-label="修正 DM 對話">
       <header className="story-revision-head">
         <div>
           <p className="eyebrow">修正小窗</p>
           <strong>
             <ChatTeardropText size={16} weight="fill" />
-            重寫上一則敘事
+            修正上一則 DM 對話
           </strong>
         </div>
         <button type="button" className="story-revision-close" aria-label="關閉修正小窗" onClick={onClose}>
@@ -63,7 +63,7 @@ export function StoryRevisionPanel({
 
       <div className="story-revision-draft">
         <span>目前草稿</span>
-        <p>{previousDraft || '尚無公開 DM 敘事可重寫。'}</p>
+        <p>{previousDraft || '尚無可修正的 DM 對話。'}</p>
       </div>
 
       <div className="story-revision-chat" aria-live="polite">
@@ -82,7 +82,7 @@ export function StoryRevisionPanel({
         {loading && (
           <div className="story-revision-line story-revision-system">
             <span>系統</span>
-            <p>DM 正在依你的修正重寫上一則敘事…</p>
+            <p>DM 正在依你的說明就地修正上一則對話…</p>
           </div>
         )}
         <div ref={endRef} />

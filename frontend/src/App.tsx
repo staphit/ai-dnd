@@ -15,8 +15,10 @@ import { CombatTracker } from './components/CombatTracker';
 import { CampaignManager } from './components/CampaignManager';
 import { SpellCastModal } from './components/SpellCastModal';
 import { PartyWipeModal } from './components/PartyWipeModal';
+import { StageClearModal, type StageClearInfo } from './components/StageClearModal';
 import { ShopModal } from './components/ShopModal';
 import { StoryRevisionPanel, type RevisionChatLine } from './components/StoryRevisionPanel';
+import { ToastLayer, useToasts } from './components/Toasts';
 import * as api from './api';
 import { ApiError, type ActionIssue, type CombatConclusion, type SceneSlotInfo } from './api';
 import { getActiveCampaignId, readLegacyVault, setActiveCampaignId } from './campaign-storage';
@@ -86,8 +88,17 @@ export default function App() {
   const [viewer, setViewer] = useState<MessageAudience>('public');
   const [demoMode, setDemoMode] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setErrorState] = useState('');
   const [notice, setNotice] = useState('');
+  // Top-right toast stack + session history (bell in the Topbar).
+  const { toasts, history: toastHistory, push: pushToast, dismiss: dismissToast, clearHistory: clearToastHistory } = useToasts();
+
+  // Every error surface also lands in the toast stack; the inline banner keeps
+  // its retry affordances.
+  function setError(message: string) {
+    setErrorState(message);
+    if (message.trim()) pushToast('error', message);
+  }
   const [imageLoading, setImageLoading] = useState(false);
   const [imageError, setImageError] = useState('');
   // True while a TTS narration clip is playing; drives the 3D DM's talking pose.
@@ -109,6 +120,8 @@ export default function App() {
   const [spellRoll, setSpellRoll] = useState<{ check: RequiredCheck; casterId: PlayerId; spell: CharacterSpell; asRitual: boolean; targetId: string } | null>(null);
   const [spellModal, setSpellModal] = useState<{ playerId: PlayerId; spell: CharacterSpell } | null>(null);
   const [revisionOpen, setRevisionOpen] = useState(false);
+  // Act-completion popup (前期/中期/後期 goal reached), fed by dm responses.
+  const [stageClear, setStageClear] = useState<StageClearInfo | null>(null);
   const [shopOpen, setShopOpen] = useState(false);
   const [shopBusy, setShopBusy] = useState(false);
   const [novelBusy, setNovelBusy] = useState(false);
@@ -399,7 +412,7 @@ export default function App() {
         dmProvider: activeDmProvider,
       });
       setCampaign(resp.view);
-      setRevisionChat((chat) => [...chat, { id: `${Date.now()}-s`, role: 'system', text: '已依你的說明重寫上一則公開敘事。', time: now() }]);
+      setRevisionChat((chat) => [...chat, { id: `${Date.now()}-s`, role: 'system', text: '已依你的說明就地修正上一則 DM 對話。', time: now() }]);
       if (settings.ttsEnabled && resp.text) void speakNarration(resp.text);
     } catch (caught) {
       if (caught instanceof ApiError && caught.status === 409 && caught.data.needsConsent) {
@@ -621,7 +634,9 @@ export default function App() {
 
   function showRejection(issues: ActionIssue[], players: PlayerCharacter[]) {
     const details = issues.map((issue) => `${players.find((player) => player.id === issue.playerId)?.name || issue.playerId}：${issue.message}`).join('；');
-    setError(`【行動駁回】${details}。故事尚未推進；請依照理由修改後重新鎖定。`);
+    // DM rejections are narrative feedback, not failures: banner + info toast.
+    setErrorState(`【行動駁回】${details}。故事尚未推進；請依照理由修改後重新鎖定。`);
+    pushToast('info', `【行動駁回】${details}`);
   }
 
   // Demo DM: narration/choices/XP are faked locally on top of the view; the
@@ -724,6 +739,7 @@ export default function App() {
         window.clearTimeout(timeout);
       }
       setCampaign(resp.view);
+      if (resp.stageClear) setStageClear(resp.stageClear);
       if (resp.sceneSlot?.id) setPendingSceneSlotId(resp.sceneSlot.id);
       void refreshSceneSlots(campaignId); // new beat = new slot in the row
       const rejectedIssues = resp.actionIssues || [];
@@ -916,6 +932,7 @@ export default function App() {
   if (!campaign.setupComplete) {
     return (
       <>
+        <ToastLayer toasts={toasts} history={toastHistory} onDismiss={dismissToast} onClear={clearToastHistory} />
         {legacyCampaigns.length > 0 && (
           <div className="notice-banner legacy-import-banner" role="region" aria-label="本機戰役匯入">
             <CloudArrowUp size={20} />
@@ -931,7 +948,7 @@ export default function App() {
   }
 
   return (
-    <div className="app-shell" style={appStyle}><div className="grain" aria-hidden="true" /><Sidebar page={page} setPage={setPage} /><div className="workspace">
+    <div className="app-shell" style={appStyle}><div className="grain" aria-hidden="true" /><ToastLayer toasts={toasts} history={toastHistory} onDismiss={dismissToast} onClear={clearToastHistory} /><Sidebar page={page} setPage={setPage} script={campaign.script} /><div className="workspace">
       <Topbar campaign={campaign} status={status} demoMode={demoMode} />
       {/* Non-table pages still get global notice/tip above content */}
       {page !== 'table' && notice && <div className="notice-banner"><span>{notice}</span><button type="button" onClick={() => setNotice('')}><XCircle /></button></div>}
@@ -1171,6 +1188,7 @@ export default function App() {
                   actionDisabled={loading || Boolean(activeRequiredCheck)}
                   partySize={campaign.players.length}
                   choices={(campaign.choices || []).filter((choice) => !choice.playerId || choice.playerId === player.id)}
+                  scripted={Boolean(campaign.script)}
                   resourceSummary={player.spellcasting
                     ? player.spellcasting.slots.map((slot) => `${slot.level}環 ${slot.current}/${slot.max}`).join('、')
                     : player.resources.slice(0, 3).map((resource) => `${resource.name} ${resource.current}/${resource.max}`).join('、')}
@@ -1195,6 +1213,7 @@ export default function App() {
           {partyWiped && campaign.id && (
             <PartyWipeModal busy={loading} onRetry={() => void retryCombat()} onEndStory={() => void endCombat(true)} />
           )}
+          {stageClear && <StageClearModal info={stageClear} onClose={() => setStageClear(null)} />}
           {shopOpen && campaign.id && (
             <ShopModal
               players={campaign.players}

@@ -78,6 +78,9 @@
 .combat-spell-chip small{color:var(--muted);font-size:10px;line-height:1.35}
 .combat-spell-empty{margin:0;color:var(--muted);font-size:12px}
 .combat-actions{flex-wrap:wrap}.combat-actions label{min-width:200px;flex:1 1 200px}.combat-actions select{margin:0}
+.combat-head-tools{display:flex;align-items:center;gap:14px}
+.combat-end-button{border:1px solid var(--line);background:transparent;color:var(--muted);padding:6px 11px;display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;font-family:var(--font-mono),monospace}
+.combat-end-button:hover:not(:disabled){border-color:oklch(55% 0.145 28 / 0.55);color:oklch(70% 0.15 28)}
 .combat-spell-cast{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px;width:100%;padding:10px 0 0;border-top:1px solid var(--line-soft)}
 .combat-spell-cast label{min-width:220px;flex:1 1 220px}
 .combat-spell-cast button{min-height:40px;padding:0 14px;border:1px solid var(--accent);background:oklch(74% 0.13 72 / 0.12);color:var(--accent)}

@@ -12,11 +12,14 @@ interface ActionComposerProps {
   partySize: number;
   choices?: Choice[];
   resourceSummary?: string;
+  /** Scripted campaign: no free-text input — clicking a choice locks it directly. */
+  scripted?: boolean;
+  combatActive?: boolean;
   onSubmit: (player: PlayerId, text: string) => void;
   onUnlock: (player: PlayerId) => void;
 }
 
-export function ActionComposer({ player, name, className, pending, disabled, partySize, choices = [], resourceSummary, onSubmit, onUnlock }: ActionComposerProps) {
+export function ActionComposer({ player, name, className, pending, disabled, partySize, choices = [], resourceSummary, scripted = false, combatActive = false, onSubmit, onUnlock }: ActionComposerProps) {
   const [text, setText] = useState('');
   const [error, setError] = useState('');
 
@@ -37,8 +40,22 @@ export function ActionComposer({ player, name, className, pending, disabled, par
         </div>
         {pending && <CheckCircle size={19} weight="fill" />}
       </div>
-      {pending ? (
+      {combatActive ? (
+        <div className="input-group scripted-composer">
+          <p className="scripted-hint">戰鬥進行中：請在戰鬥面板行動</p>
+        </div>
+      ) : pending ? (
         <><p className="submitted-copy">{pending}</p><button type="button" className="unlock-action" disabled={disabled} onClick={() => onUnlock(player)}><ArrowCounterClockwise />修改行動</button></>
+      ) : scripted && choices.length > 0 ? (
+        <div className="input-group scripted-composer">
+          <p className="scripted-hint" id={`${player}-helper`}>劇本模式：請從選項中選擇行動</p>
+          <div className="action-choices" aria-label="劇本選項">
+            {choices.map((choice) => (
+              <button type="button" key={choice.text} disabled={disabled} onClick={() => onSubmit(player, choice.text)}>{choice.text}</button>
+            ))}
+          </div>
+          {resourceSummary && <p className="composer-resources">目前資源：{resourceSummary}</p>}
+        </div>
       ) : (
         <div className="input-group">
           <label htmlFor={`${player}-action`}>這一刻，你要做什麼？</label>
@@ -60,10 +77,12 @@ export function ActionComposer({ player, name, className, pending, disabled, par
           {error && <p id={`${player}-error`} className="form-error">{error}</p>}
         </div>
       )}
-      <MagneticButton type="submit" disabled={disabled || Boolean(pending)} className="composer-button">
-        <span>{pending ? (partySize === 1 ? '等待裁定' : '等待同伴') : '鎖定行動'}</span>
-        {!pending && <ArrowRight size={17} />}
-      </MagneticButton>
+      {(!scripted || Boolean(pending)) && (
+        <MagneticButton type="submit" disabled={disabled || Boolean(pending)} className="composer-button">
+          <span>{pending ? (partySize === 1 ? '等待裁定' : '等待同伴') : '鎖定行動'}</span>
+          {!pending && <ArrowRight size={17} />}
+        </MagneticButton>
+      )}
     </form>
   );
 }

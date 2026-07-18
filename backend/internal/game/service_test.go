@@ -30,7 +30,7 @@ func createSample(t *testing.T, s *Service) View {
 		StoryID: "ashen-crown", Title: "灰燼王冠", Chapter: "第一章", Scene: "禮拜堂",
 		Objective: "找到伊薩克", ObjectiveContext: "背景", Stakes: "風險", Opening: "門闔上了。",
 		Players: []PlayerSeed{
-			{Name: "賽勒恩", ClassName: "遊俠"},
+			{Name: "賽勒恩", ClassName: "戰士"},
 			{Name: "米芮", ClassName: "牧師", Level: 5},
 		},
 	})

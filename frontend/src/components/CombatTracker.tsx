@@ -142,7 +142,15 @@ export function CombatTracker({ campaignId, players, combat, onView, onEnd, onCa
 
   return (
     <section className="combat-console">
-      <header><div><p className="eyebrow">第 {combat.round} 輪</p><h2>{current?.name} 的回合</h2></div><Sword size={24} /></header>
+      <header>
+        <div><p className="eyebrow">第 {combat.round} 輪</p><h2>{current?.name} 的回合</h2></div>
+        <div className="combat-head-tools">
+          {/* Top-right on purpose: kept away from the per-turn action row so an
+              early conclude can't be fat-fingered. */}
+          <button type="button" className="combat-end-button" onClick={onEnd} disabled={busy}><X size={14} />結束戰鬥並敘述</button>
+          <Sword size={24} />
+        </div>
+      </header>
       <div className="initiative-list">
         {combat.combatants.map((entry, index) => (
           <article key={entry.id} className={`${index === combat.turnIndex ? 'initiative-active' : ''} ${entry.defeated ? 'initiative-defeated' : ''}`}>
@@ -255,7 +263,6 @@ export function CombatTracker({ campaignId, players, combat, onView, onEnd, onCa
           </>
         )}
         <button type="button" onClick={endTurn} disabled={busy}><ArrowClockwise />結束回合</button>
-        <button type="button" onClick={onEnd} disabled={busy}><X />結束戰鬥並敘述</button>
       </div>
     </section>
   );

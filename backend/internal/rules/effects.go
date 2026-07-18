@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"strings"
 )
 
 // ApplyHealing ports effects.ts applyHealing. Healing never exceeds maxHp,
@@ -92,6 +93,24 @@ func amountFor(effect SpellEffect, caster Character, random RandomSource) (int, 
 	return max(0, dice+effect.Flat+modifier), nil
 }
 
+// casterSpellFor recovers the identity (id/level) of the spell whose effect
+// is being resolved by matching the effect value against the caster's own
+// spell list — the resolve call site passes only the SpellEffect. Catalog
+// effects are all distinct values, so the match is unambiguous; ad-hoc
+// effects (DM tests, rituals without effects) simply return nil.
+func casterSpellFor(caster Character, effect SpellEffect) *Spell {
+	if caster.Spellcasting == nil {
+		return nil
+	}
+	for i := range caster.Spellcasting.Spells {
+		spell := &caster.Spellcasting.Spells[i]
+		if spell.Effect != nil && *spell.Effect == effect {
+			return spell
+		}
+	}
+	return nil
+}
+
 // ForcedRolls mirrors the optional forcedRolls parameter of effects.ts
 // resolveSpellEffect. Nil pointers mean "not forced" (the TS ?? nullish
 // check), so a forced total of 0 is honored.
@@ -116,6 +135,8 @@ type SpellEffectResult struct {
 // are kept in sync in both directions. A nil random defaults to
 // DefaultRandom, mirroring the TS `random = Math.random` default parameter.
 // Errors carry the exact TS throw messages 找不到施法者 / 找不到法術目標.
+// On top of the TS port, class features that modify spell amounts (苦痛魔爆,
+// 生命門徒, 強效戲法) hook in here via casterSpellFor.
 func ResolveSpellEffect(players []Character, combat *CombatState, casterID, targetID string, effect SpellEffect, random RandomSource, forced *ForcedRolls) (SpellEffectResult, error) {
 	if random == nil {
 		random = DefaultRandom
@@ -154,6 +175,18 @@ func ResolveSpellEffect(players []Character, combat *CombatState, casterID, targ
 	if err != nil {
 		return SpellEffectResult{}, err
 	}
+	castSpell := casterSpellFor(*caster, effect)
+	// 魔契師 苦痛魔爆 (agonizing blast): eldritch blast adds the caster's
+	// CHA modifier to its damage.
+	if castSpell != nil && castSpell.ID == "eldritch_blast" && HasClass(*caster, "魔契師") {
+		amount = max(0, amount+AbilityModifier(caster.Abilities.Cha))
+	}
+	// 牧師（生命領域）生命門徒 (disciple of life): healing spells cast with a
+	// slot restore an extra 2 + spell level HP.
+	if castSpell != nil && castSpell.Level >= 1 && effect.Kind == "healing" &&
+		HasClass(*caster, "牧師") && strings.Contains(caster.Subclass, "生命領域") {
+		amount += 2 + castSpell.Level
+	}
 	outcome := ""
 	if effect.AttackRoll && targetCombatant != nil {
 		var attack int
@@ -184,7 +217,14 @@ func ResolveSpellEffect(players []Character, combat *CombatState, casterID, targ
 			dc = caster.Spellcasting.SaveDC
 		}
 		if save >= dc {
-			if effect.HalfOnSave {
+			halfOnSave := effect.HalfOnSave
+			// 法師 強效戲法 (potent cantrip): damage cantrips still deal half
+			// damage on a successful save.
+			if !halfOnSave && castSpell != nil && castSpell.Level == 0 &&
+				effect.Kind == "damage" && HasClass(*caster, "法師") {
+				halfOnSave = true
+			}
+			if halfOnSave {
 				amount = amount / 2 // amount >= 0, so truncation == Math.floor
 			} else {
 				amount = 0

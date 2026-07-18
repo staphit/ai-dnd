@@ -84,7 +84,7 @@ func TestKeepsCombatHpSynchronizedAfterHealingAndConsumesTemporaryHpForDmDamage(
 }
 
 func TestUsesTheVisibleSpellAttackTotalInsteadOfRollingAHiddenD20(t *testing.T) {
-	caster := CreateLevel3Character("player1", "術者", "術士")
+	caster := CreateLevel3Character("player1", "術者", "法師")
 	enemy := Combatant{ID: "enemy", Name: "敵人", Side: "enemy", InitiativeBonus: 0, Initiative: 10, AC: 15, HP: 10, MaxHP: 10, AttackBonus: 0, Damage: "1d4", DamageType: "鈍擊"}
 	combat := &CombatState{Active: true, Round: 1, TurnIndex: 0, Combatants: []Combatant{enemy}}
 	attackTotal14 := 14

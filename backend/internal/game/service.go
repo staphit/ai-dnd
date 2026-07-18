@@ -80,6 +80,7 @@ type View struct {
 	RequiredCheck    *rules.RequiredCheck        `json:"requiredCheck"`
 	Combat           *rules.CombatState          `json:"combat,omitempty"`
 	StoryArc         *StoryArc                   `json:"storyArc,omitempty"`
+	Script           *ScriptProgress             `json:"script,omitempty"`
 	ImagePrompt      string                      `json:"imagePrompt,omitempty"`
 	Settings         json.RawMessage             `json:"settings"`
 	XPProgress       map[string]rules.XPProgress `json:"xpProgress"`
@@ -149,6 +150,7 @@ func (s *Service) assembleView(row store.CampaignRow) (View, error) {
 	// it persists on the next state-mutating call.
 	for i := range players {
 		ensureShopWeaponAttacks(&players[i])
+		rules.EnsureDerivedDefaults(&players[i])
 	}
 
 	var combat *rules.CombatState
@@ -168,6 +170,21 @@ func (s *Service) assembleView(row store.CampaignRow) (View, error) {
 		arc = &StoryArc{}
 		if err := json.Unmarshal([]byte(data), arc); err != nil {
 			arc = nil
+		}
+	}
+
+	var script *ScriptProgress
+	if data, ok, err := s.store.ScriptState(row.ID); err != nil {
+		return View{}, err
+	} else if ok {
+		state := &ScriptState{}
+		if err := json.Unmarshal([]byte(data), state); err == nil {
+			script = scriptProgress(state)
+			// The read path shows the same module-pinned arc as the write
+			// path (loadState); it persists on the next mutating call.
+			if mod := scriptModuleFor(state); mod != nil && arc != nil {
+				syncScriptArc(arc, mod, state, row.Round)
+			}
 		}
 	}
 
@@ -241,6 +258,7 @@ func (s *Service) assembleView(row store.CampaignRow) (View, error) {
 		RequiredCheck:    check,
 		Combat:           combat,
 		StoryArc:         arc,
+		Script:           script,
 		ImagePrompt:      row.ImagePrompt,
 		Settings:         settings,
 		XPProgress:       xp,
@@ -341,6 +359,7 @@ type PlayerSeed struct {
 type CreateParams struct {
 	ID               string          `json:"id"`
 	StoryID          string          `json:"storyId"`
+	StoryMode        string          `json:"storyMode"` // scripted | freeform ("" = scripted when a module exists)
 	Title            string          `json:"title"`
 	Chapter          string          `json:"chapter"`
 	Scene            string          `json:"scene"`
@@ -404,6 +423,26 @@ func (s *Service) Create(p CreateParams) (View, error) {
 		return View{}, apperr.New(400, "settings 格式錯誤。")
 	}
 
+	// Scripted mode starts at the module's entry node; its choices must be in
+	// the campaign row from round one, because the scripted UI has no free-text
+	// input — without seeded choices no player could ever lock an action.
+	var scriptState *ScriptState
+	choices := "[]"
+	if state := newScriptState(p.StoryID); state != nil && p.StoryMode != "freeform" {
+		scriptState = state
+		if mod := scriptModuleFor(state); mod != nil {
+			if node := mod.node(state.NodeID); node != nil {
+				seeded := make([]rules.Choice, 0, len(node.Choices))
+				for _, c := range node.Choices {
+					seeded = append(seeded, rules.Choice{Text: c.Text})
+				}
+				if data, err := json.Marshal(seeded); err == nil {
+					choices = string(data)
+				}
+			}
+		}
+	}
+
 	row := store.CampaignRow{
 		ID:               id,
 		Title:            clampStr(p.Title, 180),
@@ -414,7 +453,7 @@ func (s *Service) Create(p CreateParams) (View, error) {
 		ObjectiveContext: clampStr(p.ObjectiveContext, 600),
 		Stakes:           clampStr(p.Stakes, 300),
 		SetupComplete:    true,
-		Choices:          "[]",
+		Choices:          choices,
 		Pending:          "{}",
 		Settings:         settings,
 		DocVersion:       1,
@@ -424,6 +463,16 @@ func (s *Service) Create(p CreateParams) (View, error) {
 	}
 	if err := s.saveCharacters(id, players); err != nil {
 		return View{}, err
+	}
+
+	if scriptState != nil {
+		data, err := json.Marshal(scriptState)
+		if err != nil {
+			return View{}, err
+		}
+		if err := s.store.SaveScriptState(id, string(data), s.now().UnixMilli()); err != nil {
+			return View{}, err
+		}
 	}
 
 	nowMs := s.now().UnixMilli()

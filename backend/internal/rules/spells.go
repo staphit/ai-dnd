@@ -55,6 +55,7 @@ func def(id, name, englishName string, level int, school, castingTime, spellRang
 var spellDefinitions = []SpellDefinition{
 	def("dancing_lights", "舞光術", "Dancing Lights", 0, "幻術", "動作", "120 呎", "專注，1 分鐘", "創造最多四個可移動的微光，照亮黑暗區域。", spellOpts{concentration: true}),
 	def("vicious_mockery", "惡毒嘲弄", "Vicious Mockery", 0, "惑控", "動作", "60 呎", "立即", "目標進行感知豁免；失敗受到 1d6 心靈傷害，下一次攻擊具有劣勢。", spellOpts{effect: &SpellEffect{Kind: "damage", Target: "creature", Dice: "1d6", SaveAbility: "wis", DamageType: "心靈"}}),
+	def("acid_splash", "酸液飛濺", "Acid Splash", 0, "塑能", "動作", "60 呎", "立即", "目標進行敏捷豁免；失敗受到 1d6 酸蝕傷害。", spellOpts{effect: &SpellEffect{Kind: "damage", Target: "creature", Dice: "1d6", SaveAbility: "dex", DamageType: "酸蝕"}}),
 	def("guidance", "神導術", "Guidance", 0, "預言", "動作", "觸碰", "專注，1 分鐘", "目標選擇一項技能，在法術結束前的一次相關檢定增加 1d4。", spellOpts{concentration: true}),
 	def("sacred_flame", "聖火術", "Sacred Flame", 0, "塑能", "動作", "60 呎", "立即", "目標進行敏捷豁免；失敗受到 1d8 光耀傷害，掩護不提供此豁免加值。", spellOpts{effect: &SpellEffect{Kind: "damage", Target: "creature", Dice: "1d8", SaveAbility: "dex", DamageType: "光耀"}}),
 	def("thaumaturgy", "奇術", "Thaumaturgy", 0, "變化", "動作", "30 呎", "最長 1 分鐘", "產生微小神蹟，例如放大聲音、改變火焰或開關未上鎖的門窗。", spellOpts{}),
@@ -79,7 +80,7 @@ var spellDefinitions = []SpellDefinition{
 	def("detect_magic", "偵測魔法", "Detect Magic", 1, "預言", "動作或儀式", "自身", "專注，10 分鐘", "感知 30 呎內魔法並辨識可見魔法靈光的學派。", spellOpts{concentration: true, ritual: true}),
 	def("dissonant_whispers", "失諧低語", "Dissonant Whispers", 1, "惑控", "動作", "60 呎", "立即", "感知豁免失敗受到 3d6 心靈傷害，並立即使用反應遠離你。", spellOpts{}),
 	def("divine_favor", "神恩", "Divine Favor", 1, "變化", "附贈動作", "自身", "1 分鐘", "你的武器攻擊額外造成 1d4 光耀傷害。", spellOpts{}),
-	def("divine_smite", "至聖斬", "Divine Smite", 1, "塑能", "命中後附贈動作", "自身", "立即", "近戰武器或徒手命中後額外造成 2d8 光耀傷害，對邪魔與不死生物再增加 1d8。", spellOpts{}),
+	def("divine_smite", "至聖斬", "Divine Smite", 1, "塑能", "命中後附贈動作", "自身", "立即", "近戰武器或徒手命中後額外造成 2d8 光耀傷害。", spellOpts{effect: &SpellEffect{Kind: "damage", Target: "creature", Dice: "2d8", DamageType: "光耀"}}),
 	def("ensnaring_strike", "誘捕打擊", "Ensnaring Strike", 1, "咒法", "附贈動作", "自身", "專注，1 分鐘", "下一次武器命中可能以荊棘束縛目標並持續造成傷害。", spellOpts{concentration: true}),
 	def("entangle", "糾纏術", "Entangle", 1, "咒法", "動作", "90 呎", "專注，1 分鐘", "20 呎方形區域長出纏繞植物；力量豁免失敗的生物受到束縛。", spellOpts{concentration: true}),
 	def("faerie_fire", "妖火術", "Faerie Fire", 1, "塑能", "動作", "60 呎", "專注，1 分鐘", "20 呎立方內生物敏捷豁免失敗便顯形，對其攻擊具有優勢。", spellOpts{concentration: true}),

@@ -54,6 +54,7 @@ func PartyCombatants(players []Character) []Combatant {
 			AttackBonus:     attack.AttackBonus,
 			Damage:          damage,
 			DamageType:      damageType,
+			CritThreshold:   player.CritThreshold,
 			Defeated:        player.HP <= 0,
 		})
 	}
@@ -224,7 +225,8 @@ func AdvanceTurn(state CombatState) CombatState {
 
 // ResolveAttack ports combat.ts resolveAttack. advantage is "normal",
 // "advantage", or "disadvantage" (rolling two d20 and keeping the higher or
-// lower). A natural 20 always crits (doubling damage dice), a natural 1
+// lower). A natural roll at or above the attacker's crit threshold (default
+// 20; 19 for a 戰士 with 精通重擊) crits and doubles damage dice, a natural 1
 // always misses, temporary HP absorbs damage first, and the target's
 // defeated flag is set when its HP reaches 0. Errors carry the exact TS
 // throw messages.
@@ -258,7 +260,11 @@ func ResolveAttack(state CombatState, attackerID, targetID string, random Random
 	case "disadvantage":
 		attackRoll = min(first, second)
 	}
-	critical := attackRoll == 20
+	threshold := attacker.CritThreshold
+	if threshold <= 0 || threshold > 20 {
+		threshold = 20
+	}
+	critical := attackRoll >= threshold
 	total := attackRoll + attacker.AttackBonus
 	hit := attackRoll != 1 && (critical || total >= target.AC)
 	damage := 0

@@ -201,7 +201,26 @@ export function StoryFeed({
                   </span>
                   <time>{entry.time}</time>
                 </div>
-                <p className="story-prose">{entry.speaker === 'dm' || entry.speaker === 'system' ? formatStoryText(entry.text) : entry.text}</p>
+                {(() => {
+                  const text = entry.speaker === 'dm' || entry.speaker === 'system' ? formatStoryText(entry.text) : entry.text;
+                  // Scripted turns lead with the option just taken; lift it out
+                  // of the prose into a visible chip so the choice stays part
+                  // of the dialogue instead of sinking into the scrollback.
+                  if (entry.speaker === 'dm' && text.startsWith('【選擇】')) {
+                    const breakIndex = text.indexOf('\n');
+                    const choiceLine = (breakIndex === -1 ? text : text.slice(0, breakIndex)).replace('【選擇】', '');
+                    const rest = breakIndex === -1 ? '' : text.slice(breakIndex + 1).trim();
+                    // Single wrapper: .story-entry is a two-column grid (meta |
+                    // body), so the chip and prose must share one grid cell.
+                    return (
+                      <div className="story-body">
+                        <p className="story-choice-chip">▸ 選擇：{choiceLine}</p>
+                        {rest && <p className="story-prose">{rest}</p>}
+                      </div>
+                    );
+                  }
+                  return <p className="story-prose">{text}</p>;
+                })()}
               </motion.article>
             ))}
             {loading && (

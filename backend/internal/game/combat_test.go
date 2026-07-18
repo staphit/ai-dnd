@@ -231,11 +231,11 @@ func TestForgeUpgradeWeapon(t *testing.T) {
 
 	var before rules.Attack
 	for _, a := range view.Players[0].Attacks {
-		if a.ID == "shortsword" {
+		if a.ID == "longsword" {
 			before = a
 		}
 	}
-	forged, err := s.ForgeUpgrade(id, "player1", "weapon", "shortsword")
+	forged, err := s.ForgeUpgrade(id, "player1", "weapon", "longsword")
 	if err != nil {
 		t.Fatalf("forge: %v", err)
 	}
@@ -244,17 +244,17 @@ func TestForgeUpgradeWeapon(t *testing.T) {
 		t.Fatalf("gold not spent: %d", p.Gold)
 	}
 	for _, a := range p.Attacks {
-		if a.ID == "shortsword" {
+		if a.ID == "longsword" {
 			if a.UpgradeLevel != 1 || a.AttackBonus != before.AttackBonus+1 {
 				t.Fatalf("upgrade not applied: before %+v after %+v", before, a)
 			}
-			if a.AttacksPerAction != 2 {
-				t.Fatalf("shortsword should strike twice: %+v", a)
+			if a.AttacksPerAction != 1 {
+				t.Fatalf("longsword should strike once: %+v", a)
 			}
 		}
 	}
 	// Broke now: second upgrade must fail on cost.
-	if _, err := s.ForgeUpgrade(id, "player1", "weapon", "shortsword"); apperr.StatusOf(err, 0) != 400 {
+	if _, err := s.ForgeUpgrade(id, "player1", "weapon", "longsword"); apperr.StatusOf(err, 0) != 400 {
 		t.Fatalf("expected 400 for missing gold, got %v", err)
 	}
 }
@@ -264,12 +264,16 @@ func TestLightWeaponStrikesTwice(t *testing.T) {
 	view := createSample(t, s)
 	id := view.ID
 
+	// The fighter has no light class weapon: buy a shortsword from the shop.
+	if _, err := s.BuyItem(id, "player1", "shortsword"); err != nil {
+		t.Fatalf("buy: %v", err)
+	}
 	s.WithDice(seq(0.99, 0.5, 0.01))
 	if _, err := s.StartCombatManual(id, []EnemySpec{{Name: "石像", AC: 5, HP: 60, AttackBonus: 2, Damage: "1d4", DamageType: "鈍擊"}}); err != nil {
 		t.Fatalf("start: %v", err)
 	}
 	s.WithDice(seq(0.9, 0.5))
-	result, err := s.Attack(id, AttackParams{AttackID: "shortsword"})
+	result, err := s.Attack(id, AttackParams{AttackID: "shop-shortsword"})
 	if err != nil {
 		t.Fatalf("attack: %v", err)
 	}
@@ -349,15 +353,15 @@ func TestBoughtWeaponBecomesAttack(t *testing.T) {
 			t.Fatalf("greatsword attack should be removed: %+v", sold.Players[0].Attacks)
 		}
 	}
-	// Class starting weapon untouched by the sweep (ranger keeps 短劍).
-	var shortswords int
+	// Class starting weapon untouched by the sweep (fighter keeps 長劍).
+	var longswords int
 	for _, a := range sold.Players[0].Attacks {
-		if a.Name == "短劍" {
-			shortswords++
+		if a.Name == "長劍" {
+			longswords++
 		}
 	}
-	if shortswords != 1 {
-		t.Fatalf("class shortsword count wrong: %+v", sold.Players[0].Attacks)
+	if longswords != 1 {
+		t.Fatalf("class longsword count wrong: %+v", sold.Players[0].Attacks)
 	}
 }
 
@@ -370,7 +374,7 @@ func TestShopBuySell(t *testing.T) {
 	if goldBefore < 15 {
 		t.Fatalf("expected starting gold, got %d", goldBefore)
 	}
-	bought, err := s.BuyItem(id, "player1", "longsword")
+	bought, err := s.BuyItem(id, "player1", "warhammer")
 	if err != nil {
 		t.Fatalf("buy: %v", err)
 	}
@@ -378,11 +382,11 @@ func TestShopBuySell(t *testing.T) {
 	if p.Gold != goldBefore-15 {
 		t.Fatalf("gold not deducted: %d -> %d", goldBefore, p.Gold)
 	}
-	if p.Equipment[len(p.Equipment)-1] != "長劍" {
+	if p.Equipment[len(p.Equipment)-1] != "戰鎚" {
 		t.Fatalf("equipment missing: %v", p.Equipment)
 	}
 
-	sold, err := s.SellItem(id, "player1", "長劍")
+	sold, err := s.SellItem(id, "player1", "戰鎚")
 	if err != nil {
 		t.Fatalf("sell: %v", err)
 	}
@@ -391,7 +395,7 @@ func TestShopBuySell(t *testing.T) {
 		t.Fatalf("sell refund wrong: %d", p.Gold)
 	}
 	for _, item := range p.Equipment {
-		if item == "長劍" {
+		if item == "戰鎚" {
 			t.Fatalf("item not removed: %v", p.Equipment)
 		}
 	}
@@ -523,7 +527,7 @@ func TestEnemyTurnFallbackTargetsLowestHP(t *testing.T) {
 	id := view.ID
 
 	// Wound player1 via import? Simpler: enemy first, runner errors, fallback
-	// picks lowest-HP player. player2 (cleric L5) HP 24 < player1 (ranger) 28.
+	// picks lowest-HP player. player2 (cleric L5) HP 24 < player1 (fighter) 31.
 	s.WithDice(seq(0.01, 0.02, 0.99))
 	if _, err := s.StartCombatManual(id, []EnemySpec{{Name: "潛伏者", AC: 12, HP: 9, AttackBonus: 3, Damage: "1d4", DamageType: "鈍擊"}}); err != nil {
 		t.Fatalf("start: %v", err)

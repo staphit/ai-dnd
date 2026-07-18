@@ -13,13 +13,15 @@ import (
 )
 
 // fullCasters mirrors the advancement.ts fullCasters set: classes whose levels
-// count fully toward the shared spell slot table.
+// count fully toward the shared spell slot table. 德魯伊 and 術士 are no
+// longer playable, but stay listed so legacy characters keep their slots.
 var fullCasters = map[string]bool{
 	"吟遊詩人": true, "牧師": true, "德魯伊": true, "術士": true, "法師": true,
 }
 
 // halfCasters mirrors the advancement.ts halfCasters set: classes whose levels
-// count at half rate (rounded up) toward the shared spell slot table.
+// count at half rate (rounded up) toward the shared spell slot table. 遊俠 is
+// no longer playable, but stays listed so legacy characters keep their slots.
 var halfCasters = map[string]bool{
 	"聖武士": true, "遊俠": true,
 }
@@ -194,6 +196,17 @@ func normalizedClasses(c Character) []ClassLevel {
 		return c.ClassLevels
 	}
 	return []ClassLevel{{ClassName: c.ClassName, Level: c.Level, Subclass: c.Subclass}}
+}
+
+// HasClass reports whether the character has levels in className, checking
+// the multiclass breakdown (falling back to the top-level class fields).
+func HasClass(c Character, className string) bool {
+	for _, entry := range normalizedClasses(c) {
+		if entry.ClassName == className {
+			return true
+		}
+	}
+	return false
 }
 
 // casterLevel mirrors advancement.ts casterLevel: full casters contribute
@@ -380,6 +393,12 @@ func Recalculate(c Character) Character {
 	c.Passive = 10 + perception
 	c.Initiative = AbilityModifier(c.Abilities.Dex)
 	c.AC = computeAC(c)
+	// 戰士 精通重擊 (improved critical): crits on 19–20; everyone else keeps
+	// the default threshold (0 = natural 20).
+	c.CritThreshold = 0
+	if HasClass(c, "戰士") {
+		c.CritThreshold = 19
+	}
 	c.Skills = skills
 	c.Attacks = attacks
 	c.Spellcasting = spellcasting
@@ -480,6 +499,16 @@ func LevelUpCharacter(c Character, className string) (Character, error) {
 	if c.Level >= 20 {
 		return Character{}, errors.New("角色總等級已達 20。")
 	}
+	// Level-ups stay in the character's own class: multiclassing is disabled.
+	if className != "" && className != c.ClassName {
+		return Character{}, fmt.Errorf("升級不可轉職：只能提升本職「%s」。", c.ClassName)
+	}
+	className = c.ClassName
+	// Deleted legacy classes must not silently merge another class's starter
+	// kit (CreateLevel3Character normalizes unknown names to 戰士).
+	if _, ok := ClassDefinitions[className]; !ok {
+		return Character{}, fmt.Errorf("職業「%s」已停用，無法再升級；請改建現行六職角色。", className)
+	}
 	if progress := ExperienceToNextLevel(c); !progress.Ready {
 		return Character{}, fmt.Errorf("尚缺 %d XP 才能升級。", progress.Remaining)
 	}
@@ -536,16 +565,20 @@ func LevelUpCharacter(c Character, className string) (Character, error) {
 	return Recalculate(c), nil
 }
 
-// SpendAbilityPoint mirrors advancement.ts spendAbilityPoint. The TS throws
-// map to errors with identical messages (the second interpolates the ability
-// key, e.g. "str 已達一般上限 20。").
+// EnsureDerivedDefaults backfills derived fields that character documents
+// saved before the field existed are missing (fighter 19-20 crit threshold).
+func EnsureDerivedDefaults(c *Character) {
+	if c.CritThreshold == 0 && HasClass(*c, "戰士") {
+		c.CritThreshold = 19
+	}
+}
+
+// SpendAbilityPoint spends one banked point on an ability. There is no score
+// ceiling: banked points may push any ability past 20.
 func SpendAbilityPoint(c Character, ability AbilityKey) (Character, error) {
 	points := c.AbilityPoints // character.abilityPoints || 0
 	if points < 1 {
 		return Character{}, errors.New("目前沒有可分配的能力值點數。")
-	}
-	if c.Abilities.Get(ability) >= 20 {
-		return Character{}, fmt.Errorf("%s 已達一般上限 20。", ability)
 	}
 	c.Abilities = c.Abilities.Set(ability, c.Abilities.Get(ability)+1)
 	c.AbilityPoints = points - 1

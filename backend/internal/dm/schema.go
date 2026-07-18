@@ -82,6 +82,13 @@ type ArcSignal struct {
 	NextGoal      string `json:"nextGoal"`
 }
 
+// ScriptSignal is the DM's scripted-module output: chosenOption names the
+// script option (A/B/C) a player's action just resolved, empty otherwise.
+// The server owns the node graph and validates the option against it.
+type ScriptSignal struct {
+	ChosenOption string `json:"chosenOption"`
+}
+
 // LootItem is one physical item found in the scene, granted to a player.
 // Damage/DamageType/Properties are optional weapon stats: when Damage is a
 // dice expression the item becomes a usable attack on the sheet.
@@ -117,6 +124,7 @@ type Turn struct {
 	ActionIssues     []ActionIssue
 	ExperienceAwards []ExperienceAward
 	Arc              ArcSignal
+	Script           ScriptSignal
 	Loot             Loot
 }
 
@@ -303,6 +311,12 @@ func validateDMTurn(raw json.RawMessage) (*Turn, error) {
 			PhaseComplete: am["phaseComplete"] == true,
 			NextGoal:      jsSlice(strOr(am["nextGoal"], ""), 240),
 		}
+	}
+
+	// Optional scripted-module signal; absent on freeform campaigns and
+	// providers without the script schema.
+	if sm := asMap(v["script"]); sm != nil {
+		turn.Script = ScriptSignal{ChosenOption: jsSlice(strings.TrimSpace(strOr(sm["chosenOption"], "")), 8)}
 	}
 
 	// Optional treasure: party gold plus named items for individual players.

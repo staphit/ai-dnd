@@ -124,6 +124,12 @@ CREATE TABLE IF NOT EXISTS story_arcs (
 	data        TEXT NOT NULL,
 	updated_at  INTEGER NOT NULL
 );
+-- Scripted-module progress: current node, alignment and ending per campaign.
+CREATE TABLE IF NOT EXISTS script_states (
+	campaign_id TEXT PRIMARY KEY,
+	data        TEXT NOT NULL,
+	updated_at  INTEGER NOT NULL
+);
 CREATE TABLE IF NOT EXISTS story_entries (
 	campaign_id TEXT NOT NULL,
 	seq         INTEGER NOT NULL,

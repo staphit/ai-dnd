@@ -35,10 +35,10 @@ func mustSpendSpellSlot(t *testing.T, c Character, spell Spell, asRitual bool) C
 	return next
 }
 
-// it('builds all 12 classes with a complete common character sheet')
-func TestBuildsAll12ClassesWithCompleteCommonSheet(t *testing.T) {
-	if len(ClassNames) != 12 {
-		t.Fatalf("expected 12 class names, got %d", len(ClassNames))
+// it('builds all 6 classes with a complete common character sheet')
+func TestBuildsAll6ClassesWithCompleteCommonSheet(t *testing.T) {
+	if len(ClassNames) != 6 {
+		t.Fatalf("expected 6 class names, got %d", len(ClassNames))
 	}
 	for index, className := range ClassNames {
 		character := CreateLevel3Character(fmt.Sprintf("player%d", index+1), "測試"+className, className)
@@ -87,9 +87,9 @@ func TestBuildsAll12ClassesWithCompleteCommonSheet(t *testing.T) {
 	}
 }
 
-// it.each(['吟遊詩人', '牧師', '德魯伊', '術士', '法師'])('%s has 4 first-level and 2 second-level slots')
+// it.each(['吟遊詩人', '牧師', '法師'])('%s has 4 first-level and 2 second-level slots')
 func TestFullCastersHaveFourFirstAndTwoSecondLevelSlots(t *testing.T) {
-	for _, className := range []string{"吟遊詩人", "牧師", "德魯伊", "術士", "法師"} {
+	for _, className := range []string{"吟遊詩人", "牧師", "法師"} {
 		t.Run(className, func(t *testing.T) {
 			character := CreateLevel3Character("player1", "施法者", className)
 			if character.Spellcasting == nil {
@@ -108,7 +108,7 @@ func TestFullCastersHaveFourFirstAndTwoSecondLevelSlots(t *testing.T) {
 
 // it('models half casters and Pact Magic separately')
 func TestModelsHalfCastersAndPactMagicSeparately(t *testing.T) {
-	for _, className := range []string{"聖武士", "遊俠"} {
+	for _, className := range []string{"聖武士"} {
 		character := CreateLevel3Character("player1", "半施法者", className)
 		if character.Spellcasting == nil {
 			t.Fatalf("expected %s to have spellcasting", className)
@@ -158,8 +158,8 @@ func TestEvokerCantripsSpellbookPreparedAndArcaneRecovery(t *testing.T) {
 			prepared++
 		}
 	}
-	if cantrips != 3 {
-		t.Errorf("cantrip count = %d, want 3", cantrips)
+	if cantrips != 4 {
+		t.Errorf("cantrip count = %d, want 4", cantrips)
 	}
 	if inSpellbook != 12 {
 		t.Errorf("spellbook count = %d, want 12", inSpellbook)

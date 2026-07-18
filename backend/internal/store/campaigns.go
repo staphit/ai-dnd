@@ -135,6 +135,7 @@ func (s *Store) DeleteCampaign(id string) error {
 		`DELETE FROM combats WHERE campaign_id = ?`,
 		`DELETE FROM combat_snapshots WHERE campaign_id = ?`,
 		`DELETE FROM story_arcs WHERE campaign_id = ?`,
+		`DELETE FROM script_states WHERE campaign_id = ?`,
 		`DELETE FROM characters WHERE campaign_id = ?`,
 		`DELETE FROM campaigns WHERE id = ?`,
 	} {
@@ -267,6 +268,33 @@ func (s *Store) SaveStoryArc(campaignID, data string, updatedAt int64) error {
 // StoryArc returns the story-pacing arc; ok is false when none.
 func (s *Store) StoryArc(campaignID string) (string, bool, error) {
 	row := s.db.QueryRow(`SELECT data FROM story_arcs WHERE campaign_id = ?`, campaignID)
+	var data string
+	err := row.Scan(&data)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", false, nil
+	}
+	if err != nil {
+		return "", false, err
+	}
+	return data, true, nil
+}
+
+// SaveScriptState upserts the scripted-module progress for a campaign.
+func (s *Store) SaveScriptState(campaignID, data string, updatedAt int64) error {
+	if campaignID == "" {
+		return errors.New("campaign id is required")
+	}
+	_, err := s.db.Exec(
+		`INSERT INTO script_states (campaign_id, data, updated_at) VALUES (?, ?, ?)
+		 ON CONFLICT(campaign_id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at`,
+		campaignID, data, updatedAt,
+	)
+	return err
+}
+
+// ScriptState returns the scripted-module progress; ok is false when none.
+func (s *Store) ScriptState(campaignID string) (string, bool, error) {
+	row := s.db.QueryRow(`SELECT data FROM script_states WHERE campaign_id = ?`, campaignID)
 	var data string
 	err := row.Scan(&data)
 	if errors.Is(err, sql.ErrNoRows) {

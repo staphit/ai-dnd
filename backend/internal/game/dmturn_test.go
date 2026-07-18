@@ -93,8 +93,14 @@ func TestStoryArcPhaseCompletion(t *testing.T) {
 	if first.CompletedRound == 0 || !first.RewardGranted {
 		t.Fatalf("phase 1 not stamped/rewarded: %+v", first)
 	}
-	if v.StoryArc.Phases[1].Goal != "查明燈塔熄滅的幕後黑手" {
-		t.Fatalf("next goal not set: %+v", v.StoryArc.Phases[1])
+	// Scripted campaigns pin phase goals and deadlines to the module: the
+	// AI-suggested nextGoal is overridden by stageObjectives, and deadlines
+	// derive from stage size instead of the generic 20/40/60.
+	if !strings.Contains(v.StoryArc.Phases[1].Goal, "下城區") {
+		t.Fatalf("phase 2 goal should come from the module: %+v", v.StoryArc.Phases[1])
+	}
+	if v.StoryArc.Phases[0].DeadlineRound == 20 {
+		t.Fatalf("deadline should be module-derived, not the generic 20: %+v", v.StoryArc.Phases[0])
 	}
 	if v.Players[0].Experience != xpBefore+first.RewardXP {
 		t.Fatalf("timed reward XP missing: before %d after %d want +%d", xpBefore, v.Players[0].Experience, first.RewardXP)
@@ -230,8 +236,19 @@ func TestApplyDMTurnFullFlow(t *testing.T) {
 }
 
 func TestApplyDMTurnCombatStartAndRejection(t *testing.T) {
+	// Freeform campaign (no scripted module): the DM may start combat itself.
 	s := newTestService(t)
-	view := createSample(t, s)
+	view, err := s.Create(CreateParams{
+		StoryID: "custom", Title: "自由冒險", Chapter: "第一章", Scene: "禮拜堂",
+		Objective: "找到伊薩克", ObjectiveContext: "背景", Stakes: "風險", Opening: "門闔上了。",
+		Players: []PlayerSeed{
+			{Name: "賽勒恩", ClassName: "戰士"},
+			{Name: "米芮", ClassName: "牧師", Level: 5},
+		},
+	})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
 	prepared := preparedActions(t, s, view.ID)
 
 	s.WithDice(seq(0.9, 0.5, 0.1))
@@ -273,5 +290,25 @@ func TestApplyDMTurnCombatStartAndRejection(t *testing.T) {
 	last := applied2.View.Story[len(applied2.View.Story)-1]
 	if !strings.Contains(last.Text, "【行動駁回】") {
 		t.Fatalf("missing rejection entry: %q", last.Text)
+	}
+}
+
+func TestClampCheckDCKeepsSuccessBetween30And90Percent(t *testing.T) {
+	cases := []struct{ dc, modifier, want int }{
+		{30, 2, 17},  // impossible DC pulled down to 30% success (needs 15)
+		{25, 5, 20},  // high DC clamped to modifier+15
+		{5, 6, 9},    // trivial DC raised to 90% success (needs 3)
+		{12, 3, 12},  // in-range DC untouched
+		{10, -1, 10}, // negative modifier, in range (needs 11)
+		{20, 0, 15},  // no modifier: DC capped at 15
+	}
+	for _, c := range cases {
+		if got := clampCheckDC(c.dc, c.modifier); got != c.want {
+			t.Fatalf("clampCheckDC(%d, %d) = %d, want %d", c.dc, c.modifier, got, c.want)
+		}
+		needed := clampCheckDC(c.dc, c.modifier) - c.modifier
+		if needed < 3 || needed > 15 {
+			t.Fatalf("clampCheckDC(%d, %d): needed natural %d outside [3,15]", c.dc, c.modifier, needed)
+		}
 	}
 }

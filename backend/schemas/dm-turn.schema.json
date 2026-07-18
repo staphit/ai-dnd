@@ -129,6 +129,14 @@
       "required": ["phaseComplete", "nextGoal"],
       "additionalProperties": false
     },
+    "script": {
+      "type": "object",
+      "properties": {
+        "chosenOption": { "type": "string", "maxLength": 8 }
+      },
+      "required": ["chosenOption"],
+      "additionalProperties": false
+    },
     "loot": {
       "type": "object",
       "properties": {
@@ -172,6 +180,6 @@
       }
     }
   },
-  "required": ["narration", "scene", "imagePrompt", "objective", "objectiveContext", "stakes", "requiresCheck", "check", "choices", "effects", "combat", "privateMessages", "actionIssues", "arc", "loot", "experienceAwards"],
+  "required": ["narration", "scene", "imagePrompt", "objective", "objectiveContext", "stakes", "requiresCheck", "check", "choices", "effects", "combat", "privateMessages", "actionIssues", "arc", "script", "loot", "experienceAwards"],
   "additionalProperties": false
 }

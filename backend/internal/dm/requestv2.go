@@ -42,6 +42,7 @@ type TurnInputV2 struct {
 	Players          []SanitizedPlayer // Summary holds the one-line digest
 	Actions          map[string]string
 	ArcLines         []string // story-pacing directives (phase, deadline, reward)
+	ScriptLines      []string // scripted-module director notes (node directive, options)
 	Resolution       *ResolutionV2
 	Conclusion       *ConclusionV2
 	DeltaMode        bool
@@ -73,6 +74,7 @@ func BuildDMRequestV2(in TurnInputV2) string {
 		combat,
 	}
 	lines = append(lines, in.ArcLines...)
+	lines = append(lines, in.ScriptLines...)
 	lines = append(lines, "")
 
 	if in.DeltaMode {

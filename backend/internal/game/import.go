@@ -31,6 +31,7 @@ type importedCampaign struct {
 	Choices          []json.RawMessage    `json:"choices"`
 	RequiredCheck    *rules.RequiredCheck `json:"requiredCheck"`
 	Combat           *rules.CombatState   `json:"combat"`
+	ScriptState      *ScriptState         `json:"scriptState"`
 	ImagePrompt      string               `json:"imagePrompt"`
 	UpdatedAt        string               `json:"updatedAt"`
 
@@ -141,6 +142,18 @@ func (s *Service) Import(raw []byte, overwrite bool) (View, error) {
 		if data, err := json.Marshal(imp.Combat); err == nil {
 			if err := s.store.SaveCombat(id, string(data), s.now().UnixMilli()); err != nil {
 				return View{}, err
+			}
+		}
+	}
+
+	// Scripted-module progress round-trips when the module still exists and
+	// the saved node is valid; otherwise the campaign continues freeform.
+	if state := imp.ScriptState; state != nil {
+		if mod := scriptModules[state.ScriptID]; mod != nil && mod.node(state.NodeID) != nil {
+			if data, err := json.Marshal(state); err == nil {
+				if err := s.store.SaveScriptState(id, string(data), s.now().UnixMilli()); err != nil {
+					return View{}, err
+				}
 			}
 		}
 	}
@@ -376,6 +389,15 @@ func (s *Service) Export(id string) ([]byte, error) {
 	}
 	delete(campaign, "settings")
 	delete(campaign, "xpProgress")
+	// View.script is the spoiler-safe progress slice; the export carries the
+	// full engine state instead so a scripted campaign round-trips intact.
+	delete(campaign, "script")
+	if data, ok, err := s.store.ScriptState(id); err == nil && ok {
+		var state ScriptState
+		if json.Unmarshal([]byte(data), &state) == nil {
+			campaign["scriptState"] = state
+		}
+	}
 	campaign["schemaVersion"] = 3
 
 	return json.MarshalIndent(map[string]any{

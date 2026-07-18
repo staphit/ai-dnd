@@ -43,26 +43,35 @@ func TestCreateConfiguredCharacterCustomIdentityAndScores(t *testing.T) {
 	}
 }
 
-// TestLevelUpCharacterMulticlass ports "adds a multiclass level without
-// replacing the existing class".
-func TestLevelUpCharacterMulticlass(t *testing.T) {
+// TestLevelUpCharacterNoMulticlass: level-ups may only advance the
+// character's own class; asking for another class errors, and the own-class
+// (or empty) form advances normally.
+func TestLevelUpCharacterNoMulticlass(t *testing.T) {
 	fighter := CreateConfiguredCharacter("player1", "黎恩", "戰士", BuildOptions{})
 	fighter.Experience = 2700
-	multiclass, err := LevelUpCharacter(fighter, "法師")
+	if _, err := LevelUpCharacter(fighter, "法師"); err == nil {
+		t.Fatal("multiclassing should be rejected")
+	}
+	leveled, err := LevelUpCharacter(fighter, "")
 	if err != nil {
-		t.Fatalf("levelUpCharacter returned error: %v", err)
+		t.Fatalf("own-class level up: %v", err)
 	}
-	if multiclass.Level != 4 {
-		t.Errorf("level = %d, want 4", multiclass.Level)
+	if leveled.Level != 4 || !hasClassLevel(leveled.ClassLevels, "戰士", 4) {
+		t.Errorf("level = %d classLevels = %+v, want 戰士 4", leveled.Level, leveled.ClassLevels)
 	}
-	if !hasClassLevel(multiclass.ClassLevels, "戰士", 3) {
-		t.Errorf("classLevels = %+v, want an entry {className: 戰士, level: 3}", multiclass.ClassLevels)
+}
+
+// TestSpendAbilityPointNoCap: banked points may push abilities past 20.
+func TestSpendAbilityPointNoCap(t *testing.T) {
+	c := CreateConfiguredCharacter("player1", "黎恩", "戰士", BuildOptions{})
+	c.Abilities = c.Abilities.Set("str", 20)
+	c.AbilityPoints = 2
+	next, err := SpendAbilityPoint(c, "str")
+	if err != nil {
+		t.Fatalf("spend past 20: %v", err)
 	}
-	if !hasClassLevel(multiclass.ClassLevels, "法師", 1) {
-		t.Errorf("classLevels = %+v, want an entry {className: 法師, level: 1}", multiclass.ClassLevels)
-	}
-	if multiclass.Spellcasting == nil {
-		t.Error("spellcasting = nil, want defined")
+	if next.Abilities.Get("str") != 21 || next.AbilityPoints != 1 {
+		t.Fatalf("str = %d points = %d, want 21 / 1", next.Abilities.Get("str"), next.AbilityPoints)
 	}
 }
 
@@ -88,10 +97,10 @@ func TestSetPreparedSpellsExplicitConfiguration(t *testing.T) {
 // TestDexRaisesAC: raising DEX must raise AC for light-armor classes; heavy
 // armor ignores DEX entirely.
 func TestDexRaisesAC(t *testing.T) {
-	rogue := CreateConfiguredCharacter("p1", "小影", "盜賊", BuildOptions{})
-	base := rogue.AC
-	rogue.AbilityPoints = 2
-	step1, err := SpendAbilityPoint(rogue, "dex")
+	bard := CreateConfiguredCharacter("p1", "小影", "吟遊詩人", BuildOptions{})
+	base := bard.AC
+	bard.AbilityPoints = 2
+	step1, err := SpendAbilityPoint(bard, "dex")
 	if err != nil {
 		t.Fatalf("spend 1: %v", err)
 	}
@@ -99,9 +108,9 @@ func TestDexRaisesAC(t *testing.T) {
 	if err != nil {
 		t.Fatalf("spend 2: %v", err)
 	}
-	wantDelta := AbilityModifier(step2.Abilities.Dex) - AbilityModifier(rogue.Abilities.Dex)
+	wantDelta := AbilityModifier(step2.Abilities.Dex) - AbilityModifier(bard.Abilities.Dex)
 	if wantDelta < 1 {
-		t.Fatalf("test setup: +2 DEX should raise the modifier (dex %d -> %d)", rogue.Abilities.Dex, step2.Abilities.Dex)
+		t.Fatalf("test setup: +2 DEX should raise the modifier (dex %d -> %d)", bard.Abilities.Dex, step2.Abilities.Dex)
 	}
 	if step2.AC != base+wantDelta {
 		t.Fatalf("AC did not follow DEX: base %d, got %d, want %d", base, step2.AC, base+wantDelta)
