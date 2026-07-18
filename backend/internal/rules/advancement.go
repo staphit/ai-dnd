@@ -399,6 +399,17 @@ func Recalculate(c Character) Character {
 	if HasClass(c, "戰士") {
 		c.CritThreshold = 19
 	}
+	// 盜賊 偷襲 (sneak attack): d6 count scales with rogue level (3rd → 2d6).
+	c.SneakAttackDice = 0
+	if HasClass(c, "盜賊") {
+		rogueLevel := c.Level
+		for _, entry := range GetCharacterClasses(c) {
+			if entry.ClassName == "盜賊" {
+				rogueLevel = entry.Level
+			}
+		}
+		c.SneakAttackDice = (rogueLevel + 1) / 2
+	}
 	c.Skills = skills
 	c.Attacks = attacks
 	c.Spellcasting = spellcasting
@@ -566,10 +577,14 @@ func LevelUpCharacter(c Character, className string) (Character, error) {
 }
 
 // EnsureDerivedDefaults backfills derived fields that character documents
-// saved before the field existed are missing (fighter 19-20 crit threshold).
+// saved before the field existed are missing (fighter 19-20 crit threshold,
+// rogue sneak-attack dice).
 func EnsureDerivedDefaults(c *Character) {
 	if c.CritThreshold == 0 && HasClass(*c, "戰士") {
 		c.CritThreshold = 19
+	}
+	if c.SneakAttackDice == 0 && HasClass(*c, "盜賊") {
+		c.SneakAttackDice = (c.Level + 1) / 2
 	}
 }
 

@@ -315,30 +315,7 @@ func (s *Service) CastSpell(id, playerID string, p CastParams) (CastResult, erro
 			if st.combat != nil && st.combat.Active {
 				// Route through applyCombatChange so a spell dropping the last
 				// enemy pays victory XP exactly like a weapon kill.
-				priorDown := make(map[string]bool, len(st.combat.Combatants))
-				for _, c := range st.combat.Combatants {
-					priorDown[c.ID] = c.Defeated
-				}
-				newlyDown := false
-				for _, c := range result.Combat.Combatants {
-					if c.Side == "enemy" && c.Defeated && !priorDown[c.ID] {
-						newlyDown = true
-						break
-					}
-				}
 				combatLogs = append(combatLogs, s.applyCombatChange(st, *result.Combat)...)
-				// 魔契師 黑暗者賜福: spell kills (eldritch blast included) grant
-				// temp HP just like weapon kills.
-				if newlyDown {
-					if caster, err := st.player(playerID); err == nil && rules.HasClass(*caster, "魔契師") {
-						grant := rules.AbilityModifier(caster.Abilities.Cha) + classLevelOf(*caster, "魔契師")
-						if grant > 0 && caster.TemporaryHP < grant {
-							caster.TemporaryHP = grant
-							syncCombatFromPlayers(st)
-							combatLogs = append(combatLogs, fmt.Sprintf("%s的「黑暗者賜福」發動：獲得 %d 點暫時生命。", caster.Name, grant))
-						}
-					}
-				}
 			} else {
 				st.combat = result.Combat
 			}
@@ -524,9 +501,6 @@ func (s *Service) ChangeResourceAction(id, playerID, resourceID string, delta in
 			return View{}, apperr.New(400, player.Name+"沒有可用奧術回復恢復的已消耗法術位。")
 		}
 	}
-	if spending && resourceID == "magical_cunning" && expendedPactSlots(*player) == 0 {
-		return View{}, apperr.New(400, player.Name+"沒有已消耗的契約法術位可恢復。")
-	}
 	if spending && resourceID == "channel_divinity" && rules.HasClass(*player, "牧師") && preserveLifeTargetIndex(st.players) < 0 {
 		return View{}, apperr.New(400, "隊伍中沒有生命低於一半上限的成員，保存生機無法分配治療。")
 	}
@@ -583,9 +557,6 @@ func (s *Service) ChangeResourceAction(id, playerID, resourceID string, delta in
 		case "arcane_recovery":
 			restored := restoreStandardSlots(player, 2)
 			logs = append(logs, fmt.Sprintf("%s使用「奧術回復」：恢復%s。", player.Name, describeSlotLevels(restored)))
-		case "magical_cunning":
-			restored := restorePactSlots(player)
-			logs = append(logs, fmt.Sprintf("%s使用「魔法巧思」：恢復 %d 個契約法術位。", player.Name, restored))
 		case "channel_divinity":
 			if !rules.HasClass(*player, "牧師") {
 				// Legacy non-cleric holders just track the charge.
@@ -670,31 +641,6 @@ func describeSlotLevels(levels []int) string {
 		parts = append(parts, fmt.Sprintf("%d 環法術位 ×%d", level, counts[level]))
 	}
 	return strings.Join(parts, "、")
-}
-
-// expendedPactSlots counts the warlock's missing pact slots.
-func expendedPactSlots(c rules.Character) int {
-	if c.Spellcasting == nil || c.Spellcasting.Mode != "pact" || len(c.Spellcasting.Slots) == 0 {
-		return 0
-	}
-	pool := c.Spellcasting.Slots[0]
-	return max(0, pool.Max-pool.Current)
-}
-
-// restorePactSlots applies 魔法巧思: it restores up to ceil(max/2) expended
-// pact slots and returns how many came back.
-func restorePactSlots(c *rules.Character) int {
-	restore := min((c.Spellcasting.Slots[0].Max+1)/2, expendedPactSlots(*c))
-	if restore <= 0 {
-		return 0
-	}
-	casting := *c.Spellcasting
-	slots := make([]rules.SlotPool, len(casting.Slots))
-	copy(slots, casting.Slots)
-	slots[0].Current += restore
-	casting.Slots = slots
-	c.Spellcasting = &casting
-	return restore
 }
 
 // preserveLifeTargetIndex finds the most injured party member still below

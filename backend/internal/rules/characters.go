@@ -191,19 +191,13 @@ var classEntries = []classEntry{
 			AlwaysPrepared: []string{"divine_smite", "protection_evil_good", "shield_of_faith"},
 		},
 	}},
-	{"魔契師", ClassDefinition{
-		Subclass: "邪魔宗主", Background: "江湖騙子", HitDie: 8,
-		Abilities: AbilityScores{Str: 8, Dex: 14, Con: 15, Int: 10, Wis: 12, Cha: 17}, AC: 13, Speed: 30,
-		Saves: []AbilityKey{"wis", "cha"}, ProficientSkills: []string{"奧秘", "欺瞞", "調查", "威嚇"},
-		Equipment: []string{"皮甲", "鐮刀", "匕首 ×2", "奧術法器", "學者套組"},
-		Attacks:   []AttackTemplate{attack("sickle", "鐮刀", "dex", "1d4", "揮砍", "輕型")},
-		Resources: []ResourceTemplate{resource("magical_cunning", "魔法巧思", 1, "進行 1 分鐘儀式，恢復最多一半（向上取整）的已消耗契約法術位。", recoverNone, "")},
-		Features:  []Feature{feature("eldritch_invocations", "魔能祈喚：苦痛魔爆", "魔能爆附加魅力調整值傷害（系統自動計算）。"), feature("dark_ones_blessing", "黑暗者賜福", "敵人被你擊倒時獲得魅力調整值 + 魔契師等級的暫時生命（保留較高值）。")},
-		Spellcasting: &SpellcastingTemplate{
-			Ability: "cha", Focus: "奧術法器", Mode: "pact", PactSlotLevel: 2, Slots: []SlotTemplate{{Level: 2, Max: 2}},
-			Cantrips: []string{"eldritch_blast", "prestidigitation"}, Prepared: []string{"armor_of_agathys", "charm_person", "hex", "misty_step"},
-			AlwaysPrepared: []string{"burning_hands", "command", "scorching_ray", "suggestion"},
-		},
+	{"盜賊", ClassDefinition{
+		Subclass: "竊賊", Background: "罪犯", HitDie: 8,
+		Abilities: AbilityScores{Str: 10, Dex: 17, Con: 14, Int: 13, Wis: 12, Cha: 8}, AC: 15, Speed: 30,
+		Saves: []AbilityKey{"dex", "int"}, ProficientSkills: []string{"隱匿", "巧手", "特技", "調查", "察覺", "欺瞞"}, ExpertiseSkills: []string{"隱匿", "巧手"},
+		Equipment: []string{"皮甲", "短劍 ×2", "短弓與 20 支箭", "盜賊工具", "竊賊套組"},
+		Attacks:   []AttackTemplate{attack("shortsword", "短劍", "dex", "1d6", "穿刺", "靈巧", "輕型", "煩擾精通"), attack("shortbow", "短弓", "dex", "1d6", "穿刺", "彈藥 80/320", "雙手")},
+		Features:  []Feature{feature("sneak_attack", "偷襲", "只要仍有隊友未倒下與你夾擊，每次武器命中額外造成 2d6 傷害（隨等級成長，由系統結算）。"), feature("expertise", "專精", "隱匿與巧手使用雙倍熟練加值。")},
 	}},
 	{"法師", ClassDefinition{
 		Subclass: "塑能師", Background: "賢者", HitDie: 6,
@@ -479,12 +473,18 @@ func CreateLevel3Character(id, name, className string) Character {
 	if resolvedClassName == "戰士" {
 		critThreshold = 19
 	}
+	// 盜賊 偷襲 (sneak attack): 2d6 at level 3.
+	sneakAttackDice := 0
+	if resolvedClassName == "盜賊" {
+		sneakAttackDice = 2
+	}
 
 	return Character{
 		ID:               id,
 		Name:             strings.TrimFunc(name, isJSWhitespace),
 		ClassName:        resolvedClassName,
 		CritThreshold:    critThreshold,
+		SneakAttackDice:  sneakAttackDice,
 		Subclass:         definition.Subclass,
 		Species:          "人類",
 		Background:       definition.Background,

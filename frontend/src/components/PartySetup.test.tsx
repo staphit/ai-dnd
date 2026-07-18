@@ -5,7 +5,7 @@ import { PartySetup } from './PartySetup';
 import { jsonResponse, makeCampaign, makePlayer } from '../test/fixtures';
 
 const catalog = {
-  classNames: ['野蠻人', '吟遊詩人', '牧師', '德魯伊', '戰士', '武僧', '聖武士', '遊俠', '盜賊', '術士', '魔契師', '法師'],
+  classNames: ['吟遊詩人', '牧師', '戰士', '聖武士', '盜賊', '法師'],
   abilityLabels: { str: '力量', dex: '敏捷', con: '體質', int: '智力', wis: '感知', cha: '魅力' },
   spells: [],
   scriptedStoryIds: ['ashen-crown'],
@@ -46,7 +46,7 @@ describe('PartySetup', () => {
     render(<PartySetup onComplete={onComplete} />);
 
     // Wait for the catalog-backed class options.
-    await waitFor(() => expect(screen.getAllByRole('option', { name: '野蠻人' }).length).toBeGreaterThan(0));
+    await waitFor(() => expect(screen.getAllByRole('option', { name: '盜賊' }).length).toBeGreaterThan(0));
 
     await user.click(screen.getByRole('button', { name: '3人' }));
     await user.clear(screen.getByLabelText('玩家 1 角色名稱'));
@@ -54,10 +54,10 @@ describe('PartySetup', () => {
     await user.selectOptions(screen.getByLabelText('玩家 1 職業'), '法師');
     await user.clear(screen.getByLabelText('玩家 2 角色名稱'));
     await user.type(screen.getByLabelText('玩家 2 角色名稱'), '布蘭');
-    await user.selectOptions(screen.getByLabelText('玩家 2 職業'), '野蠻人');
+    await user.selectOptions(screen.getByLabelText('玩家 2 職業'), '盜賊');
     await user.clear(screen.getByLabelText('玩家 3 角色名稱'));
     await user.type(screen.getByLabelText('玩家 3 角色名稱'), '希雅');
-    await user.selectOptions(screen.getByLabelText('玩家 3 職業'), '德魯伊');
+    await user.selectOptions(screen.getByLabelText('玩家 3 職業'), '牧師');
     await user.click(screen.getByRole('button', { name: /開始冒險/ }));
 
     // ashen-crown ships a script module: the story-mode dialog gates creation.
@@ -74,8 +74,8 @@ describe('PartySetup', () => {
     expect(body.opening).toContain('禮拜堂');
     expect(body.players.map((seed) => [seed.name, seed.className, seed.level])).toEqual([
       ['阿莎', '法師', 3],
-      ['布蘭', '野蠻人', 3],
-      ['希雅', '德魯伊', 3],
+      ['布蘭', '盜賊', 3],
+      ['希雅', '牧師', 3],
     ]);
     // The parent receives the server view verbatim.
     expect(onComplete.mock.calls[0][0].id).toBe('campaign-created');
@@ -88,7 +88,7 @@ describe('PartySetup', () => {
     render(<PartySetup onComplete={onComplete} />);
 
     // Let the catalog land so scriptedStoryIds is known before submitting.
-    await waitFor(() => expect(screen.getAllByRole('option', { name: '野蠻人' }).length).toBeGreaterThan(0));
+    await waitFor(() => expect(screen.getAllByRole('option', { name: '盜賊' }).length).toBeGreaterThan(0));
     await user.click(screen.getByRole('button', { name: /血月特快車/ }));
     expect(screen.getByDisplayValue('血月特快車')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /開始冒險/ }));
@@ -108,7 +108,7 @@ describe('PartySetup', () => {
     const onComplete = vi.fn();
     render(<PartySetup onComplete={onComplete} />);
 
-    await waitFor(() => expect(screen.getAllByRole('option', { name: '野蠻人' }).length).toBeGreaterThan(0));
+    await waitFor(() => expect(screen.getAllByRole('option', { name: '盜賊' }).length).toBeGreaterThan(0));
     await user.click(screen.getByRole('button', { name: /開始冒險/ }));
 
     const dialog = await screen.findByRole('dialog', { name: '要怎麼進行這個故事？' });

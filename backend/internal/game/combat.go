@@ -251,14 +251,6 @@ func (s *Service) Attack(id string, p AttackParams) (AttackResult, error) {
 		}
 	}
 
-	// One action may carry several strikes; stop early once the target drops.
-	targetWasDefeated := false
-	for _, c := range state.Combatants {
-		if c.ID == targetID {
-			targetWasDefeated = c.Defeated
-			break
-		}
-	}
 	resolved := state
 	var resolution rules.AttackResolution
 	var strikeTexts []string
@@ -289,40 +281,7 @@ func (s *Service) Attack(id string, p AttackParams) (AttackResult, error) {
 	if err != nil {
 		return AttackResult{}, apperr.New(400, err.Error())
 	}
-	// 魔契師 黑暗者賜福 (dark one's blessing): dropping an enemy grants the
-	// warlock temporary HP equal to CHA modifier + warlock level (keeping the
-	// higher of existing and new). Applied to the combatant before
-	// applyCombatChange so the sync copies it onto the character sheet.
-	var blessingLogs []string
-	if !targetWasDefeated && current.PlayerID != "" {
-		targetDown := false
-		for _, c := range spent.Combatants {
-			if c.ID == targetID && c.Defeated {
-				targetDown = true
-				break
-			}
-		}
-		if targetDown {
-			for _, p := range st.players {
-				if p.ID != current.PlayerID || !rules.HasClass(p, "魔契師") {
-					continue
-				}
-				grant := rules.AbilityModifier(p.Abilities.Cha) + classLevelOf(p, "魔契師")
-				if grant <= 0 {
-					break
-				}
-				for i := range spent.Combatants {
-					if spent.Combatants[i].ID == current.ID && spent.Combatants[i].TemporaryHP < grant {
-						spent.Combatants[i].TemporaryHP = grant
-						blessingLogs = append(blessingLogs, fmt.Sprintf("%s的「黑暗者賜福」發動：獲得 %d 點暫時生命。", p.Name, grant))
-					}
-				}
-				break
-			}
-		}
-	}
 	logs := append([]string{fmt.Sprintf("%s（已使用動作）", strings.Join(strikeTexts, " "))}, s.applyCombatChange(st, spent)...)
-	logs = append(logs, blessingLogs...)
 	view, err := s.persist(st, logs)
 	if err != nil {
 		return AttackResult{}, err

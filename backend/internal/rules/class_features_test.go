@@ -88,24 +88,36 @@ func TestDiscipleOfLifeBoostsLeveledHealing(t *testing.T) {
 	}
 }
 
-// TestAgonizingBlastAddsChaModifier verifies the 魔契師 eldritch blast damage
-// bonus.
-func TestAgonizingBlastAddsChaModifier(t *testing.T) {
-	warlock := CreateLevel3Character("player1", "維茲", "魔契師")
-	blast := findCharacterSpell(t, warlock, "eldritch_blast")
-	if blast.Effect == nil {
-		t.Fatal("eldritch_blast has no effect")
+// TestSneakAttackRiderWithAllyStanding verifies the 盜賊 偷襲 damage rider:
+// it fires while another ally stands and stays quiet when the rogue is alone.
+func TestSneakAttackRiderWithAllyStanding(t *testing.T) {
+	rogue := CreateLevel3Character("player1", "影刃", "盜賊")
+	if rogue.SneakAttackDice != 2 {
+		t.Fatalf("sneakAttackDice = %d, want 2 at level 3", rogue.SneakAttackDice)
 	}
-	enemy := Combatant{ID: "enemy", Name: "敵人", Side: "enemy", AC: 12, HP: 20, MaxHP: 20, AttackBonus: 0, Damage: "1d4", DamageType: "鈍擊"}
-	combat := &CombatState{Active: true, Round: 1, TurnIndex: 0, Combatants: []Combatant{enemy}}
-	attackTotal := 18
-	// random 0 → 1d10 rolls 1; CHA 17 → +3 苦痛魔爆 = 4 total.
-	result := mustResolveSpellEffect(t, []Character{warlock}, combat, warlock.ID, enemy.ID, *blast.Effect, func() float64 { return 0 }, &ForcedRolls{AttackTotal: &attackTotal})
-	if result.Amount != 4 {
-		t.Fatalf("agonizing blast amount = %d, want 4", result.Amount)
+	party := PartyCombatants([]Character{rogue, CreateLevel3Character("player2", "同伴", "戰士")})
+	enemy := Combatant{ID: "enemy", Name: "敵人", Side: "enemy", AC: 5, HP: 30, MaxHP: 30, Damage: "1d4", DamageType: "鈍擊"}
+	state := CombatState{Active: true, Round: 1, Combatants: append(party, enemy)}
+	// random 0 → d20 rolls 1? Die maps 0 → 1; use 0.5 for a mid roll that hits AC 5.
+	_, res, err := ResolveAttack(state, party[0].ID, "enemy", func() float64 { return 0.5 }, "normal")
+	if err != nil {
+		t.Fatalf("attack: %v", err)
 	}
-	if result.Combat.Combatants[0].HP != 16 {
-		t.Fatalf("enemy hp = %d, want 16", result.Combat.Combatants[0].HP)
+	// Weapon 1d6 mid-roll 4 + DEX bonus, plus 2d6 sneak (mid-roll 4 each).
+	if res.Damage <= 0 || !strings.Contains(res.Text, "偷襲") {
+		t.Fatalf("sneak rider missing: dmg=%d text=%q", res.Damage, res.Text)
+	}
+
+	// Solo rogue (ally defeated): no sneak rider.
+	soloParty := PartyCombatants([]Character{rogue, CreateLevel3Character("player2", "同伴", "戰士")})
+	soloParty[1].Defeated = true
+	soloState := CombatState{Active: true, Round: 1, Combatants: append(soloParty, enemy)}
+	_, soloRes, err := ResolveAttack(soloState, soloParty[0].ID, "enemy", func() float64 { return 0.5 }, "normal")
+	if err != nil {
+		t.Fatalf("solo attack: %v", err)
+	}
+	if strings.Contains(soloRes.Text, "偷襲") {
+		t.Fatalf("solo rogue must not sneak attack: %q", soloRes.Text)
 	}
 }
 

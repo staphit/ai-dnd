@@ -239,6 +239,9 @@ type Character struct {
 	// CritThreshold is the lowest natural d20 roll that scores a critical hit
 	// (0 means the default 20). 戰士 精通重擊 sets 19.
 	CritThreshold int `json:"critThreshold,omitempty"`
+	// SneakAttackDice is the 盜賊 偷襲 rider: d6 count added to weapon hits
+	// while a standing ally flanks (0 = no sneak attack).
+	SneakAttackDice int `json:"sneakAttackDice,omitempty"`
 	// PendingInspiration counts queued 吟遊激勵 dice: the next required check
 	// resolved by any party member gains a server-rolled d6 and consumes it.
 	PendingInspiration int           `json:"pendingInspiration,omitempty"`
@@ -277,6 +280,8 @@ type Combatant struct {
 	// CritThreshold mirrors Character.CritThreshold onto the party combatant
 	// (0 means the default 20); enemies always use the default.
 	CritThreshold int `json:"critThreshold,omitempty"`
+	// SneakAttackDice mirrors Character.SneakAttackDice onto the combatant.
+	SneakAttackDice int `json:"sneakAttackDice,omitempty"`
 }
 
 // CombatState mirrors types.ts CombatState.

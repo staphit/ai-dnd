@@ -176,11 +176,6 @@ func ResolveSpellEffect(players []Character, combat *CombatState, casterID, targ
 		return SpellEffectResult{}, err
 	}
 	castSpell := casterSpellFor(*caster, effect)
-	// 魔契師 苦痛魔爆 (agonizing blast): eldritch blast adds the caster's
-	// CHA modifier to its damage.
-	if castSpell != nil && castSpell.ID == "eldritch_blast" && HasClass(*caster, "魔契師") {
-		amount = max(0, amount+AbilityModifier(caster.Abilities.Cha))
-	}
 	// 牧師（生命領域）生命門徒 (disciple of life): healing spells cast with a
 	// slot restore an extra 2 + spell level HP.
 	if castSpell != nil && castSpell.Level >= 1 && effect.Kind == "healing" &&
