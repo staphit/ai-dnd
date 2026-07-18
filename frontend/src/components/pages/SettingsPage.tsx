@@ -108,7 +108,6 @@ export function SettingsPage({
         </select>
       </section>
       <ToggleRow label={t('settings.autoScene')} description={t('settings.autoSceneDesc')} checked={Boolean(settings.autoSceneImages)} onToggle={() => onUpdateSettings({ autoSceneImages: !settings.autoSceneImages })} />
-      <ToggleRow label={t('settings.tts')} description={t('settings.ttsDesc')} checked={Boolean(settings.ttsEnabled)} onToggle={() => onUpdateSettings({ ttsEnabled: !settings.ttsEnabled })} />
       <ToggleRow label={t('settings.statHints')} description={t('settings.statHintsDesc')} checked={settings.showStatHints !== false} onToggle={() => onUpdateSettings({ showStatHints: settings.showStatHints === false })} />
       <section className="settings-row">
         <div><strong>{t('settings.fontScale')}</strong><span>{Math.round((settings.fontScale || 1) * 100)}%</span></div>

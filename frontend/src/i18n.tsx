@@ -48,8 +48,6 @@ const messages = {
   'settings.imageBackendDesc': { zh: '場景圖與角色肖像使用的後端；本地選項需先啟動 SD Forge（--api）。', en: 'Backend for scene art and portraits; the local option needs SD Forge running with --api.' },
   'settings.autoScene': { zh: '每回合自動生成場景圖', en: 'Auto-generate scene art each turn' },
   'settings.autoSceneDesc': { zh: '開啟後，每次 DM 完成公開敘事便自動生成並加入圖庫。', en: 'When on, every DM narration renders a scene image into the gallery automatically.' },
-  'settings.tts': { zh: '語音朗讀 DM 敘事', en: 'Narrate DM text aloud' },
-  'settings.ttsDesc': { zh: '使用本地 GPT-SoVITS 朗讀每回合公開敘事；需先啟動 scripts/sovits.sh 並設定聲線。', en: 'Reads each public narration with local GPT-SoVITS; start scripts/sovits.sh and configure a voice first.' },
   'settings.statHints': { zh: '角色屬性懸浮說明', en: 'Stat hover hints' },
   'settings.statHintsDesc': { zh: '滑鼠停留或用鍵盤聚焦屬性時，顯示規則用途與計算方式。', en: 'Hovering or keyboard-focusing a stat shows what it does and how it is computed.' },
   'settings.fontScale': { zh: '介面字型大小', en: 'UI font size' },

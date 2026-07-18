@@ -225,7 +225,7 @@ CREATE TABLE campaigns (
 		settingsObj := map[string]any{}
 		for _, k := range []string{
 			"storyId", "selectedModel", "selectedEffort", "imageBackend", "forgeSettings",
-			"fontScale", "showStatHints", "autoSceneImages", "ttsEnabled", "dismissedTips",
+			"fontScale", "showStatHints", "autoSceneImages", "dismissedTips",
 			"sceneImages", "sceneImage", "dmProvider",
 		} {
 			if v, ok := doc[k]; ok && v != nil {

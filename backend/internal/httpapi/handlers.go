@@ -22,7 +22,6 @@ import (
 	"dndduet/internal/jsutil"
 	"dndduet/internal/provider"
 	"dndduet/internal/store"
-	"dndduet/internal/tts"
 )
 
 // storyIDPattern validates the untrusted campaign id. The frontend id format is
@@ -1182,35 +1181,3 @@ func (s *Server) handleCharacterImage(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, result)
 }
 
-// handleTTS synthesizes narration audio through the local GPT-SoVITS server
-// and streams the clip back (audio/wav).
-func (s *Server) handleTTS(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(r.Context(), 180*time.Second)
-	defer cancel()
-
-	body, err := readJSONBody(w, r)
-	if err != nil {
-		writeErr(w, err, http.StatusServiceUnavailable)
-		return
-	}
-	text := tts.PrepareText(jsutil.StrOr(jsutil.Get(body, "text"), ""))
-	text = jsutil.JSSlice(text, 2000)
-	if text == "" {
-		writeJSON(w, http.StatusBadRequest, errorBody{Error: "需要要朗讀的文字。"})
-		return
-	}
-	if s.TTS == nil {
-		writeJSON(w, http.StatusServiceUnavailable, errorBody{Error: "此伺服器未啟用語音朗讀。"})
-		return
-	}
-
-	audio, mime, err := s.TTS.Synthesize(ctx, text)
-	if err != nil {
-		writeErr(w, err, http.StatusServiceUnavailable)
-		return
-	}
-	w.Header().Set("content-type", mime)
-	w.Header().Set("cache-control", "no-store")
-	w.WriteHeader(http.StatusOK)
-	w.Write(audio)
-}

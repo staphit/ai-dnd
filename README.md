@@ -1,6 +1,6 @@
-# D&D Duet AI
+# D&D  AI
 
-本機 D&D 遊戲桌：React 前端 + Go 後端，AI 地城主走本機 Codex CLI（ChatGPT 登入）或 Grok CLI，不需要 API key。1–4 名玩家、SRD 5.2.1 的 6 個職業、完整戰鬥與法術結算、劇本／自由兩種模式、場景插圖與語音旁白。另附一個精簡的 VS Code 擴充套件版本。
+本機 D&D 遊戲桌：React 前端 + Go 後端，AI 地城主走本機 Codex CLI（ChatGPT 登入）或 Grok CLI，不需要 API key。1–4 名玩家、SRD 5.2.1 的 6 個職業、完整戰鬥與法術結算、劇本／自由兩種模式、場景插圖。另附一個精簡的 VS Code 擴充套件版本。
 
 ## 需求
 
@@ -27,10 +27,10 @@ PORT=8080 ./scripts/run.sh   # 換埠
 
 所有腳本說明見 [`scripts/README.md`](scripts/README.md)。
 
-## 怎麼玩（30 秒版）
+## 怎麼玩
 
-1. 首次進入走開團設定：選故事模板（內建模板可選**劇本模式**＝預寫分支、選項按鈕、零 AI 延遲；或**自由模式**＝AI DM 即興）、建 1–4 名角色
-2. 右上「連線 Codex／Grok」讓 DM 上線
+1. 首次進入走開團設定：選故事模板（內建模板可選**劇本模式**＝預寫分支、選項按鈕、零 AI 延遲；或**自由模式**＝AI DM 即興 會等比較有 目前有機率幻覺）、建 1–4 名角色
+2. 右上「連線 Codex／Grok」讓 DM 上線 (包含生圖)
 3. 每位玩家輸入行動並鎖定，**全員鎖定後**故事推進；DM 要求檢定時按骰盤擲 d20（加值與 DC 由伺服器算）
 4. 戰鬥自動排先攻；輪到你時攻擊／施法／用資源，敵方回合 AI 自動結算
 5. 進度存本機 SQLite（`campaign-data/`），重開瀏覽器續玩；設定頁可多戰役、匯出入 JSON、匯出小說 `.txt`
@@ -39,8 +39,7 @@ PORT=8080 ./scripts/run.sh   # 換埠
 
 | 功能 | 啟用方式 |
 |---|---|
-| 本地場景圖（SD Forge） | `./scripts/forge-setup.sh --model turbo` → `./scripts/forge.sh`，設定頁選「本地」 |
-| 語音旁白（GPT-SoVITS） | `./scripts/sovits-setup.sh` → `./scripts/sovits.sh`，`backend/.env` 設聲線 |
+| 本地場景圖（需要本地有SD Forge） | `./scripts/forge-setup.sh --model turbo` → `./scripts/forge.sh`，設定頁選「本地」 |
 | Grok 當 DM／生圖 | `grok login` 或 `XAI_API_KEY`，設定頁切換 |
 | 介面／DM 語言 | 設定頁切換繁體中文／English |
 
@@ -54,7 +53,7 @@ PORT=8080 ./scripts/run.sh   # 換埠
 
 ## VS Code 擴充套件
 
-兩人桌邊版，用 VS Code Language Model API（需已設定 Chat 模型）：
+用 VS Code Language Model API（需已設定 Chat 模型）：
 
 ```bash
 npm ci && npm run compile

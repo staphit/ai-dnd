@@ -1,6 +1,6 @@
 # 安裝需求盤點（REQUIREMENTS）
 
-本專案沒有單一 `requirements.txt`——四個組件各自管理相依。本文盤點「要跑起來到底要裝多少東西」，按必要／選用分級。
+本專案沒有單一 `requirements.txt`——各組件自管相依。本文盤點「要跑起來到底要裝多少東西」，按必要／選用分級。
 
 ## 總覽
 
@@ -11,7 +11,6 @@
 | AI DM | 必要（擇一） | Codex CLI（`codex login`）或 Grok CLI／`XAI_API_KEY`；都沒有可用示範 DM | — |
 | VS Code 擴充套件 | 選用 | Node.js 20+、VS Code 1.95+ | 4 個 dev 套件（repo 根目錄 `npm ci`） |
 | 本地圖片（SD Forge） | 選用 | git、curl、Python（Forge 首次啟動自建 venv） | Forge 自身相依 + checkpoint 數 GB |
-| 本地語音（GPT-SoVITS） | 選用 | Python 3.10+、ffmpeg | venv 內 torch 2.5.1+cu121 等數十套件 + 預訓練模型數 GB |
 
 Windows 另需 **git-bash**（所有 `scripts/*.sh` 都是 bash）。
 
@@ -58,16 +57,6 @@ Windows 另需 **git-bash**（所有 `scripts/*.sh` 都是 bash）。
 - 啟動：`scripts/forge.sh`（macOS／Linux）；**Windows 改用** `vendor/stable-diffusion-webui-forge/webui-user.bat`（先加 `set COMMANDLINE_ARGS=--api`）
 - 不裝也能用 Codex（`codex login`）或 Grok（`XAI_API_KEY`）生圖
 
-### 本地語音旁白 — GPT-SoVITS（`/api/tts`）
-
-- 系統：Python **3.10+**、**ffmpeg** 在 PATH
-- 安裝：`scripts/sovits-setup.sh` 會在 `vendor/GPT-SoVITS/.venv` 內裝：
-  - `torch==2.5.1+cu121`、`torchaudio==2.5.1+cu121`（CUDA 版先裝，避免 Windows 落到 CPU wheel）
-  - GPT-SoVITS 官方 `requirements.txt`（數十個套件）
-  - `huggingface_hub[cli]` + 預訓練模型（數 GB，可續傳）
-- 設定：`backend/.env` 指定 `SOVITS_REF_AUDIO`（3–10 秒旁白樣本）與 `SOVITS_PROMPT_TEXT`
-- 啟動：`scripts/sovits.sh`（port 9880）
-
 ## 安裝指令速查
 
 ```bash
@@ -79,7 +68,6 @@ codex login                             # AI DM（或 grok login／示範 DM）
 # 選用
 npm ci && npm run compile               # VS Code 擴充（repo 根目錄）
 ./scripts/forge-setup.sh --model turbo  # 本地圖片
-./scripts/sovits-setup.sh               # 本地語音
 ```
 
-磁碟空間粗估：核心 < 1 GB（node_modules + Go cache）；+Forge 約 10–15 GB；+SoVITS 約 8–12 GB。
+磁碟空間粗估：核心 < 1 GB（node_modules + Go cache）；+Forge 約 10–15 GB。

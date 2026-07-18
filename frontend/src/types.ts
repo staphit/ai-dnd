@@ -240,7 +240,6 @@ export interface CampaignSettings {
   fontScale?: number;
   showStatHints?: boolean;
   autoSceneImages?: boolean;
-  ttsEnabled?: boolean;
   dismissedTips?: string[];
   sceneImages?: SceneImage[];
 }
