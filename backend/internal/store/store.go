@@ -1,6 +1,6 @@
-﻿// Package store persists narrative memory text in SQLite and generated images
+// Package store persists narrative memory text in SQLite and generated images
 // on disk. Image files live under a dedicated directory (default:
-// <repo>/generated-images/) and are kept until the user deletes them ??SQLite
+// <repo>/generated-images/) and are kept until the user deletes them; SQLite
 // never holds image bytes. The public URL contract (/generated/<filename>) is
 // unchanged.
 package store

@@ -52,6 +52,101 @@ func TestPrepareActionsTurnValidates(t *testing.T) {
 	}
 }
 
+func TestDMTurnLeaseRejectsConcurrentAndStaleApply(t *testing.T) {
+	s := newTestService(t)
+	view := createSample(t, s)
+	prepared := preparedActions(t, s, view.ID)
+
+	if _, err := s.PrepareActionsTurn(view.ID, prepared.Actions, nil); apperr.StatusOf(err, 0) != 409 {
+		t.Fatalf("concurrent prepare should be 409, got %v", err)
+	}
+	if _, err := s.UpdateSettings(view.ID, []byte(`{"fontScale":1.1}`)); err != nil {
+		t.Fatalf("mutate while provider is running: %v", err)
+	}
+
+	turn := BuildDemoTurn(prepared)
+	if _, err := s.ApplyDMTurn(view.ID, prepared, turn); apperr.StatusOf(err, 0) != 409 {
+		t.Fatalf("stale apply should be 409, got %v", err)
+	}
+	current, err := s.View(view.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if current.Round != view.Round {
+		t.Fatalf("stale turn advanced round: got %d want %d", current.Round, view.Round)
+	}
+
+	// ApplyDMTurn releases the lease even on rejection, so the user can retry.
+	retry, err := s.PrepareActionsTurn(view.ID, prepared.Actions, nil)
+	if err != nil {
+		t.Fatalf("retry prepare: %v", err)
+	}
+	s.AbortDMTurn(view.ID, retry.TurnToken)
+}
+
+func TestDemoTurnPersistsServerAuthoritativeState(t *testing.T) {
+	s := newTestService(t)
+	view, err := s.Create(CreateParams{
+		StoryID: "custom", StoryMode: "freeform", Title: "示範冒險", Scene: "舊塔",
+		Objective: "找出鐘聲來源", Players: []PlayerSeed{{Name: "艾拉", ClassName: "遊俠"}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	prepared, err := s.PrepareActionsTurn(view.ID, map[string]string{"player1": "檢查塔門。"}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	applied, err := s.ApplyDMTurn(view.ID, prepared, BuildDemoTurn(prepared))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if applied.View.Round != 2 || applied.View.Players[0].Experience != view.Players[0].Experience+75 {
+		t.Fatalf("demo mechanics not applied: round=%d xp=%d", applied.View.Round, applied.View.Players[0].Experience)
+	}
+
+	reloaded, err := s.View(view.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reloaded.Round != applied.View.Round || reloaded.Players[0].Experience != applied.View.Players[0].Experience {
+		t.Fatalf("reloaded demo state diverged: %+v", reloaded)
+	}
+	if len(reloaded.Story) < 3 || !strings.Contains(reloaded.Story[len(reloaded.Story)-2].Text, "隊伍的宣告") {
+		t.Fatalf("demo narration was not persisted: %+v", reloaded.Story)
+	}
+}
+
+func TestStoryRevisionTargetsExactVersionAndEntry(t *testing.T) {
+	s := newTestService(t)
+	view := createSample(t, s)
+	prepared, err := s.PrepareStoryRevision(view.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.PrepareActionsTurn(view.ID, map[string]string{"player1": "前進", "player2": "警戒"}, nil); apperr.StatusOf(err, 0) != 409 {
+		t.Fatalf("DM turn should be blocked by revision lease: %v", err)
+	}
+	if _, err := s.UpdateSettings(view.ID, []byte(`{"fontScale":1.2}`)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.ApplyStoryRevision(view.ID, prepared, "不應寫入"); apperr.StatusOf(err, 0) != 409 {
+		t.Fatalf("stale revision should be 409: %v", err)
+	}
+
+	retry, err := s.PrepareStoryRevision(view.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	updated, err := s.ApplyStoryRevision(view.ID, retry, "門後傳來清楚的鐘聲。")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := updated.Story[len(updated.Story)-2].Text; got != "門後傳來清楚的鐘聲。" {
+		t.Fatalf("revised text = %q", got)
+	}
+}
+
 func asActionIssues(err error, target **ActionIssuesError) bool {
 	if e, ok := err.(*ActionIssuesError); ok {
 		*target = e

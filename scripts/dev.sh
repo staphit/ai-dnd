@@ -8,7 +8,7 @@ PORT="${PORT:-4318}"
 CODEX_MODE="${CODEX_MODE:-app-server}"
 
 if [ ! -d "$ROOT/frontend/node_modules" ]; then
-  ( cd "$ROOT/frontend" && npm install )
+  ( cd "$ROOT/frontend" && npm ci )
 fi
 
 cleanup() { kill 0 2>/dev/null || true; }

@@ -306,6 +306,7 @@ export interface DmTurnRequest {
   model?: string;
   effort?: string;
   dmProvider?: string;
+  demo?: boolean;
   actions?: Array<{ playerId: PlayerId; text: string }>;
   intents?: Partial<Record<PlayerId, DmIntent>>;
   checkRoll?: { natural: number };

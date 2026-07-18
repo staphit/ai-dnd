@@ -12,13 +12,15 @@ import (
 
 // gameState is the loaded mutable state for one campaign action.
 type gameState struct {
-	row     store.CampaignRow
-	players []rules.Character
-	combat  *rules.CombatState
-	pending map[string]string
-	check   *rules.RequiredCheck
-	arc     *StoryArc
-	script  *ScriptState
+	row           store.CampaignRow
+	players       []rules.Character
+	combat        *rules.CombatState
+	pending       map[string]string
+	check         *rules.RequiredCheck
+	arc           *StoryArc
+	script        *ScriptState
+	snapshot      *string
+	clearSnapshot bool
 }
 
 func (s *Service) loadState(id string) (*gameState, error) {
@@ -83,37 +85,45 @@ func (s *Service) loadState(id string) (*gameState, error) {
 	return st, nil
 }
 
-// persist writes back the mutated parts of the state and returns the fresh view.
+// persist writes back the mutated state and journal as one SQLite transaction.
 func (s *Service) persist(st *gameState, logs []string) (View, error) {
-	if err := s.saveCharacters(st.row.ID, st.players); err != nil {
+	entries := make([]store.StoryRow, 0, len(logs))
+	for _, text := range logs {
+		entries = append(entries, store.StoryRow{Speaker: "system", Text: text})
+	}
+	return s.persistEntries(st, entries)
+}
+
+func (s *Service) persistEntries(st *gameState, entries []store.StoryRow) (View, error) {
+	nowMs := s.now().UnixMilli()
+	characterRows, err := s.characterRows(st.row.ID, st.players, nowMs)
+	if err != nil {
 		return View{}, err
 	}
+	var combatData, arcData, scriptData *string
 	if st.combat != nil {
 		data, err := json.Marshal(st.combat)
 		if err != nil {
 			return View{}, err
 		}
-		if err := s.store.SaveCombat(st.row.ID, string(data), s.now().UnixMilli()); err != nil {
-			return View{}, err
-		}
+		encoded := string(data)
+		combatData = &encoded
 	}
 	if st.arc != nil {
 		data, err := json.Marshal(st.arc)
 		if err != nil {
 			return View{}, err
 		}
-		if err := s.store.SaveStoryArc(st.row.ID, string(data), s.now().UnixMilli()); err != nil {
-			return View{}, err
-		}
+		encoded := string(data)
+		arcData = &encoded
 	}
 	if st.script != nil {
 		data, err := json.Marshal(st.script)
 		if err != nil {
 			return View{}, err
 		}
-		if err := s.store.SaveScriptState(st.row.ID, string(data), s.now().UnixMilli()); err != nil {
-			return View{}, err
-		}
+		encoded := string(data)
+		scriptData = &encoded
 	}
 	pending, err := json.Marshal(st.pending)
 	if err != nil {
@@ -129,17 +139,22 @@ func (s *Service) persist(st *gameState, logs []string) (View, error) {
 	} else {
 		st.row.RequiredCheck = ""
 	}
-	if st.row, err = s.touch(st.row); err != nil {
-		return View{}, err
+	st.row = s.stamp(st.row)
+	label := timeLabel(s.now())
+	for i := range entries {
+		if entries[i].CreatedAt == 0 {
+			entries[i].CreatedAt = nowMs
+		}
+		if entries[i].TimeLabel == "" {
+			entries[i].TimeLabel = label
+		}
 	}
-	if len(logs) > 0 {
-		entries := make([]store.StoryRow, 0, len(logs))
-		for _, text := range logs {
-			entries = append(entries, store.StoryRow{Speaker: "system", Text: text})
-		}
-		if err := s.AppendStory(st.row.ID, entries); err != nil {
-			return View{}, err
-		}
+	if err := s.store.SaveCampaignState(store.CampaignStateWrite{
+		Campaign: st.row, Characters: characterRows, Combat: combatData,
+		CombatSnapshot: st.snapshot, ClearCombatSnapshot: st.clearSnapshot,
+		StoryArc: arcData, ScriptState: scriptData, Story: entries,
+	}); err != nil {
+		return View{}, err
 	}
 	return s.assembleView(st.row)
 }

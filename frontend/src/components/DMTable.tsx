@@ -575,19 +575,17 @@ function DungeonMasterAvatar({
   // After a one-shot dice clip ends, fall back to idle visually via mode when rolling becomes false.
   return (
     <group>
-      <GltfFigure url={GLB.idle} active={mode === 'idle'} reduced={reduced} loop scale={avatarScale} />
-      <GltfFigure url={GLB.talk} active={mode === 'talk'} reduced={reduced} loop scale={avatarScale} />
-      <GltfFigure url={GLB.dice_succ} active={mode === 'dice_succ'} reduced={reduced} loop={false} scale={avatarScale} />
-      <GltfFigure url={GLB.dice_fail} active={mode === 'dice_fail'} reduced={reduced} loop={false} scale={avatarScale} />
+      <GltfFigure
+        key={mode}
+        url={GLB[mode]}
+        active
+        reduced={reduced}
+        loop={mode === 'idle' || mode === 'talk'}
+        scale={avatarScale}
+      />
     </group>
   );
 }
-
-// Warm the GLB cache as soon as the portrait module loads.
-useGLTF.preload(GLB.idle);
-useGLTF.preload(GLB.talk);
-useGLTF.preload(GLB.dice_succ);
-useGLTF.preload(GLB.dice_fail);
 
 export function DMTable({
   speaking,

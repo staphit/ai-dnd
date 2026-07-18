@@ -229,6 +229,42 @@ func TestShippedModulesCompile(t *testing.T) {
 	}
 }
 
+func TestScriptCompileRejectsBrokenGraph(t *testing.T) {
+	valid := func() ScriptModule {
+		return ScriptModule{
+			ScriptID: "validation-test", Entry: "entry",
+			Nodes: []ScriptNode{
+				{ID: "entry", Stage: "前期", Type: "explore", Title: "入口", Directive: "描述入口。", Choices: []ScriptChoice{{ID: "A", Text: "前進", Next: "end"}}},
+				{ID: "end", Stage: "結局", Type: "ending", Title: "結局", Directive: "故事結束。", EndingKind: "neutral"},
+			},
+		}
+	}
+	tests := []struct {
+		name string
+		edit func(*ScriptModule)
+		want string
+	}{
+		{"invalid stage", func(m *ScriptModule) { m.Nodes[0].Stage = "序章" }, "invalid stage"},
+		{"duplicate choice", func(m *ScriptModule) { m.Nodes[0].Choices = append(m.Nodes[0].Choices, m.Nodes[0].Choices[0]) }, "duplicate choice"},
+		{"unreachable node", func(m *ScriptModule) {
+			m.Nodes = append(m.Nodes, ScriptNode{ID: "lost", Stage: "結局", Type: "ending", Title: "遺失", Directive: "無法抵達。", EndingKind: "bad"})
+		}, "unreachable"},
+		{"no ending route", func(m *ScriptModule) {
+			m.Nodes[0].Choices = append(m.Nodes[0].Choices, ScriptChoice{ID: "B", Text: "迷路", Next: "loop"})
+			m.Nodes = append(m.Nodes, ScriptNode{ID: "loop", Stage: "中期", Type: "explore", Title: "迴圈", Directive: "不斷繞行。", Choices: []ScriptChoice{{ID: "A", Text: "繼續", Next: "loop"}}})
+		}, "cannot reach"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mod := valid()
+			test.edit(&mod)
+			if err := mod.compile(); err == nil || !strings.Contains(err.Error(), test.want) {
+				t.Fatalf("compile error = %v, want containing %q", err, test.want)
+			}
+		})
+	}
+}
+
 func TestScriptCreateSeedsEntryChoices(t *testing.T) {
 	registerTestModule(t)
 	s := newTestService(t)

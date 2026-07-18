@@ -43,7 +43,9 @@ type Tactic struct {
 	Intent   string `json:"intent"`
 }
 
-const tacticsTimeout = 45 * time.Second
+// Enemy targeting is optional flavour: a deterministic mechanical fallback is
+// always available, so it must never hold up a combat turn for tens of seconds.
+const tacticsTimeout = 5 * time.Second
 
 // tacticsPreamble is the whole system framing for the combat-tactics call —
 // deliberately a fraction of the DM preamble.

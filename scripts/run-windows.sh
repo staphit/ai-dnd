@@ -25,7 +25,7 @@ if [ -n "$existing_pid" ]; then
 fi
 
 echo "==> Building frontend"
-( cd "$ROOT/frontend" && npm install && npm run build )
+( cd "$ROOT/frontend" && if [ ! -d node_modules ]; then npm ci; fi && npm run build )
 
 echo "==> Building backend"
 ( cd "$ROOT/backend" && go build -o "$ROOT/backend/bin/dnd-server.exe" ./cmd/server )

@@ -145,6 +145,10 @@ type PreparedDMTurn struct {
 	Actions        map[string]string
 	Round          int
 	IsContinuation bool
+	// TurnToken owns the single in-flight lease; ExpectedVersion is the campaign
+	// document version captured after prepare-time writes.
+	TurnToken       string
+	ExpectedVersion int
 	// InspirationPlayerID names the player whose queued 吟遊激勵 die was rolled
 	// into this check's modifier; the die is only consumed when the turn is
 	// applied, so a failed AI call doesn't burn it.
@@ -178,6 +182,16 @@ func (s *Service) prepareBase(st *gameState) dm.TurnInputV2 {
 func (s *Service) PrepareActionsTurn(id string, actions map[string]string, intents map[string]Intent) (PreparedDMTurn, error) {
 	unlock := s.Lock(id)
 	defer unlock()
+	token, err := s.reserveDMTurn(id)
+	if err != nil {
+		return PreparedDMTurn{}, err
+	}
+	preparedOK := false
+	defer func() {
+		if !preparedOK {
+			s.AbortDMTurn(id, token)
+		}
+	}()
 	st, err := s.loadState(id)
 	if err != nil {
 		return PreparedDMTurn{}, err
@@ -215,7 +229,11 @@ func (s *Service) PrepareActionsTurn(id string, actions map[string]string, inten
 
 	input := s.prepareBase(st)
 	input.Actions = merged
-	return PreparedDMTurn{Input: input, Players: input.Players, Actions: merged, Round: st.row.Round}, nil
+	preparedOK = true
+	return PreparedDMTurn{
+		Input: input, Players: input.Players, Actions: merged, Round: st.row.Round,
+		TurnToken: token, ExpectedVersion: st.row.DocVersion,
+	}, nil
 }
 
 // PrepareCheckTurn turns a player's natural d20 roll into the resolution
@@ -225,6 +243,16 @@ func (s *Service) PrepareActionsTurn(id string, actions map[string]string, inten
 func (s *Service) PrepareCheckTurn(id string, natural int) (PreparedDMTurn, error) {
 	unlock := s.Lock(id)
 	defer unlock()
+	token, err := s.reserveDMTurn(id)
+	if err != nil {
+		return PreparedDMTurn{}, err
+	}
+	preparedOK := false
+	defer func() {
+		if !preparedOK {
+			s.AbortDMTurn(id, token)
+		}
+	}()
 	st, err := s.loadState(id)
 	if err != nil {
 		return PreparedDMTurn{}, err
@@ -293,7 +321,11 @@ func (s *Service) PrepareCheckTurn(id string, natural int) (PreparedDMTurn, erro
 		Total:     total,
 		Success:   total >= st.check.DC,
 	}
-	return PreparedDMTurn{Input: input, Players: input.Players, Round: st.row.Round, IsContinuation: true, InspirationPlayerID: inspirationPlayer}, nil
+	preparedOK = true
+	return PreparedDMTurn{
+		Input: input, Players: input.Players, Round: st.row.Round, IsContinuation: true,
+		InspirationPlayerID: inspirationPlayer, TurnToken: token, ExpectedVersion: st.row.DocVersion,
+	}, nil
 }
 
 // PrepareConclusionTurn builds the post-combat narration turn from a
@@ -301,6 +333,16 @@ func (s *Service) PrepareCheckTurn(id string, natural int) (PreparedDMTurn, erro
 func (s *Service) PrepareConclusionTurn(id, outcome, summary string, final bool) (PreparedDMTurn, error) {
 	unlock := s.Lock(id)
 	defer unlock()
+	token, err := s.reserveDMTurn(id)
+	if err != nil {
+		return PreparedDMTurn{}, err
+	}
+	preparedOK := false
+	defer func() {
+		if !preparedOK {
+			s.AbortDMTurn(id, token)
+		}
+	}()
 	st, err := s.loadState(id)
 	if err != nil {
 		return PreparedDMTurn{}, err
@@ -310,7 +352,11 @@ func (s *Service) PrepareConclusionTurn(id, outcome, summary string, final bool)
 	}
 	input := s.prepareBase(st)
 	input.Conclusion = &dm.ConclusionV2{Outcome: outcome, Summary: clampStr(strings.TrimSpace(summary), 3000), Final: final}
-	return PreparedDMTurn{Input: input, Players: input.Players, Round: st.row.Round, IsContinuation: true}, nil
+	preparedOK = true
+	return PreparedDMTurn{
+		Input: input, Players: input.Players, Round: st.row.Round, IsContinuation: true,
+		TurnToken: token, ExpectedVersion: st.row.DocVersion,
+	}, nil
 }
 
 // StageClear announces a completed act: the scripted stage boundary just
@@ -335,9 +381,16 @@ type ApplyResult struct {
 func (s *Service) ApplyDMTurn(id string, prepared PreparedDMTurn, turn *dm.Turn) (ApplyResult, error) {
 	unlock := s.Lock(id)
 	defer unlock()
+	defer s.AbortDMTurn(id, prepared.TurnToken)
+	if !s.dmTurnCurrent(id, prepared.TurnToken) {
+		return ApplyResult{}, apperr.New(409, "這個地城主回合已失效，請重新送出目前行動。")
+	}
 	st, err := s.loadState(id)
 	if err != nil {
 		return ApplyResult{}, err
+	}
+	if st.row.DocVersion != prepared.ExpectedVersion {
+		return ApplyResult{}, apperr.New(409, "戰役在地城主思考期間已更新；舊裁定未套用，請重新送出目前行動。")
 	}
 
 	// Narrative action rejection: unlock the vetoed players, log, stop.
@@ -359,10 +412,7 @@ func (s *Service) ApplyDMTurn(id string, prepared PreparedDMTurn, turn *dm.Turn)
 			details = append(details, name+"："+issue.Message)
 			rejected = append(rejected, ActionIssue{PlayerID: issue.PlayerID, Message: issue.Message})
 		}
-		if err := s.AppendStory(id, []store.StoryRow{{Speaker: "dm", Text: "【行動駁回】" + strings.Join(details, "；") + "。故事尚未推進；請依照理由修改後重新鎖定。"}}); err != nil {
-			return ApplyResult{}, err
-		}
-		view, err := s.persist(st, nil)
+		view, err := s.persistEntries(st, []store.StoryRow{{Speaker: "dm", Text: "【行動駁回】" + strings.Join(details, "；") + "。故事尚未推進；請依照理由修改後重新鎖定。"}})
 		if err != nil {
 			return ApplyResult{}, err
 		}
@@ -687,10 +737,7 @@ func (s *Service) ApplyDMTurn(id string, prepared PreparedDMTurn, turn *dm.Turn)
 		st.check = check
 	}
 
-	if err := s.AppendStory(id, entries); err != nil {
-		return ApplyResult{}, err
-	}
-	view, err := s.persist(st, nil)
+	view, err := s.persistEntries(st, entries)
 	if err != nil {
 		return ApplyResult{}, err
 	}

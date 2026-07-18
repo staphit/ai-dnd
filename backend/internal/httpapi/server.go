@@ -10,7 +10,9 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -246,6 +248,7 @@ func (s *Server) imageRenderer(requested string) (images.Renderer, error) {
 // the behaviour matches the original method+URL dispatch.
 func (s *Server) Router() http.Handler {
 	r := chi.NewRouter()
+	r.Use(localRequestGuard)
 	r.Use(requestLogger)
 	r.Get("/api/status", s.handleStatus)
 	r.Get("/api/codex/connection", s.handleCodexConnection)
@@ -293,6 +296,55 @@ func (s *Server) Router() http.Handler {
 	r.NotFound(s.serveStatic)
 	r.MethodNotAllowed(s.serveStatic)
 	return r
+}
+
+// localRequestGuard closes the DNS-rebinding/CORS gap around this loopback-only
+// application. Direct local tools may omit Origin, while browsers must use a
+// loopback Host and a loopback Origin for every state-changing request.
+func localRequestGuard(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("Referrer-Policy", "no-referrer")
+		if !isLoopbackAuthority(r.Host) {
+			writeJSON(w, http.StatusForbidden, map[string]string{"error": "僅接受 localhost 連線。"})
+			return
+		}
+		if r.Method != http.MethodGet && r.Method != http.MethodHead && r.Method != http.MethodOptions {
+			if origin := strings.TrimSpace(r.Header.Get("Origin")); origin != "" && !isLoopbackOrigin(origin) {
+				writeJSON(w, http.StatusForbidden, map[string]string{"error": "拒絕非 localhost 網頁送出的請求。"})
+				return
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func isLoopbackOrigin(raw string) bool {
+	u, err := url.Parse(raw)
+	return err == nil && (u.Scheme == "http" || u.Scheme == "https") && isLoopbackHost(u.Hostname())
+}
+
+func isLoopbackAuthority(authority string) bool {
+	authority = strings.TrimSpace(authority)
+	if authority == "" {
+		return false
+	}
+	host := authority
+	if parsed, _, err := net.SplitHostPort(authority); err == nil {
+		host = parsed
+	} else if strings.HasPrefix(authority, "[") && strings.HasSuffix(authority, "]") {
+		host = strings.TrimSuffix(strings.TrimPrefix(authority, "["), "]")
+	}
+	return isLoopbackHost(host)
+}
+
+func isLoopbackHost(host string) bool {
+	host = strings.TrimSpace(host)
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }
 
 // statusRecorder captures the response status code for the access log.

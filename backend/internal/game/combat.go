@@ -74,10 +74,12 @@ func (s *Service) startCombatLocked(st *gameState, enemies []EnemySpec, firstTur
 	}
 	combat := rules.StartCombat(append(rules.PartyCombatants(st.players), s.enemyCombatants(enemies)...), s.dice, firstTurn)
 	st.combat = &combat
-	if data, err := json.Marshal(combatSnapshot{Players: st.players, Combat: combat}); err == nil {
-		// Best-effort: a missing snapshot only disables 戰鬥重來 for this fight.
-		_ = s.store.SaveCombatSnapshot(st.row.ID, string(data), s.now().UnixMilli())
+	data, err := json.Marshal(combatSnapshot{Players: st.players, Combat: combat})
+	if err != nil {
+		return err
 	}
+	encoded := string(data)
+	st.snapshot = &encoded
 	return nil
 }
 
@@ -388,7 +390,7 @@ func (s *Service) Conclude(id string) (ConcludeResult, error) {
 
 	st.players = rules.SyncPlayersFromCombat(st.players, *st.combat)
 	st.combat.Active = false
-	_ = s.store.DeleteCombatSnapshot(id) // combat over; retry window closed
+	st.clearSnapshot = true // combat over; retry window closes in the same commit
 
 	resultLabel := map[string]string{"victory": "隊伍勝利", "defeat": "隊伍戰敗", "withdrawal": "戰鬥中止或撤退"}[outcome]
 	view, err := s.persist(st, []string{fmt.Sprintf("戰鬥結束：%s。%s", resultLabel, summary)})

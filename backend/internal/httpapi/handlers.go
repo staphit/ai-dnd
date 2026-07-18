@@ -227,11 +227,12 @@ type dmResponse struct {
 // dmRequest is the slim /api/dm body: everything else (characters, combat,
 // history, campaign meta) now comes from the server's own store.
 type dmRequest struct {
-	CampaignID  string `json:"campaignId"`
-	Model       string `json:"model"`
-	Effort      string `json:"effort"`
-	DmProvider  string `json:"dmProvider"`
-	Actions     []struct {
+	CampaignID string `json:"campaignId"`
+	Model      string `json:"model"`
+	Effort     string `json:"effort"`
+	DmProvider string `json:"dmProvider"`
+	Demo       bool   `json:"demo"`
+	Actions    []struct {
 		PlayerID string `json:"playerId"`
 		Text     string `json:"text"`
 	} `json:"actions"`
@@ -293,6 +294,9 @@ func (s *Server) handleDm(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, err, http.StatusServiceUnavailable)
 		return
 	}
+	// Every exit after prepare must release the in-flight lease. ApplyDMTurn also
+	// releases it; AbortDMTurn is intentionally idempotent.
+	defer s.Game.AbortDMTurn(storyID, prepared.TurnToken)
 
 	// Scripted campaigns resolve locally: the node graph carries the branches
 	// and their prose, so the turn returns instantly with no AI in the loop.
@@ -301,6 +305,10 @@ func (s *Server) handleDm(w http.ResponseWriter, r *http.Request) {
 		return
 	} else if scripted {
 		s.respondDMTurn(w, storyID, prepared, localTurn, "劇本")
+		return
+	}
+	if req.Demo {
+		s.respondDMTurn(w, storyID, prepared, game.BuildDemoTurn(prepared), "示範 DM")
 		return
 	}
 
@@ -389,18 +397,24 @@ func (s *Server) handleDm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	applied, err := s.Game.ApplyDMTurn(storyID, prepared, output)
+	if err != nil {
+		// The provider thread has seen this answer but the campaign has not. Force
+		// the next request to send a full snapshot instead of compacting from a
+		// state that was deliberately rejected as stale.
+		if s.Prompt != nil && threadAlive {
+			s.Prompt.Reset(storyID)
+		}
+		writeErr(w, err, http.StatusServiceUnavailable)
+		return
+	}
+
 	if s.Prompt != nil && threadAlive {
 		fullRules := rulesMode == dm.RulesFull
 		s.Prompt.Commit(storyID, &dm.TurnSnapshot{
 			Title: prepared.Input.Title, Scene: prepared.Input.Scene,
 			Objective: prepared.Input.Objective, Stakes: prepared.Input.Stakes,
 		}, fullRules, true)
-	}
-
-	applied, err := s.Game.ApplyDMTurn(storyID, prepared, output)
-	if err != nil {
-		writeErr(w, err, http.StatusServiceUnavailable)
-		return
 	}
 
 	// Persist this turn to memory (raw events sync; compaction is async). The
@@ -497,6 +511,9 @@ func (s *Server) respondDMTurn(w http.ResponseWriter, storyID string, prepared g
 		return
 	}
 	publicText := FormatDialogueBreaks(strings.TrimSpace(output.Narration))
+	if output.RequiresCheck && output.Check != nil {
+		publicText += "\n\n檢定：" + output.Check.Character + " 進行 DC " + strconv.Itoa(output.Check.DC) + " 的" + output.Check.Ability + "（" + output.Check.Skill + "）檢定。" + output.Check.Reason
+	}
 	rejected := applied.Rejected
 	if rejected == nil {
 		rejected = []game.ActionIssue{}
@@ -533,8 +550,8 @@ func (s *Server) respondDMTurn(w http.ResponseWriter, storyID string, prepared g
 		View:            &applied.View,
 		Text:            publicText,
 		Choices:         choices,
-		RequiresCheck:   false,
-		Check:           nil,
+		RequiresCheck:   output.RequiresCheck,
+		Check:           output.Check,
 		PrivateMessages: []dm.PrivateMessage{},
 		ActionIssues:    rejected,
 		Model:           model,
@@ -1045,23 +1062,14 @@ func (s *Server) handleReviseStory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	view, err := s.Game.View(storyID)
+	prepared, err := s.Game.PrepareStoryRevision(storyID)
 	if err != nil {
 		writeErr(w, err, http.StatusServiceUnavailable)
 		return
 	}
-	lastDM := ""
-	for i := len(view.Story) - 1; i >= 0; i-- {
-		e := view.Story[i]
-		if e.Speaker == "dm" && (e.Audience == "" || e.Audience == "public") {
-			lastDM = e.Text
-			break
-		}
-	}
-	if strings.TrimSpace(lastDM) == "" {
-		writeJSON(w, http.StatusBadRequest, errorBody{Error: "尚無可重寫的 DM 敘事。"})
-		return
-	}
+	defer s.Game.AbortDMTurn(storyID, prepared.TurnToken)
+	view := prepared.View
+	lastDM := prepared.OriginalText
 
 	selectedModel, err := api.NormalizeModel(jsutil.StrOr(jsutil.Get(body, "model"), ""))
 	if err != nil {
@@ -1111,14 +1119,20 @@ func (s *Server) handleReviseStory(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusServiceUnavailable, errorBody{Error: "DM 未回傳可用敘事。"})
 		return
 	}
-	if err := s.Game.ReplaceLastPublicDM(storyID, newText); err != nil {
-		writeErr(w, err, http.StatusServiceUnavailable)
-		return
+	updated, err := s.Game.ApplyStoryRevision(storyID, prepared, newText)
+	if s.Prompt != nil {
+		// A revision changes what the player considers canonical and also adds a
+		// provider-thread message, so the next turn must send a full snapshot.
+		s.Prompt.Reset(storyID)
 	}
-	updated, err := s.Game.View(storyID)
 	if err != nil {
 		writeErr(w, err, http.StatusServiceUnavailable)
 		return
+	}
+	if s.Memory != nil {
+		_ = s.Memory.Record(storyID, []store.MemoryEvent{{
+			Round: view.Round, Role: "system", Text: "玩家修正了上一則 DM 敘事；正確版本：" + newText,
+		}})
 	}
 	_ = dmID
 	writeJSON(w, http.StatusOK, map[string]any{"view": updated, "text": newText, "model": selectedModel})

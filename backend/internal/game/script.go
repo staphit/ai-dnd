@@ -159,6 +159,9 @@ var scriptModules = func() map[string]*ScriptModule {
 		if err := mod.compile(); err != nil {
 			panic(fmt.Sprintf("script module %s: %v", e.Name(), err))
 		}
+		if _, duplicate := mods[mod.ScriptID]; duplicate {
+			panic(fmt.Sprintf("script module %s: duplicate scriptId %q", e.Name(), mod.ScriptID))
+		}
 		mods[mod.ScriptID] = mod
 	}
 	return mods
@@ -167,17 +170,28 @@ var scriptModules = func() map[string]*ScriptModule {
 // compile indexes nodes and validates the graph so a broken module fails at
 // startup, not mid-campaign.
 func (m *ScriptModule) compile() error {
-	if m.ScriptID == "" || m.Entry == "" || len(m.Nodes) == 0 {
+	if strings.TrimSpace(m.ScriptID) == "" || strings.TrimSpace(m.Entry) == "" || len(m.Nodes) == 0 {
 		return fmt.Errorf("scriptId, entry and nodes are required")
 	}
+	validStages := map[string]bool{"前期": true, "中期": true, "後期": true, "結局": true}
+	validTypes := map[string]bool{"explore": true, "town": true, "combat": true, "boss": true, "treasure": true, "ending": true}
 	m.byID = make(map[string]*ScriptNode, len(m.Nodes))
 	for i := range m.Nodes {
 		n := &m.Nodes[i]
-		if n.ID == "" {
+		if strings.TrimSpace(n.ID) == "" {
 			return fmt.Errorf("node %d has no id", i)
 		}
 		if _, dup := m.byID[n.ID]; dup {
 			return fmt.Errorf("duplicate node id %q", n.ID)
+		}
+		if !validStages[n.Stage] {
+			return fmt.Errorf("node %q has invalid stage %q", n.ID, n.Stage)
+		}
+		if !validTypes[n.Type] {
+			return fmt.Errorf("node %q has invalid type %q", n.ID, n.Type)
+		}
+		if strings.TrimSpace(n.Title) == "" || strings.TrimSpace(n.Directive) == "" {
+			return fmt.Errorf("node %q needs title and directive", n.ID)
 		}
 		m.byID[n.ID] = n
 	}
@@ -187,18 +201,94 @@ func (m *ScriptModule) compile() error {
 	for i := range m.Nodes {
 		n := &m.Nodes[i]
 		if n.Type == "ending" {
+			if n.Stage != "結局" {
+				return fmt.Errorf("ending node %q must use 結局 stage", n.ID)
+			}
 			if n.EndingKind != "good" && n.EndingKind != "bad" && n.EndingKind != "neutral" {
 				return fmt.Errorf("ending node %q needs endingKind good|bad|neutral", n.ID)
+			}
+			if len(n.Choices) != 0 {
+				return fmt.Errorf("ending node %q must not have choices", n.ID)
 			}
 			continue
 		}
 		if len(n.Choices) == 0 {
 			return fmt.Errorf("node %q has no choices", n.ID)
 		}
+		choiceIDs := make(map[string]bool, len(n.Choices))
 		for _, c := range n.Choices {
+			if strings.TrimSpace(c.ID) == "" || strings.TrimSpace(c.Text) == "" || strings.TrimSpace(c.Next) == "" {
+				return fmt.Errorf("node %q has a choice missing id, text or next", n.ID)
+			}
+			if choiceIDs[c.ID] {
+				return fmt.Errorf("node %q has duplicate choice id %q", n.ID, c.ID)
+			}
+			choiceIDs[c.ID] = true
 			if _, ok := m.byID[c.Next]; !ok {
 				return fmt.Errorf("node %q choice %q points at missing node %q", n.ID, c.ID, c.Next)
 			}
+		}
+	}
+
+	// Every authored node must be reachable from entry; otherwise content can
+	// silently ship but never be played.
+	reachable := map[string]bool{m.Entry: true}
+	queue := []string{m.Entry}
+	for len(queue) > 0 {
+		id := queue[0]
+		queue = queue[1:]
+		for _, choice := range m.byID[id].Choices {
+			if !reachable[choice.Next] {
+				reachable[choice.Next] = true
+				queue = append(queue, choice.Next)
+			}
+		}
+	}
+	for _, n := range m.Nodes {
+		if !reachable[n.ID] {
+			return fmt.Errorf("node %q is unreachable from entry %q", n.ID, m.Entry)
+		}
+	}
+
+	// Reverse-walk from all endings. This allows intentional loops, but rejects
+	// a branch trapped in a component that can never finish the adventure.
+	reverse := make(map[string][]string, len(m.Nodes))
+	canEnd := map[string]bool{}
+	queue = queue[:0]
+	for _, n := range m.Nodes {
+		if n.Type == "ending" {
+			canEnd[n.ID] = true
+			queue = append(queue, n.ID)
+		}
+		for _, choice := range n.Choices {
+			reverse[choice.Next] = append(reverse[choice.Next], n.ID)
+		}
+	}
+	if len(queue) == 0 {
+		return fmt.Errorf("module has no ending node")
+	}
+	for len(queue) > 0 {
+		id := queue[0]
+		queue = queue[1:]
+		for _, previous := range reverse[id] {
+			if !canEnd[previous] {
+				canEnd[previous] = true
+				queue = append(queue, previous)
+			}
+		}
+	}
+	for _, n := range m.Nodes {
+		if !canEnd[n.ID] {
+			return fmt.Errorf("node %q cannot reach an ending", n.ID)
+		}
+	}
+
+	for stage, objective := range m.StageObjectives {
+		if !validStages[stage] {
+			return fmt.Errorf("stageObjectives has invalid stage %q", stage)
+		}
+		if strings.TrimSpace(objective.Objective) == "" || strings.TrimSpace(objective.Context) == "" || strings.TrimSpace(objective.Stakes) == "" {
+			return fmt.Errorf("stageObjectives %q needs objective, context and stakes", stage)
 		}
 	}
 	return nil

@@ -6,9 +6,13 @@ export default defineConfig({
   root: '.',
   plugins: [react(), tailwindcss()],
   assetsInclude: ['**/*.glb'],
+  resolve: { dedupe: ['three'] },
   build: {
     outDir: '../web-dist',
     emptyOutDir: true,
+    // The intentionally isolated Three.js renderer is ~1 MB minified; keep
+    // warnings focused on accidental growth in the eager application chunks.
+    chunkSizeWarningLimit: 1100,
     rolldownOptions: {
       output: {
         codeSplitting: {
