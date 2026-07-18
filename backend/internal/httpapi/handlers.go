@@ -298,6 +298,12 @@ func (s *Server) handleDm(w http.ResponseWriter, r *http.Request) {
 	// releases it; AbortDMTurn is intentionally idempotent.
 	defer s.Game.AbortDMTurn(storyID, prepared.TurnToken)
 
+	// Campaign language rides on the prepared input: scripted turns pick the
+	// module's English variants, AI turns get the prompt override.
+	if strings.EqualFold(strings.TrimSpace(req.Language), "en") {
+		prepared.Input.Language = "en"
+	}
+
 	// Scripted campaigns resolve locally: the node graph carries the branches
 	// and their prose, so the turn returns instantly with no AI in the loop.
 	if localTurn, scripted, serr := s.Game.BuildScriptTurn(storyID, prepared); serr != nil {
@@ -355,9 +361,6 @@ func (s *Server) handleDm(w http.ResponseWriter, r *http.Request) {
 		plan = s.Prompt.Plan(storyID, threadAlive)
 	}
 
-	if strings.EqualFold(strings.TrimSpace(req.Language), "en") {
-		prepared.Input.Language = "en"
-	}
 	turnBody := dm.BuildDMRequestV2(prepared.Input)
 	if memoryInline != "" && !prepared.Input.DeltaMode {
 		turnBody = "前情提要（由伺服器注入，只讀）：\n" + memoryInline + "\n\n" + turnBody

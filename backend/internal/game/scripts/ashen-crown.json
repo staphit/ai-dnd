@@ -17,22 +17,27 @@
           "text": "沿著泥痕走向祭壇,仔細檢視痕跡與敲擊來源",
           "next": "altar_traces",
           "alignment": 0,
-          "checkHint": "調查:辨識泥痕的走向與深淺"
+          "checkHint": "調查:辨識泥痕的走向與深淺",
+          "textEn": "Follow the mud trail to the altar and examine the marks and the knocking"
         },
         {
           "id": "B",
           "text": "壓低身形潛入長椅間的陰影,先觀察堂內動靜",
           "next": "shadow_watcher",
           "alignment": 0,
-          "checkHint": "隱匿:無聲穿行於長椅之間"
+          "checkHint": "隱匿:無聲穿行於長椅之間",
+          "textEn": "Slip low into the shadows between the pews and watch the hall first"
         },
         {
           "id": "C",
           "text": "高聲呼喊伊薩克的名字,直奔祭壇",
           "next": "chapel_ambush",
-          "alignment": -1
+          "alignment": -1,
+          "textEn": "Shout Isaac's name and stride straight for the altar"
         }
-      ]
+      ],
+      "titleEn": "The Lightless Chapel",
+      "narrationEn": "The doors swing shut behind you on their own, the groan of the hinges smothered by heavy wood. The candles inside have not gone out — but every flame leans toward the altar, drawn long and thin, as if something is inhaling them. A trail of mud winds from the threshold to the altar, carrying the cold reek of the riverbed. You came for Isaac the mapmaker — he was last seen here, in this lightless chapel. From beneath the altar come three slow knocks: dull, heavy, then dead silence. On the faded mural, a crown sinks into the waves, points downward."
     },
     {
       "id": "altar_traces",
@@ -47,22 +52,27 @@
           "text": "搜索祭壇底座,尋找挪動祭壇的機關",
           "next": "hidden_door",
           "alignment": 0,
-          "checkHint": "調查:找出底座刮痕對應的機關"
+          "checkHint": "調查:找出底座刮痕對應的機關",
+          "textEn": "Search the altar base for the mechanism that moves it"
         },
         {
           "id": "B",
           "text": "先退回堂內陰影,確認附近是否有人監視",
           "next": "shadow_watcher",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Fall back into the shadows first and check whether anyone is watching"
         },
         {
           "id": "C",
           "text": "不管機關,用蠻力直接推開祭壇",
           "next": "chapel_ambush",
           "alignment": -1,
-          "checkHint": "力量/運動:推移沉重石壇"
+          "checkHint": "力量/運動:推移沉重石壇",
+          "textEn": "Forget mechanisms — shove the altar aside by brute force"
         }
-      ]
+      ],
+      "titleEn": "Mud and Knocking",
+      "narrationEn": "The mud trail stops dead three paces from the altar, its end dragged into a long smear — as if someone was hauled beneath the flagstones here. The knocking comes again, this time under your feet: three short, one long, a pause, three short again — faint, but stubbornly repeated. A living person, signalling. The relief on the altar face is water-worn, yet still shows a crown sinking beneath the waves, points down, like an inverted bell. Up close, the seam between the altar base and the floor bears fresh scratches, stone dust not yet settled: this altar was moved, and recently."
     },
     {
       "id": "shadow_watcher",
@@ -77,22 +87,27 @@
           "text": "扼住他的衣領,逼他說出祭壇下的秘密",
           "next": "hidden_door",
           "alignment": -1,
-          "checkHint": "威嚇:碾碎他的僥倖"
+          "checkHint": "威嚇:碾碎他的僥倖",
+          "textEn": "Seize his collar and force out the secret beneath the altar"
         },
         {
           "id": "B",
           "text": "放軟語氣勸他,承諾救他脫離教團",
           "next": "believer_confession",
           "alignment": 1,
-          "checkHint": "說服:動搖他的狂信"
+          "checkHint": "說服:動搖他的狂信",
+          "textEn": "Soften your voice and promise to free him from the Order"
         },
         {
           "id": "C",
           "text": "不留活口,拔刃便攻",
           "next": "chapel_ambush",
-          "alignment": -2
+          "alignment": -2,
+          "textEn": "Leave no witness — draw steel and strike"
         }
-      ]
+      ],
+      "titleEn": "Shadows Between the Pews",
+      "narrationEn": "There is breathing behind the torn curtain of the confessional. You pull it aside: a grey-robed believer huddles in the corner, hood slipped, showing a face far too young, frost-sores not yet healed on his cheekbones. Between his fingers he clutches a tin badge — an inverted crown. \"When the bell tolls, the tide crowns.\" He murmurs it over and over, eyes sliding past you toward the altar, terror laced with something close to rapture. He was left to watch the chapel. He knows things — the altar, what lies below, the mapmaker who was 'invited' down. But his throat could squeeze out a scream at any moment."
     },
     {
       "id": "believer_confession",
@@ -106,22 +121,27 @@
           "id": "A",
           "text": "放他從側門離開,記下他說的叩門禱文",
           "next": "hidden_door",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Let him slip out the side door, and memorise the knocking litany"
         },
         {
           "id": "B",
           "text": "把他捆在告解室,免得他反悔報信",
           "next": "hidden_door",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Tie him up in the confessional so he cannot turn informer"
         },
         {
           "id": "C",
           "text": "追問堂內還有哪些看守,他們藏在何處",
           "next": "organ_loft",
           "alignment": 0,
-          "checkHint": "洞悉:分辨他的話裡有幾分保留"
+          "checkHint": "洞悉:分辨他的話裡有幾分保留",
+          "textEn": "Press him: how many watchers remain, and where do they hide?"
         }
-      ]
+      ],
+      "titleEn": "The Believer's Confession",
+      "narrationEn": "\"My name is Colin.\" He presses the tin badge into your hands as if desperate to be rid of it. \"My father owed the docks. The Order paid his debt, so I… I keep the night watch.\" His voice drops to almost nothing: there is a door beneath the altar, opened by knocking in the order of the litany; other watchers crouch in the dark of the choir, far more devout than he. \"The map-drawing gentleman was taken down to 'hear the bell'. No one who hears the bell comes back up.\" He grips your sleeve, frost-sore fingers ice-cold: \"If you go down — look whether my father's name is carved on the water wall.\""
     },
     {
       "id": "organ_loft",
@@ -136,15 +156,19 @@
           "text": "記下看守的位置,無聲繞回祭壇開啟暗門",
           "next": "hidden_door",
           "alignment": 0,
-          "checkHint": "隱匿:貼著陰影繞過唱詩席"
+          "checkHint": "隱匿:貼著陰影繞過唱詩席",
+          "textEn": "Mark the watchers’ positions, then circle back silently and open the hidden door"
         },
         {
           "id": "B",
           "text": "先摸進唱詩席後的聖器室搜一遍",
           "next": "vestry_cache",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Slip into the vestry behind the choir and search it first"
         }
-      ]
+      ],
+      "titleEn": "The Organ Loft",
+      "narrationEn": "Every step of the loft stair groans underfoot; you climb pressed to the wall, one pause per tread. The organ squats at the centre of the loft like a great beast — its pipes have been filled with lead. This chapel permits not even the wind to speak. From behind the rail the whole hall lies open below: figures do crouch in the choir's shadow — two, and a low-slung hound; from up here the scratches at the altar base join into an arc, the hinge line plain to see. Beneath the organ bench is a damp-swollen register, ink blurred but names still legible — and after every name, someone has drawn a small bell. Behind the choir, a low door stands ajar: the vestry."
     },
     {
       "id": "chapel_ambush",
@@ -212,7 +236,8 @@
             "damageType": "火焰"
           }
         ],
-        "intro": "灰袍自黑暗中無聲圍攏,獵犬頸間的鐘舌輕晃卻不作響——這座禮拜堂裡,連鐘聲都已被獻祭。"
+        "intro": "灰袍自黑暗中無聲圍攏,獵犬頸間的鐘舌輕晃卻不作響——這座禮拜堂裡,連鐘聲都已被獻祭。",
+        "introEn": "The grey robes close in without a sound; the clapper at the hound's neck sways, silent — in this chapel, even the bells have been given up in sacrifice."
       },
       "choices": [
         {
@@ -220,23 +245,28 @@
           "text": "搜索屍體與祭壇周圍,尋找進入地下的門徑",
           "next": "hidden_door",
           "alignment": 0,
-          "checkHint": "調查:檢視屍身信物與祭壇刮痕"
+          "checkHint": "調查:檢視屍身信物與祭壇刮痕",
+          "textEn": "Search the bodies and the altar for the way down"
         },
         {
           "id": "B",
           "text": "檢視信徒的錫徽與禱文,推想教團儀軌",
           "next": "hidden_door",
           "alignment": 0,
-          "checkHint": "宗教:辨識倒懸王冠的教義含義"
+          "checkHint": "宗教:辨識倒懸王冠的教義含義",
+          "textEn": "Study the believer's badge and litany to piece out the Order's rites"
         },
         {
           "id": "C",
           "text": "搜查唱詩席後的聖器室,看看教團留下什麼",
           "next": "vestry_cache",
           "alignment": 0,
-          "checkHint": "調查:循看守的足跡找到聖器室"
+          "checkHint": "調查:循看守的足跡找到聖器室",
+          "textEn": "Search the vestry behind the choir for what the Order left"
         }
-      ]
+      ],
+      "titleEn": "Grey-Robe Ambush",
+      "narrationEn": "The commotion has woken what should have slept. Two grey-robed figures rise from the choir's shadows, their hooded chanting low and urgent, answering the knocking under the earth beat for beat. A hound vaults the pews, half a bell-clapper chained at its neck for a collar — it swings, and makes no sound. In this hall even the dog-chains have been silenced. Candles die one after another, darkness flooding from the back of the hall toward the altar. The grey robes fan out to encircle you, boots grinding wet mud into the flagstones — the same river-stink as the trail at the threshold."
     },
     {
       "id": "vestry_cache",
@@ -259,23 +289,28 @@
             "properties": "塗抹兵刃後,下一次命中對黯蝕造物額外+2傷害"
           }
         ],
-        "intro": "蛛網下的聖龕裡,銀燭台仍亮著沉靜的光——翻檢教堂的人拿走了一切,唯獨漏了這裡。"
+        "intro": "蛛網下的聖龕裡,銀燭台仍亮著沉靜的光——翻檢教堂的人拿走了一切,唯獨漏了這裡。",
+        "introEn": "In the cobwebbed shrine the silver candlesticks still hold a quiet light — whoever stripped this church took everything, and missed only here."
       },
       "choices": [
         {
           "id": "A",
           "text": "帶上銀器,回祭壇設法開啟暗門",
           "next": "hidden_door",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Take the silver and return to the altar to open the hidden door"
         },
         {
           "id": "B",
           "text": "細讀損毀紀錄,弄清教團收集銀器的緣由",
           "next": "hidden_door",
           "alignment": 0,
-          "checkHint": "調查:從紀錄簿裡理出借調的規律"
+          "checkHint": "調查:從紀錄簿裡理出借調的規律",
+          "textEn": "Read the ledger closely — why does the Order gather silver?"
         }
-      ]
+      ],
+      "titleEn": "Relics of the Vestry",
+      "narrationEn": "The vestry door is unlocked — there is nothing left worth locking. The shelves have been stripped bare, the velvet still holding the ghost-prints of candlesticks and chalices like a row of emptied graves. But the old shrine in the corner wears cobwebs, and the looters missed it: a pair of silver candlesticks, a small flask of holy oil with its wax seal intact, a few gold coins pressed beneath the velvet. On the shelf lies a damage ledger, the former sexton's hand almost stubbornly neat: for three months the parish silver has been 'borrowed' piece by piece, none returned. In every entry, the handler's column holds no name — only a small drawn bell."
     },
     {
       "id": "hidden_door",
@@ -290,23 +325,28 @@
           "text": "以細針撬開三簧暗鎖",
           "next": "crypt_cache",
           "alignment": 0,
-          "checkHint": "敏捷/巧手:撬開三簧暗鎖"
+          "checkHint": "敏捷/巧手:撬開三簧暗鎖",
+          "textEn": "Pick the three-tumbler lock with a fine needle"
         },
         {
           "id": "B",
           "text": "低誦門框禱文,依教義順序叩門開鎖",
           "next": "crypt_cache",
           "alignment": 1,
-          "checkHint": "宗教:還原教團的叩門儀式"
+          "checkHint": "宗教:還原教團的叩門儀式",
+          "textEn": "Recite the litany and knock in the order of the rite"
         },
         {
           "id": "C",
           "text": "劈碎門板,強行破門",
           "next": "crypt_cache",
           "alignment": -1,
-          "checkHint": "力量/運動:擊破鐵木門"
+          "checkHint": "力量/運動:擊破鐵木門",
+          "textEn": "Split the boards and break the door down"
         }
-      ]
+      ],
+      "titleEn": "The Door Beneath the Altar",
+      "narrationEn": "The altar base grinds aside, baring an iron-bound door set in the stone, ringed with bell engravings worn bright by hands. Cold, damp air seeps through the seam, smelling of silt and wax. The knocking is close now — just beyond the boards: trembling, hurried, no longer a steady signal but knuckles on wood, strength nearly spent. The door bears a three-tumbler lock, its keyholes arranged like three bells. Inside the frame a line of litany is carved, black mud packed in the grooves: 'Whose voice sinks into water — crown them.' You crouch before the door; the hall is so quiet you can hear each other's hearts."
     },
     {
       "id": "crypt_cache",
@@ -329,7 +369,8 @@
             "properties": "標注下城水道路線與灰袍教團的記號"
           }
         ],
-        "intro": "牆龕的油布下,銀刃映出微光;筆記封皮上,炭筆勾著一頂沉入水線的王冠。"
+        "intro": "牆龕的油布下,銀刃映出微光;筆記封皮上,炭筆勾著一頂沉入水線的王冠。",
+        "introEn": "Beneath the oilcloth a silver blade catches the light; on the notebook cover, charcoal traces a crown sinking below the waterline."
       },
       "choices": [
         {
@@ -337,21 +378,26 @@
           "text": "翻開伊薩克的筆記,對照燈夫的話拼出線索",
           "next": "isaac_notes",
           "alignment": 0,
-          "checkHint": "調查:拼合筆記殘頁與地圖"
+          "checkHint": "調查:拼合筆記殘頁與地圖",
+          "textEn": "Open Isaac's notebook and piece its clues against the lamplighter's words"
         },
         {
           "id": "B",
           "text": "先安撫燈夫,扶他到安全處再細讀筆記",
           "next": "lamplighter_rescue",
-          "alignment": 2
+          "alignment": 2,
+          "textEn": "Calm the lamplighter first, help him somewhere safe, then read"
         },
         {
           "id": "C",
           "text": "拿走財物便走,把燈夫留在地窖",
           "next": "crypt_shortcut",
-          "alignment": -2
+          "alignment": -2,
+          "textEn": "Take the valuables and go — leave the old man in the crypt"
         }
-      ]
+      ],
+      "titleEn": "The Crypt Cache",
+      "narrationEn": "The instant the door opens, a wasted hand grips the frame from the dark. An old man — a lamplighter's livery rotting on his body, knuckles knocked bloody: the second name on the missing list, left in this crypt by the Order to die. He flinches from the light, shrinking into the corner at the sight of your torch, mumbling over and over: \"The map-drawing gentleman — dragged down to hear the bell under the water… I heard it. The bell rings in the water.\" The wall niche is draped in oilcloth; the Order left in haste and took nothing beneath it: a shortsword with a faint sheen, and a leather notebook — on its cover, in charcoal, a crown sinking below the waterline. The mapmaker's hand."
     },
     {
       "id": "lamplighter_rescue",
@@ -365,15 +411,19 @@
           "id": "A",
           "text": "收下提燈,扶他藏進告解室,再細讀筆記",
           "next": "isaac_notes",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Take the lantern, hide him in the confessional, then read the notebook"
         },
         {
           "id": "B",
           "text": "叮囑他躲好等你們回來,即刻翻開筆記",
           "next": "isaac_notes",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Tell him to stay hidden till you return, and open the notebook at once"
         }
-      ]
+      ],
+      "titleEn": "Old Mo the Lamplighter",
+      "narrationEn": "You pass him the waterskin and settle the livery around his shoulders, and slowly the old man's shaking stills. \"Old Mo.\" He pats his own chest. \"Forty years lighting the street lamps — Old Mo.\" In the moment his wits gather, his eyes are startlingly bright. He presses his brass lantern into your hands, every dent in its hood polished smooth by his thumb: \"Take it. The old folk of Lowtown trust the lamp, not the face — they see this, they'll know you're not with the grey robes.\" He hauls himself up by the wall and refuses to come: \"My legs are slow. Don't let me drag you. Go — bring the map-drawing gentleman back up. Old Mo will be waiting under the lamps.\""
     },
     {
       "id": "crypt_shortcut",
@@ -387,15 +437,19 @@
           "id": "A",
           "text": "不作停留,循水聲趕往梯道",
           "next": "flooded_stair",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Do not linger — follow the water sound to the stair"
         },
         {
           "id": "B",
           "text": "回頭望了一眼地窖的方向,仍舊前行",
           "next": "flooded_stair",
-          "alignment": -1
+          "alignment": -1,
+          "textEn": "Glance back once toward the crypt, and walk on"
         }
-      ]
+      ],
+      "titleEn": "The Knocking Behind You",
+      "narrationEn": "You leave the crypt, and the old man's knocking follows — urgent at first, like pleading; then slower, one knock, another, the gaps stretching longer. The passage slopes down between walls cut with bone niches, each holding its remains, every skull turned to face the deep end of the corridor, as if listening. You raise the lamp: the ear canals of every skull have been filled with yellowed wax. Most of the name-plates have rotted; the legible ones all bear the same title: Bell-Listener. At some point, the knocking behind you has stopped. From the end of the passage comes the sound of water."
     },
     {
       "id": "isaac_notes",
@@ -409,16 +463,20 @@
           "id": "A",
           "text": "循筆記地圖,取道水淹梯道前往下城區",
           "next": "flooded_stair",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Follow the notebook’s map down the flooded stair toward Lowtown"
         },
         {
           "id": "B",
           "text": "追問燈夫關於教團與「聽鐘」的細節",
           "next": "flooded_stair",
           "alignment": 1,
-          "checkHint": "洞悉:從瘋語中篩出真話"
+          "checkHint": "洞悉:從瘋語中篩出真話",
+          "textEn": "Press the lamplighter about the Order and the 'bell-hearing'"
         }
-      ]
+      ],
+      "titleEn": "Isaac's Notebook",
+      "narrationEn": "The pages are damp but the ink-lines stay crisp — a mapmaker's hand draws even its fear in order. The first half surveys the Lowtown waterways, lanes and culverts dated one by one; the second half grows hurried: Isaac traced the disappearances down the water, and measured out a sanctum that exists on no map. At its centre, below the tide line, he drew a crown, with two small notes beside it: 'The grey robes wait for the midnight tide.' 'The inscriptions are beyond me — ask Inkgill, the old bookseller in Lowtown.' The last page holds half a sentence: 'They know I measured it—' and the ink drags off in a long streak, as if the pen was torn from his hand."
     },
     {
       "id": "flooded_stair",
@@ -433,16 +491,20 @@
           "text": "涉水強渡,搶在漲潮前穿過梯道捷徑",
           "next": "undercroft_shortcut",
           "alignment": 0,
-          "checkHint": "力量/運動:逆水攀渡濕滑石梯"
+          "checkHint": "力量/運動:逆水攀渡濕滑石梯",
+          "textEn": "Wade the shortcut and beat the tide through the stair"
         },
         {
           "id": "B",
           "text": "沿高處繞行,順路記下沿途的教團記號",
           "next": "wall_signs",
           "alignment": 1,
-          "checkHint": "調查:辨識牆上的灰袍記號"
+          "checkHint": "調查:辨識牆上的灰袍記號",
+          "textEn": "Circle the high way around, noting the Order's marks as you go"
         }
-      ]
+      ],
+      "titleEn": "The Flooded Stair",
+      "narrationEn": "The spiral stair sinks into black water, the surface still as dark glass, dusted with wax crumbs. Standing a moment, you watch the waterline creep soundlessly up the steps — one, then another. This is the forerunner of the great tide: at midnight the water fills, and the paths, the marks, and whoever is still trapped below all go under together. Somewhere far off, water drips with a regularity that is not natural — one drop, another, like a countdown. The stair turns twice beneath the water; at its end a rusted grate lets in dim yellow light: beyond it lies Lowtown's dusk, the fish-oil lamps already lit."
     },
     {
       "id": "undercroft_shortcut",
@@ -456,15 +518,19 @@
           "id": "A",
           "text": "擰乾衣物,踏進下城的燈影",
           "next": "lowtown_streets",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Wring out your clothes and step into the lamplight of Lowtown"
         },
         {
           "id": "B",
           "text": "把錫徽收好,或許能用來冒充信徒",
           "next": "lowtown_streets",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Pocket the badge — it may pass you off as a believer"
         }
-      ]
+      ],
+      "titleEn": "The Drowned Shortcut",
+      "narrationEn": "Black water climbs past your waist, then your chest, cold as teeth. You inch along the iron rings in the wall, the steps beneath slick with years of silt. Something bumps your arm — a tin badge afloat, the inverted crown, its pin still new; nearby drifts half a melted candle with fingerprints pressed in the wax. People passed this way recently, in numbers, heading toward deeper water. The lowest stretch has drowned completely; you fill your lungs and dive, and in those seconds of roaring ears you truly hear it — far away, one muffled toll of a bell. When you squeeze out through the grate, Lowtown's dusk falls on your faces."
     },
     {
       "id": "wall_signs",
@@ -478,16 +544,20 @@
           "id": "A",
           "text": "記熟記號規律,走進下城街市",
           "next": "lowtown_streets",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Fix the pattern in memory and walk into the Lowtown streets"
         },
         {
           "id": "B",
           "text": "順手竄改幾處巡邏樁點,給教團添亂",
           "next": "lowtown_streets",
           "alignment": 0,
-          "checkHint": "巧手:改劃粉痕而不露破綻"
+          "checkHint": "巧手:改劃粉痕而不露破綻",
+          "textEn": "Quietly falsify a few patrol stakes to tangle the Order"
         }
-      ]
+      ],
+      "titleEn": "Marks on the Walls",
+      "narrationEn": "The high walkway is drier, and the chalk marks thicken along the wall-foots: always the inverted crown, but the strokes beneath it differ. Against Isaac's notes you walk and read — one bar beneath the crown points the way, arrows toward deeper water; two dots mark a household, curtains drawn tight; a circle appears at lane-mouths and bridgeheads at regular intervals: patrol stakes. Marks overlay marks; the newest chalk has not yet blurred in the fog — drawn tonight. By the walkway's end, the Order's web across Lowtown has joined itself into a net before your eyes."
     },
     {
       "id": "lowtown_streets",
@@ -501,21 +571,26 @@
           "id": "A",
           "text": "走進溺鐘酒館,買酒打聽失蹤案與教團",
           "next": "drowned_bell_tavern",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Enter the Drowned Bell and buy drinks — and news of the missing and the Order"
         },
         {
           "id": "B",
           "text": "逛夜市補給裝備,順道探聽風聲",
           "next": "night_market",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Browse the night market for gear and listen for rumours"
         },
         {
           "id": "C",
           "text": "下石階往河岸去,查探渡口與鐘塔",
           "next": "riverbank",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Take the steps down to the river to scout the ferry and the bell tower"
         }
-      ]
+      ],
+      "titleEn": "Lowtown at Dusk",
+      "narrationEn": "Lowtown soaks in fog. Fish-oil lamps bloom dim yellow rings of light, and beyond the rings everything is black. Passers-by hug the walls with hoods drawn low, no one looking at anyone; every few steps the chalk mark repeats along the wall — the inverted crown, new powder over old. This is Lowtown's heart: to your left the Drowned Bell tavern burns brightest, a salvaged, tongueless bell hung at its door; to your right the night market's stalls stir in the mist, the black market and pawnshop lamps hidden in the alley behind; down the stone steps lies the riverside — pontoons, ferries, and the black bulk of the bell tower. Here you can resupply, catch your breath, and ask questions. The tower clock's long hand stands one notch closer to midnight."
     },
     {
       "id": "drowned_bell_tavern",
@@ -530,21 +605,26 @@
           "text": "請碼頭工喝酒,套出教團與失蹤案的內情",
           "next": "cult_informant",
           "alignment": 1,
-          "checkHint": "說服:換取碼頭工的真話"
+          "checkHint": "說服:換取碼頭工的真話",
+          "textEn": "Stand the dockhands a round and draw out what they know"
         },
         {
           "id": "B",
           "text": "坐上後桌的牌局,用籌碼換消息",
           "next": "tavern_cards",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Take a seat at the back-table game and trade chips for news"
         },
         {
           "id": "C",
           "text": "向酒保問路,前往舊書商墨鰓的鋪子",
           "next": "old_bookseller",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Ask the barkeep the way to Inkgill's shop"
         }
-      ]
+      ],
+      "titleEn": "The Drowned Bell",
+      "narrationEn": "The tavern's sign is a real bell, hauled up from the riverbed, its body crusted white with water-rust, its tongue long gone. Dockhands crowd a fire-basin over rough liquor, voices held low: \"…chanting in the water, I heard it myself, right under pontoon three.\" \"Every one of the missing vanished on a bell-night. Not one exception.\" The barkeep polishes a cup without lifting his eyes, but when you ask after Inkgill the old bookseller, he juts his chin toward the deep of the foggy lane. In the corner, a grey-cloaked stranger sits before an untouched drink, the shadow of the hood angled always toward your table. At the back, a card game — and in the pile of stakes, something glints tin-dark. Here you can resupply, rest, and buy word."
     },
     {
       "id": "tavern_cards",
@@ -559,21 +639,26 @@
           "text": "接下牌局,贏出她那張水下的圖",
           "next": "cult_informant",
           "alignment": 0,
-          "checkHint": "欺瞞/洞悉:在牌桌上壓過老閘工"
+          "checkHint": "欺瞞/洞悉:在牌桌上壓過老閘工",
+          "textEn": "Play — and win that underwater map out of her"
         },
         {
           "id": "B",
           "text": "故意輸幾把小的,陪她喝酒聽她講古",
           "next": "cult_informant",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Lose a few small hands on purpose, drink with her, and let her talk"
         },
         {
           "id": "C",
           "text": "收手離桌,回街上整備",
           "next": "lowtown_streets",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Fold, leave the table, and go resupply on the street"
         }
-      ]
+      ],
+      "titleEn": "The Back-Table Game",
+      "narrationEn": "The dealer at the back table is a one-eyed old woman, sleeves worn shiny, her shuffle steadier than her years should allow. \"Selda. Thirty years keeping the sluice-gates; now I keep the cards.\" In the pile of stakes a tin badge of the inverted crown lies pressed under coppers — \"Last loser paid his debt with that. Said it would keep him safe. He didn't look kept-safe to me.\" She narrows her one eye at you: \"House rule: beat me once, ask what you like. Thirty years on the gates — which culvert runs where, when the grey robes change watch: the old woman keeps the whole map in her head.\" She pushes the deck across. \"Cut.\""
     },
     {
       "id": "cult_informant",
@@ -588,22 +673,27 @@
           "text": "貼著霧影無聲跟蹤他",
           "next": "printworks_search",
           "alignment": 0,
-          "checkHint": "敏捷/隱匿:霧中綴行不被察覺"
+          "checkHint": "敏捷/隱匿:霧中綴行不被察覺",
+          "textEn": "Shadow him silently through the fog"
         },
         {
           "id": "B",
           "text": "搶步攔下,當街逼問教團據點",
           "next": "alley_ambush",
           "alignment": -1,
-          "checkHint": "威嚇:在他呼救前撬開嘴"
+          "checkHint": "威嚇:在他呼救前撬開嘴",
+          "textEn": "Cut him off and demand the Order's safehouse, here in the street"
         },
         {
           "id": "C",
           "text": "放他離去,回街上補給整備",
           "next": "lowtown_streets",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Let him go, and return to the street to resupply"
         }
-      ]
+      ],
+      "titleEn": "The Order's Informer",
+      "narrationEn": "The grey-cloaked stranger in the corner finally moves. His chair makes no sound as he rises; he slips out sideways into the foggy lane — not fast, almost deliberately so. Trailing him, you watch him pause half a step at every corner, draw chalk from his sleeve, and add a stroke to the wall: the inverted crown, one bar beneath, every arrow pointing toward the river. He is marking a path. The question is for whom: for believers coming home late — or for the fish who just took his bait. The fog thickens; his back flickers ahead of you like a scrap of drifting grey cloth."
     },
     {
       "id": "old_bookseller",
@@ -618,22 +708,27 @@
           "text": "請墨鰓詳解銘文環列的讀法",
           "next": "bookseller_riddle",
           "alignment": 1,
-          "checkHint": "宗教:聽懂加冕儀式的關竅"
+          "checkHint": "宗教:聽懂加冕儀式的關竅",
+          "textEn": "Ask Inkgill to explain how the ringed inscription is read"
         },
         {
           "id": "B",
           "text": "問他教團在下城的眼線都是誰",
           "next": "cult_informant",
           "alignment": 0,
-          "checkHint": "洞悉:判斷墨鰓有無隱瞞"
+          "checkHint": "洞悉:判斷墨鰓有無隱瞞",
+          "textEn": "Ask him who the Order's eyes in Lowtown are"
         },
         {
           "id": "C",
           "text": "道謝離開,回街上整備",
           "next": "lowtown_streets",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Thank him and go back to the street to prepare"
         }
-      ]
+      ],
+      "titleEn": "Inkgill the Old Bookseller",
+      "narrationEn": "The shop is so narrow you enter sideways; books climb both walls from floor to rafters, every one with the wave-warped fore-edge of river-soaked paper. Inkgill peers out from behind a stack, gaunt as a fish skeleton propping up a long gown. \"Isaac?\" He holds the notebook to the lamp and says nothing for a long while. \"The Sunken Crown. The grey robes' relic.\" His voice drops: when the midnight tide fills, the Order will hold a coronation — a living person for a bell-tongue, sunk below, to give the Crown its voice. Isaac measured out where the Crown sleeps, so he was 'invited' down. \"Someone took a rubbing of the Crown's inscription at the derelict printworks in the east quarter. The inscription records what it fears. Get the rubbing first; then we talk about going under.\" The shop sells sundries too — you can rest and resupply here."
     },
     {
       "id": "bookseller_riddle",
@@ -648,15 +743,19 @@
           "text": "依他指點,即刻前往廢印坊找拓片",
           "next": "printworks_search",
           "alignment": 0,
-          "checkHint": "奧秘:記牢逆讀鐘紋的訣竅"
+          "checkHint": "奧秘:記牢逆讀鐘紋的訣竅",
+          "textEn": "Head straight for the printworks to find the rubbing"
         },
         {
           "id": "B",
           "text": "抄下讀法,先回街上整備再動身",
           "next": "lowtown_streets",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Copy down the reading, resupply on the street, then set out"
         }
-      ]
+      ],
+      "titleEn": "The Riddle of the Bell Ring",
+      "narrationEn": "Inkgill draws a half-burnt codex from under the counter and spreads it beneath the lamp. \"The Order's. Snatched from the ash-heap when the puritans burned books, twenty years back.\" Rings of bell-marks circle the page margins. He hands you a lens: every bell's tongue leans to one side, and read together they form a line of pointers. \"Their script is read against the clock.\" You follow the tongues around once, and a litany surfaces: 'Whose voice sinks into water — crown them.' Then his finger reverses, clockwise around the same ring — and the same bells read out a different sentence. He looks up, eyes blinking behind three lenses: \"Read forward, it crowns. Read backward, it uncrowns. Remember that. When the rubbing is in your hands, you will need it.\""
     },
     {
       "id": "night_market",
@@ -671,21 +770,26 @@
           "text": "向老嫗追問拓片與印坊的確切位置",
           "next": "printworks_search",
           "alignment": 0,
-          "checkHint": "說服:讓老嫗吐出實情"
+          "checkHint": "說服:讓老嫗吐出實情",
+          "textEn": "Press the old woman for exactly where the rubbing and printworks are"
         },
         {
           "id": "B",
           "text": "鑽進攤棚後巷,找黑市販子接頭",
           "next": "black_market",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Duck into the back alley and meet the black-marketeer"
         },
         {
           "id": "C",
           "text": "循綠罩燈走進巷底的當鋪",
           "next": "pawnshop",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Follow the green lamp to the pawnshop at the alley’s end"
         }
-      ]
+      ],
+      "titleEn": "Night-Market Shadows",
+      "narrationEn": "The night market crams between two rows of fish-oil lamps — half honest stalls, half stolen goods, the line drawn only by the look in a buyer's eye. Salt fish, lamp oil, second-hand blades and armour scraps: whatever you need to resupply is here, and the soup tent at the row's end has seats for the weary. The old woman selling charms stops mid-reach and lowers her voice: \"You have the look of people asking questions. Heard of the 'crown under the water'? Someone took a rubbing of its inscription at the old printworks in the east quarter. One sheet — and the grey robes are paying high for it now, and paying urgently.\" Her eyes flick toward the bell tower, the way everyone's on this street do. In the alley behind the stalls two lights burn: a black-marketeer's storm-lantern, and the green-shaded lamp of a pawnshop."
     },
     {
       "id": "black_market",
@@ -699,15 +803,19 @@
           "id": "A",
           "text": "採買銀粉銀箭與防水火把,回街整備",
           "next": "lowtown_streets",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Buy silver dust, silver arrows and waterproof torches, then return to the street"
         },
         {
           "id": "B",
           "text": "走向巷口的孤兒,打聽灰袍搬貨的路線",
           "next": "market_urchin",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Approach the orphan at the alley mouth and ask about the grey robes’ hauling route"
         }
-      ]
+      ],
+      "titleEn": "The Storm-Lantern Market",
+      "narrationEn": "The dealer under the storm-lantern is missing two fingers of his right hand; the street calls him Two-Fingers. Crate after crate comes open: silver dust, silver arrowheads, wax-dipped waterproof torches, and a few old but wicked blades. \"Strange stock? These days the hardest currency in Lowtown is silver.\" He weighs a small bag of silver dust. \"The grey robes have bought it up for three months — every scrap, and sunk it all in the river. Ask yourselves: what fears silver so badly it needs a whole river to bury it?\" He nudges the goods toward you: \"That's why I sell dear, and sell fast. Whatever you need — take it while it's here.\" At the alley mouth squats a lookout — an orphan of maybe ten, eyes bright as a cat's in the fog, watching you without blinking."
     },
     {
       "id": "pawnshop",
@@ -721,22 +829,27 @@
           "id": "A",
           "text": "贖回羅盤,承諾把它交還伊薩克本人",
           "next": "lowtown_streets",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Redeem the compass and vow to return it to Isaac himself"
         },
         {
           "id": "B",
           "text": "問老人是誰替教團銷贓,長什麼模樣",
           "next": "cult_informant",
           "alignment": 0,
-          "checkHint": "說服:讓謹慎的老人開口"
+          "checkHint": "說服:讓謹慎的老人開口",
+          "textEn": "Ask the old man who fences for the Order, and what they look like"
         },
         {
           "id": "C",
           "text": "只當閒逛,回街上去",
           "next": "lowtown_streets",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Browse idly and head back to the street"
         }
-      ]
+      ],
+      "titleEn": "The Green-Lamp Pawnshop",
+      "narrationEn": "The pawnshop's green-shaded lamp makes the roomful of old things look drowned. The aged keeper raises his eyes, hears Isaac's name, turns without a word, and takes a brass compass from the shelf. \"Pawned the day before he vanished.\" The ticket pressed beneath it reads, in a clear hand: 'If I do not return, give this to whoever comes looking for me.' The old man pushes the compass across. \"He knew he wasn't coming back. More and more people know that, these days — the grey robes bring keepsakes to sell: shoes, pocket watches, wedding rings. I take none of them.\" Inside the compass lid a few marks are scratched: a string of waterway turnings, and at their end, a small bell. The shop is well-stocked; you may pick out what you can use."
     },
     {
       "id": "market_urchin",
@@ -750,22 +863,27 @@
           "id": "A",
           "text": "給他銀幣,請他領你們到河岸的搬貨點",
           "next": "riverbank",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Pay him silver to lead you to the riverside handling point"
         },
         {
           "id": "B",
           "text": "揪住他衣領,逼他免費帶路",
           "next": "riverbank",
           "alignment": -1,
-          "checkHint": "威嚇:嚇住見慣風浪的街童"
+          "checkHint": "威嚇:嚇住見慣風浪的街童",
+          "textEn": "Grab his collar and make him guide you for free"
         },
         {
           "id": "C",
           "text": "記下路線就好,先回街上整備",
           "next": "lowtown_streets",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Memorise the route and go back to the street to prepare"
         }
-      ]
+      ],
+      "titleEn": "The Lookout Orphan",
+      "narrationEn": "The orphan will only talk once he has backed out of the lantern light, his voice lower than the fog: \"Call me Little Eel.\" He keeps watch for Two-Fingers, and his eyes miss nothing: the grey robes move goods at night — long crates under oilcloth, four bearers to a crate — along the riverbank, over pontoon three, and in through the water-gate under the bell tower. \"Rain-night before last, one of the crates was knocking from inside.\" He says this very fast, as if it burns his mouth. \"Knocked the whole way. They walked on like they heard nothing. Never broke step.\" He tilts his face up to study you and holds out one grubby palm: \"Guiding costs. No coin, and the talk ends here.\""
     },
     {
       "id": "riverbank",
@@ -779,21 +897,26 @@
           "id": "A",
           "text": "涉到橋樁邊,把浮屍撈起來查驗",
           "next": "river_corpse",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Wade to the piles and pull the corpse out for examination"
         },
         {
           "id": "B",
           "text": "沿堤上行,摸向鐘塔下的守衛哨",
           "next": "belltower_watch",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Move up the embankment toward the watch post under the tower"
         },
         {
           "id": "C",
           "text": "走向渡口,跟船伕談一趟水路",
           "next": "smuggler_boat",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Walk to the ferry and bargain with the boatman for a water passage"
         }
-      ]
+      ],
+      "titleEn": "The Fog-Locked Riverbank",
+      "narrationEn": "At the foot of the stone steps the river fog will not thin. The water has risen unnaturally, past the warning line cut in the stone — yet it lies silent, without one lap of a wave, like a beast holding its breath. Something is lodged between the piles of pontoon three — you wade closer: a floating corpse, face down, skirts swaying slowly in the water as if still alive. Upstream, the bell tower stands black in the fog; at its base a water-gate sits half-drowned in the river — the end of the crates' night road. The watch-light at its top is lit: someone up there holds the whole bank in view. A small boat is still tied to the ferry post, an oilcloth-wrapped boatman crouched at the bow, pipe-embers flaring and dying."
     },
     {
       "id": "river_corpse",
@@ -807,21 +930,26 @@
           "id": "A",
           "text": "把她抬上岸好生安置,默禱後再查驗遺物",
           "next": "river_cache",
-          "alignment": 2
+          "alignment": 2,
+          "textEn": "Carry her ashore, lay her out with a prayer, then examine her effects"
         },
         {
           "id": "B",
           "text": "就地搜刮遺物,拿了東西就走",
           "next": "river_cache",
-          "alignment": -1
+          "alignment": -1,
+          "textEn": "Strip the effects where she lies and move on"
         },
         {
           "id": "C",
           "text": "把屍體推回河裡,免得惹上教團",
           "next": "riverbank",
-          "alignment": -2
+          "alignment": -2,
+          "textEn": "Push the body back into the river and stay clear of the Order"
         }
-      ]
+      ],
+      "titleEn": "The Corpse at the Piles",
+      "narrationEn": "The moment you turn her over, the fog seems to grow colder. A middle-aged woman — she is on the missing list: Margo, who washed laundry for half a street. Her ears are filled with wax, yellow and hard-set, sealed tight; two rings of deep-purple bruising circle her wrists — bell-rope marks. She did not drown by accident. She escaped. Prying open her clenched right hand you find a water-swollen wooden tag branded with the bell tower watch's mark: she fled through the tower's water-gate, swam this far, and her strength ended here. The river rises without a sound; her skirts still sway gently in the water. What to do with her is yours to decide."
     },
     {
       "id": "river_cache",
@@ -842,22 +970,27 @@
             "properties": "標注鐘塔水門守衛的換班空隙,潛入鐘塔時可佔先機"
           }
         ],
-        "intro": "防水油囊裡,銀懷錶的指針停在差一刻午夜——她把逃生的路畫好了,只是自己沒用上。"
+        "intro": "防水油囊裡,銀懷錶的指針停在差一刻午夜——她把逃生的路畫好了,只是自己沒用上。",
+        "introEn": "In the waterproof pouch, the silver watch has stopped at a quarter to midnight — she drew her escape route perfectly; she simply never got to use it."
       },
       "choices": [
         {
           "id": "A",
           "text": "循草圖所指,前往鐘塔守衛哨",
           "next": "belltower_watch",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Follow the sketch to the bell tower watch post"
         },
         {
           "id": "B",
           "text": "帶著發現回街上,整備後再動身",
           "next": "lowtown_streets",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Take your findings back to the street and prepare before moving"
         }
-      ]
+      ],
+      "titleEn": "The Washerwoman's Oilskin",
+      "narrationEn": "Bound flat against her waist is a waterproof oilskin pouch, its knot swollen tight — the kind of knot a washerwoman ties all her life. Its contents come out one by one: a small bag of savings, not much, long in the gathering; a silver pocket watch, two children's pet-names engraved inside the lid, hands stopped at a quarter to midnight; and half a charcoal sketch — the lines shaky but unmistakable: the position of the tower's water-gate, the hour the guard changes, and the stretch of stair left empty at the change. She drew her way out and hid it against her skin, and did not let go even in death. That half-sheet of map is in your hands now."
     },
     {
       "id": "belltower_watch",
@@ -871,22 +1004,27 @@
           "id": "A",
           "text": "硬闖石門,與守鐘人正面對決",
           "next": "belltower_keeper",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Storm the stone door and face the Bell-Keeper head-on"
         },
         {
           "id": "B",
           "text": "憑錫徽或換班草圖冒充守衛,混上塔去",
           "next": "belltower_top",
           "alignment": 0,
-          "checkHint": "欺瞞:對上守鐘人的盤問"
+          "checkHint": "欺瞞:對上守鐘人的盤問",
+          "textEn": "Bluff your way in with the tin badge or the shift sketch"
         },
         {
           "id": "C",
           "text": "不冒此險,退回河岸另做打算",
           "next": "riverbank",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Refuse the risk and fall back to the riverbank"
         }
-      ]
+      ],
+      "titleEn": "The Bell Tower Watch",
+      "narrationEn": "A fire-basin burns before the stone door at the tower's base, and a figure paces through the light — a head taller than any ordinary man, shoulders draped in armour strung from broken bell-shards. Each step sets the shards chiming against each other, softly, deliberately muffled. The Bell-Keeper. At his belt hangs a great ring of keys: the water-gate's, the tower stair's, and several black, heavy ones that open no door you know. Beside the basin stands the duty rack with the watchmen's name-tags; the tower windows run black all the way up, only the top watch-light burning. Inside this tower is whatever the Order will not keep in the waterways — and its top commands the whole bank and far beyond. Force the door, talk or trick your way in — or leave the risk alone? You confer in lowered voices in the fog."
     },
     {
       "id": "belltower_keeper",
@@ -945,22 +1083,27 @@
             "damageType": "揮砍"
           }
         ],
-        "intro": "鐘片甲在黑暗中嘩然張開——守鐘人掄起鐘杵,沉默地堵住塔梯,他身後的塔,一聲也不許響。"
+        "intro": "鐘片甲在黑暗中嘩然張開——守鐘人掄起鐘杵,沉默地堵住塔梯,他身後的塔,一聲也不許響。",
+        "introEn": "The shard-armour flares open in the dark — the Bell-Keeper hefts his mallet and blocks the stair in silence. The tower at his back is not permitted a single sound."
       },
       "choices": [
         {
           "id": "A",
           "text": "拾起鑰匙串,搜查塔中層的鐘室密匣",
           "next": "belltower_cache",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Take the key ring and search the bell-chamber strongbox on the middle floor"
         },
         {
           "id": "B",
           "text": "不作停留,直接登上塔頂哨位",
           "next": "belltower_top",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Do not linger — climb straight to the top watch post"
         }
-      ]
+      ],
+      "titleEn": "The Bell-Keeper",
+      "narrationEn": "The Bell-Keeper does not challenge you, and does not sound the alarm — he simply kicks the fire-basin over, sparks fountaining into your eyes, and his shard-armour flares open in the dark with a rush, like a river-beast raising its fin. He swings up the great bell-mallet by the door bare-handed and walks the fight backward, step by step, onto the tower stair: in the narrow spiral he stands above you, and every blow falls with the whole weight of his arm behind it. Strange, though — even at the fiercest he calls for no one. Something in this tower is precious enough that he would rather die alone on the stair than let anyone outside hear a sound."
     },
     {
       "id": "belltower_cache",
@@ -983,22 +1126,27 @@
             "properties": "可開啟聖所外圍的水門,潛入時多一條路徑"
           }
         ],
-        "intro": "啞鐘的鐘腹裡吊著鐵匣——教團把對付王冠的銀鎚,藏在他們自己的鐘裡。"
+        "intro": "啞鐘的鐘腹裡吊著鐵匣——教團把對付王冠的銀鎚,藏在他們自己的鐘裡。",
+        "introEn": "Inside the mute bell hangs an iron box — the Order hid its silver hammer, the weapon against the Crown, inside its own bell."
       },
       "choices": [
         {
           "id": "A",
           "text": "收好銀鎚與鑰匙,登上塔頂看清全局",
           "next": "belltower_top",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Take the hammer and the key, and climb to the top for the full picture"
         },
         {
           "id": "B",
           "text": "下塔回河岸,備妥了再走水路",
           "next": "riverbank",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Descend to the riverbank and take the water route once ready"
         }
-      ]
+      ],
+      "titleEn": "The Bell-Chamber Strongbox",
+      "narrationEn": "In the bell chamber the great bell hangs mute, its tongue removed, mouth turned down like a mouth that cannot speak. You raise the lamp into its belly — a strongbox hangs inside on iron chains, hidden in the one place in all Lowtown no hand would reach. The oldest key on the ring opens it. The contents explain themselves: a silver hammer, the ghost-shapes of candlesticks and chalices still visible in the cast — the parish silver the Order collected was melted here; they forged their own weapon against the Crown, and dared not keep it in the waterways. A bag of gold. And a black iron key, strangely toothed, its bow cast in the pattern of a water-gate. What the Bell-Keeper guarded was the Order's own way out."
     },
     {
       "id": "belltower_top",
@@ -1012,15 +1160,19 @@
           "id": "A",
           "text": "記下巡邏間隙,下塔直奔水道鏽閘",
           "next": "sewer_gate",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Memorise the patrol gaps and descend straight for the rusted sluice"
         },
         {
           "id": "B",
           "text": "下塔回下城街市,做最後的整備",
           "next": "lowtown_streets",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Go back down to the streets for one last resupply"
         }
-      ]
+      ],
+      "titleEn": "The Top Watch Post",
+      "narrationEn": "The wind at the top carries the river's stink up into your faces. Beyond the watch-light all Lowtown spreads out under the fog — and for the first time you see the river's truth: the waterways beneath Lowtown do not each run to the sea. They circle one point. There the water runs deep black, and even the fog bends around it, as if the whole river turned one silent eddy there. Isaac's 'sanctum that should not exist' sleeps beneath that eddy's heart. Strings of grey-robe lanterns are converging on it along every waterway, line after line; the flat-bottomed patrol skiffs run to a count, their gaps plain to read. You look back along the lights to the clock tower: the long hand stands two notches from midnight."
     },
     {
       "id": "printworks_search",
@@ -1035,23 +1187,28 @@
           "text": "搜索坍塌的印版架,翻找藏起的拓片",
           "next": "rubbing_cache",
           "alignment": 0,
-          "checkHint": "調查:從翻動痕跡找出暗格"
+          "checkHint": "調查:從翻動痕跡找出暗格",
+          "textEn": "Search the collapsed plate racks for the hidden rubbing"
         },
         {
           "id": "B",
           "text": "破譯牆上鐘紋刻痕,推算拓片藏處",
           "next": "rubbing_cache",
           "alignment": 0,
-          "checkHint": "奧秘:解讀鐘紋的環列規律"
+          "checkHint": "奧秘:解讀鐘紋的環列規律",
+          "textEn": "Decipher the wall carvings and deduce where the rubbing is hidden"
         },
         {
           "id": "C",
           "text": "察覺殺氣,搶先向暗處出手",
           "next": "alley_ambush",
           "alignment": 0,
-          "checkHint": "洞悉:辨出埋伏的呼吸聲"
+          "checkHint": "洞悉:辨出埋伏的呼吸聲",
+          "textEn": "Trust the prickle on your neck and strike first into the dark"
         }
-      ]
+      ],
+      "titleEn": "The Derelict Printworks",
+      "narrationEn": "Half the printworks' roof has fallen in; night fog drips through the gap and pools on the rows of type-trays like sheets of black mirror. The air tastes of paper-ash and lead; every step raises fine white dust. This shop once printed the Order's litany-sheets — the whole clay wall along one side is carved with bell-rings, circle within circle, the groove-edges ragged, rubbed out and recut over and over, each cut deeper than the last. The plate racks have been searched, and recently: fresh finger-tracks in the dust, hurried ones, and whoever it was did not find what they wanted — otherwise they would not have pried up even the bottom trays. The rubbing is still in this building. In the dark hangs the stillness of being watched."
     },
     {
       "id": "rubbing_cache",
@@ -1072,22 +1229,27 @@
             "properties": "佩戴者對黯蝕傷害的豁免檢定+1"
           }
         ],
-        "intro": "油布展開,拓片上的王冠輪廓像從紙背滲出水漬——銘文邊緣,有人以血補了三個字:逆著敲。"
+        "intro": "油布展開,拓片上的王冠輪廓像從紙背滲出水漬——銘文邊緣,有人以血補了三個字:逆著敲。",
+        "introEn": "The oilcloth opens: on the rubbing, the crown's outline seeps through like a water-stain — and at its edge, three words written in blood: strike them backward."
       },
       "choices": [
         {
           "id": "A",
           "text": "攜拓片直赴水道閘門,搶在午夜前潛入",
           "next": "alley_ambush",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Take the rubbing straight to the sluice and slip in before midnight"
         },
         {
           "id": "B",
           "text": "先回街上休整補給,再動身下水道",
           "next": "lowtown_streets",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Return to the street to rest and resupply, then go under"
         }
-      ]
+      ],
+      "titleEn": "The Crown Rubbing",
+      "narrationEn": "The hidden slot is in the base of the plate rack. Oilcloth peels back layer by layer, and the rubbing finally sees light: the crown's outline pressed across the whole sheet, and where the ink runs deepest the crown seems to seep through from the back of the paper like a water-stain. The inscription rings the crown's rim in a variant bell-script — read backward, it surfaces phrase by phrase: 'The Crown fears silver. Silver upon its form, and the form shall flinch. Ring the bells in reverse, and its avatar stands rigid, a bell that has lost its tongue.' At the margin, whoever took this rubbing added three words in blood, the strokes shaking badly: 'Strike them backward.' In the slot lie a purse of gold and a warding charm — the rubbing-taker never came back for them. Outside in the fog lane, at some point, there are more footsteps than there were."
     },
     {
       "id": "alley_ambush",
@@ -1155,7 +1317,8 @@
             "damageType": "鈍擊"
           }
         ],
-        "intro": "霧忽然稠了。兩端巷口的燈同時熄滅,刀光比警覺更快一步。"
+        "intro": "霧忽然稠了。兩端巷口的燈同時熄滅,刀光比警覺更快一步。",
+        "introEn": "The fog thickens without warning. The lamps at both ends of the lane die together — and the knife-light moves one step ahead of your guard."
       },
       "choices": [
         {
@@ -1163,22 +1326,27 @@
           "text": "揪起倖存者,逼問聖所入口與守衛部署",
           "next": "sewer_gate",
           "alignment": -1,
-          "checkHint": "威嚇:讓他明白沉默的代價"
+          "checkHint": "威嚇:讓他明白沉默的代價",
+          "textEn": "Haul up a survivor and force out the sanctum entrance and its guard posts"
         },
         {
           "id": "B",
           "text": "為重傷的敵人止血,以救命之恩換情報",
           "next": "sewer_gate",
-          "alignment": 2
+          "alignment": 2,
+          "textEn": "Staunch a dying enemy's wounds and trade the debt for information"
         },
         {
           "id": "C",
           "text": "搜屍取走骨牌,循教團記號前往閘門",
           "next": "sewer_gate",
           "alignment": 0,
-          "checkHint": "調查:讀懂骨牌上的閘門開法"
+          "checkHint": "調查:讀懂骨牌上的閘門開法",
+          "textEn": "Search the bodies for their bone tokens and follow the Order’s marks to the sluice"
         }
-      ]
+      ],
+      "titleEn": "Ambush in the Narrow Lane",
+      "narrationEn": "The fog thickens all at once. The lamp at the lane-mouth ahead dies; you turn — the one behind has died too. Figures pour from the dark at both ends: grey-robed bruisers bar the way with staves, and a thinner, faster shadow slides along the wall, its blade showing only one line of cold light in the fog. They do not call out, do not demand your purses. Their eyes fix on one thing only: the satchel holding the rubbing and the notebook. The assassin's steps circle whoever carries it, like water circling a stone. The fog presses low; beyond three paces there are only outlines, and every flash of the knife is faster than the eye that catches it."
     },
     {
       "id": "smuggler_boat",
@@ -1192,22 +1360,27 @@
           "id": "A",
           "text": "付足船資,由水路直抵鏽閘",
           "next": "sewer_gate",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Pay the full fare and go by water straight to the sluice"
         },
         {
           "id": "B",
           "text": "跟他講價,許諾回程再付一半",
           "next": "sewer_gate",
           "alignment": 0,
-          "checkHint": "說服:讓精明的船伕鬆口"
+          "checkHint": "說服:讓精明的船伕鬆口",
+          "textEn": "Haggle — half now, half on the return trip"
         },
         {
           "id": "C",
           "text": "改變主意,回河岸另尋門路",
           "next": "riverbank",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Change your minds and go back to the bank for another way"
         }
-      ]
+      ],
+      "titleEn": "The Smuggler’s Boat",
+      "narrationEn": "The boatman shows half a face out of the oilcloth and jabs his pipe toward the black water upstream: \"Going there?\" He calls himself Uncle Reed; he has ferried night-cargo half his life and knows every crooked pile on the riverbed. \"I take you to the rusted sluice. Not one stroke farther.\" On price, his raised finger will not bend; at mention of the eddy's heart his pipe goes out: \"That place — you put an oar in, and the water feels soft.\" The boat leaves the bank. Halfway, Uncle Reed speaks suddenly, his voice folded into the creak of the scull: \"These last nights there've been lights under the water. In rows. Like street-lamps. The old folk say, the night the river lights up—\" he pauses, \"—is the night of the great tide.\" Ahead of the bow, the sluice's black shape lifts out of the fog, and he is already turning the boat."
     },
     {
       "id": "sewer_gate",
@@ -1222,16 +1395,20 @@
           "text": "拆解鏽死的閘門絞盤,撬開水閘",
           "next": "undertow_passage",
           "alignment": 0,
-          "checkHint": "敏捷/巧手:拆開鏽蝕絞盤"
+          "checkHint": "敏捷/巧手:拆開鏽蝕絞盤",
+          "textEn": "Break down the rusted winch and force the sluice open"
         },
         {
           "id": "B",
           "text": "深吸一口氣,潛過淹沒的涵洞",
           "next": "undertow_passage",
           "alignment": 0,
-          "checkHint": "力量/運動:閉氣潛渡黑水涵洞"
+          "checkHint": "力量/運動:閉氣潛渡黑水涵洞",
+          "textEn": "Fill your lungs and dive the flooded culvert"
         }
-      ]
+      ],
+      "titleEn": "The Rusted Sluice",
+      "narrationEn": "The sluice bars the waterway's throat, half sunk in black water, rusted into one flesh with the rock. Through the gaps between its bars seeps a sound — like water at first, but heard true, it is voices: many of them, in unison, chanting the same bell-litany, phrase folding over phrase, rising from the tunnel's far depths. The waterline climbs the bars as you watch: one rust-mark goes under, then another. This is the last way in before the tide fills; when the midnight bell sounds, this spot becomes riverbed. The winch is rusted solid — but below the surface, a culvert mouth gapes black in the rock, fully flooded, passing to the sluice's far side."
     },
     {
       "id": "undertow_passage",
@@ -1246,21 +1423,26 @@
           "text": "撬開鐵柵,探那間磷光龕室",
           "next": "drowned_warden",
           "alignment": 0,
-          "checkHint": "巧手:無聲撬開鏽柵"
+          "checkHint": "巧手:無聲撬開鏽柵",
+          "textEn": "Pry open the grille and search the phosphor-lit shrine"
         },
         {
           "id": "B",
           "text": "順主流前行,先看清壁上的潮汐刻度",
           "next": "tide_gauge",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Follow the main flow and read the tide graduations first"
         },
         {
           "id": "C",
           "text": "不繞路也不停留,循誦經聲直下",
           "next": "drowned_gallery",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "No detours, no pauses — go straight down toward the chanting"
         }
-      ]
+      ],
+      "titleEn": "The Undertow Passage",
+      "narrationEn": "Beyond the sluice the water stands thigh-deep. An undercurrent runs along the bed, tugging your ankles in pulses, like a hand testing your weight from below. The chanting carries along the water, now near, now far, its direction impossible to fix. Ahead the passage forks: down the main flow the water-sound swells, and a row of graduations is cut into the wall — the Order's tide-measure; the other branch is closed by an iron grille, pale phosphor-light seeping between its bars, showing a small shrine-chamber cut into the rock — and before the shrine stands a human-shaped shadow, unmoving. The water parts around its waist, and still it does not move. In the phosphor-glow, something silver glints. Whether that detour is fortune or ruin is yours to weigh."
     },
     {
       "id": "drowned_warden",
@@ -1949,17 +2131,26 @@
     "中期": {
       "objective": "在下城區蒐集教團與沉沒王冠的線索,找到進入水道聖所的途徑",
       "context": "伊薩克被灰袍教團擄往水道深處;下城的酒館、夜市與舊書商各握有一段真相,王冠拓片記著它的弱點。",
-      "stakes": "午夜大潮將至;拖得越久,教團的儀式準備越完備,下城的水位越高。"
+      "stakes": "午夜大潮將至;拖得越久,教團的儀式準備越完備,下城的水位越高。",
+      "objectiveEn": "Gather leads on the Order and the Sunken Crown in Lowtown, and find a way into the waterway sanctum",
+      "contextEn": "Isaac has been dragged deep into the waterways by the grey-robed Order; the tavern, night market and old bookseller of Lowtown each hold a piece of the truth, and the crown rubbing records its weakness.",
+      "stakesEn": "The midnight tide is coming; the longer you take, the readier the ritual — and the higher the water climbs through Lowtown."
     },
     "後期": {
       "objective": "潛入水道聖所,在加冕儀式完成前救出伊薩克並阻止沉沒王冠",
       "context": "聖所就在水道深處,主教瑪列克正主持儀式;伊薩克被縛於池畔,王冠在池心低語。",
-      "stakes": "儀式一旦完成,王冠將奪走活人的鐘聲,下城半數街巷會沉入大潮。"
+      "stakes": "儀式一旦完成,王冠將奪走活人的鐘聲,下城半數街巷會沉入大潮。",
+      "objectiveEn": "Infiltrate the waterway sanctum, rescue Isaac before the coronation rite completes, and stop the Sunken Crown",
+      "contextEn": "The sanctum lies deep in the waterways, where Bishop Malek leads the rite; Isaac is bound at the poolside while the Crown whispers from the water.",
+      "stakesEn": "Once the rite completes, the Crown will take the bells from the living, and half the streets of Lowtown will drown in the tide."
     },
     "結局": {
       "objective": "見證抉擇的結果,為這一夜畫下句點",
       "context": "王冠與伊薩克的命運已定;剩下的,是你們要以什麼身分走出禮拜堂。",
-      "stakes": "結局已定,不可回頭。"
+      "stakes": "結局已定,不可回頭。",
+      "objectiveEn": "Witness what your choices have wrought, and bring this night to its close",
+      "contextEn": "The fates of the Crown and of Isaac are sealed; what remains is who you will be as you walk out of the chapel.",
+      "stakesEn": "The ending is set. There is no turning back."
     }
   }
 }
