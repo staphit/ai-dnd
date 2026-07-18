@@ -16,21 +16,26 @@
           "id": "A",
           "text": "直奔燈光轉紅的第十三節車廂",
           "next": "car13_red",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Run straight for Car Thirteen, where the lights turned red"
         },
         {
           "id": "B",
           "text": "盯住車票,看名字究竟要寫成什麼",
           "next": "ticket_omen",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Watch the ticket, and see what the name means to become"
         },
         {
           "id": "C",
           "text": "攔住臉色發白的列車長,要他解釋",
           "next": "conductor_lie",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Stop the white-faced conductor and demand an explanation"
         }
-      ]
+      ],
+      "titleEn": "Tremor Over the Rift",
+      "narrationEn": "The Blood Moon Express lurches hard as it crosses the trestle over the Rift; the rhythm of the wheels stumbles half a beat, as if something beneath the rails has turned over in its sleep. The tannoy crackles into life — and says nothing. Then every lamp in Car Thirteen turns red at once, and the red light comes flooding up the aisle to stain the ticket in your hand: the passenger's name in gilt lettering is squirming, stroke by slow stroke, rewriting itself into yours. From the far end of the corridor comes a muffled thump, like a heavy thing dropped onto carpet. The smell of rust rises through the air, and the beat of the wheels suddenly sounds very much like a countdown."
     },
     {
       "id": "car13_red",
@@ -44,22 +49,27 @@
           "id": "A",
           "text": "撞開上鎖的包廂門",
           "next": "sealed_room",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Break down the locked compartment door"
         },
         {
           "id": "B",
           "text": "貼門聽動靜,再從門縫窺看",
           "next": "sealed_room",
           "alignment": 0,
-          "checkHint": "感知檢定"
+          "checkHint": "感知檢定",
+          "textEn": "Press your ear to the door, then peer through the crack"
         },
         {
           "id": "C",
           "text": "折返去找列車長拿萬能鑰匙",
           "next": "conductor_lie",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Turn back and fetch the conductor's master key"
         }
-      ]
+      ],
+      "titleEn": "Car Thirteen",
+      "narrationEn": "In Car Thirteen the red lamps hum, plating the velvet seats with a film like thin blood. The passengers are simply gone. Only a birdcage stands empty on the luggage rack, its little door bent open from the inside. Midway down the aisle, the first-class compartment is locked, and from under its door seeps a line of deeper red — not lamplight, but blood, crawling slowly along the nap of the carpet. A wooden 'Do Not Disturb' sign hangs on the handle, still swinging faintly, as if someone touched it only a moment ago."
     },
     {
       "id": "ticket_omen",
@@ -73,15 +83,19 @@
           "id": "A",
           "text": "拿著車票去質問列車長名單的事",
           "next": "conductor_lie",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Take the ticket to the conductor and demand answers about the manifest"
         },
         {
           "id": "B",
           "text": "收好車票,趕往第十三節車廂",
           "next": "car13_red",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Pocket the ticket and hurry to Car Thirteen"
         }
-      ]
+      ],
+      "titleEn": "The Squirming Ticket",
+      "narrationEn": "You raise the ticket to the red light. The printed passenger's name is already half devoured, and new strokes are seeping up from deep in the grain of the paper, the ink wet and gleaming — it is, unmistakably, your name. A small line has appeared in the corner of the stub: 'Car Thirteen. One way.' Stranger still is the passenger number on the back — twenty-seven. You clearly remember the notice on the platform: twenty-six passengers on this service. The extra one is now in your hand."
     },
     {
       "id": "conductor_lie",
@@ -95,21 +109,26 @@
           "id": "A",
           "text": "逼他交出完整乘客名單",
           "next": "manifest_page",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Press him to hand over the full passenger manifest"
         },
         {
           "id": "B",
           "text": "不再糾纏,逕自前往命案車廂",
           "next": "sealed_room",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Let it drop and head straight for the death car"
         },
         {
           "id": "C",
           "text": "記下他缺扣的袖口,再去第十三節車廂",
           "next": "sealed_room",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Mark the missing cuff button, then go on to Car Thirteen"
         }
-      ]
+      ],
+      "titleEn": "The Conductor's Script",
+      "narrationEn": "The conductor is a tall, thin man, his uniform so crisp it might be nailed to him, a pocket watch clutched in one white glove. 'On this service, no one boarded and no one alighted along the Rift.' He repeats it like a recitation, the watch case clicking open and shut. You notice a button missing from his left cuff, the thread frayed to a fuzz — jarring against that immaculate uniform. When Car Thirteen is mentioned, his throat bobs: 'That car... takes no passengers tonight.' The snap of the closing watch case swallows the tail of his sentence."
     },
     {
       "id": "manifest_page",
@@ -123,15 +142,19 @@
           "id": "A",
           "text": "帶著名單直奔第十三節車廂",
           "next": "sealed_room",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Take the manifest and go straight to Car Thirteen"
         },
         {
           "id": "B",
           "text": "趁亂撕下這頁名單收好",
           "next": "sealed_room",
-          "alignment": -1
+          "alignment": -1,
+          "textEn": "In the confusion, tear out the page and keep it"
         }
-      ]
+      ],
+      "titleEn": "The Extra Name",
+      "narrationEn": "The manifest is a yellowed page of ruled paper, twenty-six names in tidy rows. But at the very bottom, a twenty-seventh line has appeared out of nowhere: the ink wet and shining, the hand identical to all the rest, spelling out 'Vesper Vane'. The conductor stares at the line, his knuckles creaking inside their gloves: 'That line... was not there last night.' The edge of the page carries a faint ring of scorch, as if moonlight had singed it. You notice that the ink of the twenty-seventh line has still not dried."
     },
     {
       "id": "sealed_room",
@@ -145,21 +168,26 @@
           "id": "A",
           "text": "掰開死者攥緊的手,細驗屍身",
           "next": "button_clue",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Pry open the dead man's fist and examine the body"
         },
         {
           "id": "B",
           "text": "走廊盡頭傳來腳步聲,立刻追出去",
           "next": "corridor_shadows",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Footsteps at the end of the corridor — chase them at once"
         },
         {
           "id": "C",
           "text": "安撫圍在門外的乘客,逐一問話",
           "next": "widow_witness",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Calm the passengers crowding the doorway and question them one by one"
         }
-      ]
+      ],
+      "titleEn": "Death Under Lock",
+      "narrationEn": "The instant the door opens, the smell of rust rolls out, mixed with cold incense. The royal envoy lies sprawled on the compartment carpet, a long thin slit across his throat; the blood has walked half the room. The window is latched from within, the door lock intact — this is a room sealed from the inside. His right hand is clenched tight, a glint of silver showing between the fingers. Of the Starfire Casket that stood enshrined on the luggage rack, nothing remains but a ring pressed into the velvet. The sound of the wheels rises through the floor, one beat, another — as if counting down for someone."
     },
     {
       "id": "button_clue",
@@ -176,22 +204,27 @@
             "properties": "死者遺留的罪證,刻月輪紋章;可比對乘務制服缺扣,對質兇手時作為關鍵信物"
           }
         ],
-        "intro": "死者的手心裡,躺著他留給世間的最後一句話。"
+        "intro": "死者的手心裡,躺著他留給世間的最後一句話。",
+        "introEn": "In the dead man's palm lies the last sentence he left the world."
       },
       "choices": [
         {
           "id": "A",
           "text": "收好鈕扣,去問走廊上的目擊者",
           "next": "widow_witness",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Pocket the button and question the witnesses in the corridor"
         },
         {
           "id": "B",
           "text": "循方才的腳步聲追向走廊盡頭",
           "next": "corridor_shadows",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Follow the footsteps you heard toward the end of the corridor"
         }
-      ]
+      ],
+      "titleEn": "The Silver Button",
+      "narrationEn": "In the dead man's palm lies a silver button, torn away by force, its face bent inward — the mark of a dying grip on his killer's lapel. It is engraved with the Express's moon-wheel crest, identical to the ones on the crew uniforms. You raise it to the red light: the curve of the bend fits neatly around a torn scrap of thread. With his last strength, the envoy kept for you a fragment of his murderer. What remains is to find whose uniform is missing it."
     },
     {
       "id": "corridor_shadows",
@@ -240,22 +273,27 @@
             "damageType": "暗影"
           }
         ],
-        "intro": "兩道無主之影自壁板剝落,無聲無息地直取你的咽喉。"
+        "intro": "兩道無主之影自壁板剝落,無聲無息地直取你的咽喉。",
+        "introEn": "Two masterless shadows peel from the panelling and go for your throat without a sound."
       },
       "choices": [
         {
           "id": "A",
           "text": "檢查影子消散處的壁板",
           "next": "inspector_first",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Examine the panelling where the shadows dissolved"
         },
         {
           "id": "B",
           "text": "回到包廂外,找圍觀乘客問話",
           "next": "widow_witness",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Return to the compartment and question the onlookers"
         }
-      ]
+      ],
+      "titleEn": "Shadows in the Corridor",
+      "narrationEn": "The footsteps stop dead at the end of the corridor. Under the red light, two shadows rise up flat against the panelling — shadows without owners, thin as cut paper, their edges curling like raised blades. In unison they tilt their heads, mimicking with perfect precision the way you just ran, and then they lunge. The carpet drinks every sound; all that is left in the corridor is the beat of the wheels underfoot, quicker with every bar."
     },
     {
       "id": "widow_witness",
@@ -269,21 +307,26 @@
           "id": "A",
           "text": "追問她黑紗底下看見了什麼",
           "next": "inspector_first",
-          "alignment": -1
+          "alignment": -1,
+          "textEn": "Press her about what she saw beneath the veil"
         },
         {
           "id": "B",
           "text": "謝過她,去攔正在查票的乘務員",
           "next": "inspector_first",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Thank her and go intercept the ticket inspector working the aisle"
         },
         {
           "id": "C",
           "text": "護送受驚的她回座位",
           "next": "inspector_first",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Escort the shaken woman back to her seat"
         }
-      ]
+      ],
+      "titleEn": "The Widow in Black",
+      "narrationEn": "Among the onlookers, a widow in a black veil stands nearest the door. 'I heard two people talking in that compartment,' her voice comes through the gauze as if rising from underwater, 'and afterwards — only one person's breathing. No door opened. Not once.' Her fingers slowly twist the hem of her veil. As you glance down you see it: the red light drags everyone's shadow out long, but hers alone does not stir — pinned to the carpet, as it were; even her twisting hands find no echo in it."
     },
     {
       "id": "inspector_first",
@@ -298,21 +341,26 @@
           "text": "出示銀鈕扣,盯緊他的反應",
           "next": "dining_hub",
           "alignment": 0,
-          "checkHint": "洞察檢定"
+          "checkHint": "洞察檢定",
+          "textEn": "Show him the silver button and watch his reaction closely"
         },
         {
           "id": "B",
           "text": "指他證件有假,當場攤牌",
           "next": "inspector_scuffle",
-          "alignment": -1
+          "alignment": -1,
+          "textEn": "Call his credentials false, here and now"
         },
         {
           "id": "C",
           "text": "交票配合,跟著人流前往餐車",
           "next": "dining_hub",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Hand over your ticket and follow the flow toward the dining car"
         }
-      ]
+      ],
+      "titleEn": "Tickets That Bleed",
+      "narrationEn": "A ticket inspector comes against the flow of passengers, his punch clicking on empty air. His uniform fits too well, his cap is pulled too low, and his smile might have been drawn with a ruler. 'Tickets.' Every ticket he clips seeps a thread of dark red at the cut, and the passengers take back their stubs without noticing a thing. Now it is your turn. On the fingertip of his outstretched glove is a fleck of dried rust-colour, and it smells exactly like the envoy's compartment."
     },
     {
       "id": "inspector_scuffle",
@@ -361,22 +409,27 @@
             "damageType": "暗影"
           }
         ],
-        "intro": "驗票員散作剪影,剪票鉗在半空自行開合,影子自座底湧出。"
+        "intro": "驗票員散作剪影,剪票鉗在半空自行開合,影子自座底湧出。",
+        "introEn": "The inspector scatters into silhouette, his punch opening and closing on its own in mid-air, as shadows well up from beneath the seats."
       },
       "choices": [
         {
           "id": "A",
           "text": "拾起他遺落的剪票鉗",
           "next": "punch_pliers",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Pick up the ticket punch he left behind"
         },
         {
           "id": "B",
           "text": "不碰那東西,前往餐車",
           "next": "dining_hub",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Leave the thing untouched and head for the dining car"
         }
-      ]
+      ],
+      "titleEn": "Escape in Silhouette",
+      "narrationEn": "'Fare-dodging,' the inspector's smile splits open inch by inch, 'is not settled in money.' He topples backward — and before he touches the floor he scatters into a black paper-cut of himself, leaving only the ticket punch clicking in mid-air. Shadows squeeze out from beneath the seats and close in around you. The red lamps flicker twice, and the doors at both ends of the aisle lock as one."
     },
     {
       "id": "punch_pliers",
@@ -395,22 +448,27 @@
             "properties": "可傷害影類與無形之物,視同有形;剪中影子時目標本體同痛"
           }
         ],
-        "intro": "剪魂的工具落在了獵物手裡。"
+        "intro": "剪魂的工具落在了獵物手裡。",
+        "introEn": "The soul-clipping tool has fallen into the hands of its prey."
       },
       "choices": [
         {
           "id": "A",
           "text": "收好鉗子,前往餐車",
           "next": "dining_hub",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Pocket the punch and head for the dining car"
         },
         {
           "id": "B",
           "text": "先回命案包廂再查一眼,再去餐車",
           "next": "dining_hub",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Look over the murder compartment once more, then go to the dining car"
         }
-      ]
+      ],
+      "titleEn": "The Shadowshear Punch",
+      "narrationEn": "The ticket punch is cold in the hand, its jaws thin enough to shear lamplight. You test it with an empty snip at your own shadow — and a corner of the shadow's edge actually lifts, a line of pain crawling up from your ankle. So shadows can be cut, and cutting them hurts. On the inside of the handle a small line is engraved: 'Ride by ticket; alight by name.' You think of the name that squirmed itself onto your ticket, and suddenly you are not sure what will be collected from you when you get off."
     },
     {
       "id": "dining_hub",
@@ -424,21 +482,26 @@
           "id": "A",
           "text": "推開頭等沙龍的門",
           "next": "salon_firstclass",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Push open the door of the first-class salon"
         },
         {
           "id": "B",
           "text": "循蠟紙味走向郵務車廂",
           "next": "mail_car",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Follow the smell of wax and paper toward the mail car"
         },
         {
           "id": "C",
           "text": "往吧檯後段走,找酒保搭話",
           "next": "dining_bar",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Walk to the back of the bar and strike up a talk with the bartender"
         }
-      ]
+      ],
+      "titleEn": "The Front Saloon",
+      "narrationEn": "The dining car is the only place on the train still lit warm and yellow. The crystal chandelier sways gently; behind the counter the bartender polishes glasses that are never done being polished; shaken passengers huddle in the booths in twos and threes, trading rumours. A waiter wheels a trolley through, hawking hot wine, bandages, and salt packets said to calm the nerves — everything is for sale on this train, at a price to be discussed. Here you can resupply, catch your breath, or prick up your ears for the whispers: the door of the first-class salon stands ajar, and from the direction of the mail car drifts a smell of wax and paper."
     },
     {
       "id": "salon_firstclass",
@@ -452,22 +515,27 @@
           "id": "A",
           "text": "與缺了半截影子的詩人攀談",
           "next": "poet_shadow",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Talk to the poet with half a shadow"
         },
         {
           "id": "B",
           "text": "潛入隔壁使節的空包廂搜查",
           "next": "firstclass_secret",
           "alignment": 0,
-          "checkHint": "調查或巧手檢定"
+          "checkHint": "調查或巧手檢定",
+          "textEn": "Slip into the envoy's empty compartment and search it"
         },
         {
           "id": "C",
           "text": "回餐車前廳",
           "next": "dining_hub",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Return to the front saloon"
         }
-      ]
+      ],
+      "titleEn": "The First-Class Salon",
+      "narrationEn": "The first-class salon is laid with wine-red velvet, a gramophone playing a waltz gone slightly off-key. A waiter with a moon-wheel badge at his collar murmurs his 'first-class exclusives': silver-tempered table knives, black coffee to keep you sharp, and a ticket holder said to turn aside one stroke of ill luck — buying and resting are easily arranged here. In the corner, a poet mutters to himself at the window — the red light throws every shadow onto the wall, but his is missing from the knees down, simply gone. The late envoy's compartment is next door, its seal pasted on crooked."
     },
     {
       "id": "poet_shadow",
@@ -481,15 +549,19 @@
           "id": "A",
           "text": "追問郵務車廂是怎麼「收費」的",
           "next": "mail_car",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Press him on how the mail car does its 'collecting'"
         },
         {
           "id": "B",
           "text": "記下這筆「欠資」,回餐車前廳",
           "next": "dining_hub",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Note down that 'postage due' and return to the front saloon"
         }
-      ]
+      ],
+      "titleEn": "The Half-Shadowed Poet",
+      "narrationEn": "'My shadow?' The poet's laugh floats loose; ripples circle out across his glass. 'Three stops back, the mail car collected half of it. They call that postage due.' He leans in close, paper ash under the wine on his breath: 'This train has never charged in money, friend. Whatever you handed over when you boarded — you had best know what it was.' On the wall, his knee-cut shadow gives a shiver, the stump as clean as if shorn with pliers. He raises his glass to it, and drains it."
     },
     {
       "id": "firstclass_secret",
@@ -510,22 +582,27 @@
             "properties": "王都印璽:匣為餌、認影不認人;可作為說服王室法師與乘客的憑據"
           }
         ],
-        "intro": "暗格裡的遺物,替死者把沒說完的話說完。"
+        "intro": "暗格裡的遺物,替死者把沒說完的話說完。",
+        "introEn": "The relics in the hidden compartment finish the sentence the dead man never could."
       },
       "choices": [
         {
           "id": "A",
           "text": "帶著密信回餐車核對傳言",
           "next": "dining_hub",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Take the letter back to the dining car and test it against the rumours"
         },
         {
           "id": "B",
           "text": "循「認影不認人」一語去郵務車廂",
           "next": "mail_car",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Follow the words 'trust the shadow, not the bearer' to the mail car"
         }
-      ]
+      ],
+      "titleEn": "The Envoy's Hidden Compartment",
+      "narrationEn": "The empty compartment keeps the tidiness of its dead owner. You go over the panelling by hand and knock a hollow note from the inside of the luggage rack — in the hidden compartment lie a gilt pocket watch and a wax-sealed letter. It bears the seal of the royal capital: 'The casket is bait; the moon is the hook. On no account open the casket before the tunnel. Another carries the true charge — trust the shadow, not the bearer.' The watch's second hand runs backward, and with every notch it retreats, the little blood moon inside the lid grows one shade fuller. The envoy died without meeting anyone who could read this letter. Now it is in your hands."
     },
     {
       "id": "mail_car",
@@ -539,21 +616,26 @@
           "id": "A",
           "text": "拆開寫著你名字的那封信",
           "next": "mail_code",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Open the letter that bears your name"
         },
         {
           "id": "B",
           "text": "拔出武器,朝信堆深處逼近",
           "next": "mail_wraith",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Draw your weapon and press toward the heart of the letter-piles"
         },
         {
           "id": "C",
           "text": "退回餐車前廳",
           "next": "dining_hub",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Withdraw to the front saloon"
         }
-      ]
+      ],
+      "titleEn": "The Dead-Letter Car",
+      "narrationEn": "The mail car is heaped with letters never sent, sacks stacked from floor to luggage rack, their wax seals like rows of scabs in the red light. You draw out the topmost letter: addressed to the old gentleman dozing in the dining car — but where the address should be, there is a date. Tonight. You draw another: a passenger's name again, tonight again. From deep in the letter-piles comes a rustling, as of something crawling beneath the pages. One letter slides down from the top of the heap and stops at your feet. The ink on the addressee line is not yet dry. It is your name."
     },
     {
       "id": "mail_code",
@@ -567,15 +649,19 @@
           "id": "A",
           "text": "深入信堆,揪出寫信的東西",
           "next": "mail_wraith",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Go deep into the letter-piles and drag out whatever wrote it"
         },
         {
           "id": "B",
           "text": "帶著信去吧檯,打聽提燈的孩子",
           "next": "dining_bar",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Take the letter to the bar and ask after the child with the lantern"
         }
-      ]
+      ],
+      "titleEn": "A Dead Letter for You",
+      "narrationEn": "There are only three lines on the page, the ink varying in depth, as if set down at three different sittings: 'The Blood Moon Tunnel. Arriving tonight.' 'The list of offerings, called by shadow.' The last line staggers, the hand that held the pen plainly shaking: 'Do not let the child with the lantern sit alone.' It is signed with the name that should not exist on the manifest — Vesper Vane. You fold the letter away inside your coat. The ink on your fingertips fades slowly to rust against the skin, like a small old wound that will not wipe off."
     },
     {
       "id": "mail_wraith",
@@ -624,22 +710,27 @@
             "damageType": "暗影"
           }
         ],
-        "intro": "死信騰空拼成人形,郵戳一下下蓋著乘客的名字,紙刃如雪捲來。"
+        "intro": "死信騰空拼成人形,郵戳一下下蓋著乘客的名字,紙刃如雪捲來。",
+        "introEn": "Dead letters swarm up into a human shape, a postmark stamping out passenger names one by one, as paper blades come whirling like snow."
       },
       "choices": [
         {
           "id": "A",
           "text": "翻找怨靈死守的那只郵袋",
           "next": "mail_treasure",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Search the mailbag the wraith died guarding"
         },
         {
           "id": "B",
           "text": "不動死者的信,回餐車前廳",
           "next": "dining_hub",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Leave the letters of the dead in peace and return to the front saloon"
         }
-      ]
+      ],
+      "titleEn": "The Dead-Letter Wraith",
+      "narrationEn": "The letter-piles stir with no wind, and a thousand dead letters roar upward, assembling in mid-air into a figure of paper — wax seals for its eyes, a postmark stamping over and over at its chest, and every stamp is a passenger's name. It opens a mouth folded from envelopes and lets out a long shriek like tearing paper; letters whirl from the sacks toward you like snow, and every paper edge is honed like a razor."
     },
     {
       "id": "mail_treasure",
@@ -660,22 +751,27 @@
             "properties": "數十種筆跡的同一個名字;比對筆跡可在排查時排除或鎖定嫌疑"
           }
         ],
-        "intro": "怨靈守了一路的,是一整匣簽了名的命。"
+        "intro": "怨靈守了一路的,是一整匣簽了名的命。",
+        "introEn": "What the wraith guarded all this way is a boxful of lives, every one signed for."
       },
       "choices": [
         {
           "id": "A",
           "text": "收好回執,回餐車前廳",
           "next": "dining_hub",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Pocket the receipts and return to the front saloon"
         },
         {
           "id": "B",
           "text": "循郵袋上的貨運單據去貨運車廂",
           "next": "freight_car",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Follow the freight docket on the mailbag to the freight car"
         }
-      ]
+      ],
+      "titleEn": "The Box Beneath the Mailbags",
+      "narrationEn": "When the wraith scatters into drifts of paper, a locked black-iron mail box shows beneath the piles, its keyhole shaped like a crescent moon. Prised open, it holds a neat stack of 'receipts' — every one stamped 'Received', and in every signature line, in a different hand, the same name: Vesper Vane. Some dainty, some scrawled; one of them looks very like the chalk lettering on the dining-car menu. Beneath the receipts lie a few coins of travelling money and a small bottle of dark red liquid labelled 'Ink — do not drink.'"
     },
     {
       "id": "dining_bar",
@@ -689,21 +785,26 @@
           "id": "A",
           "text": "和酒保聊聊那個「不存在的乘客」",
           "next": "bartender_talk",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Ask the bartender about the 'passenger who doesn't exist'"
         },
         {
           "id": "B",
           "text": "前往貨運車廂",
           "next": "freight_car",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Head for the freight car"
         },
         {
           "id": "C",
           "text": "回餐車前廳",
           "next": "dining_hub",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Return to the front saloon"
         }
-      ]
+      ],
+      "titleEn": "The Back Bar",
+      "narrationEn": "The back of the bar is far quieter. The bartender is turning a row of bottles label-outward, his hands practised as if he had been doing it for a thousand years. 'Whatever you need, we have,' he says without looking up. 'Spirits, hardtack, bandages, words of courage — all clearly priced. Information is half price. Tonight's information is cheap; you'll use every bit of it before dawn anyway.' At the far end of the bar a girl sits alone with a small brass lantern, her toes not reaching the floor, the flame lighting an untouched glass of hot milk before her. She looks at no one. Only at her lantern."
     },
     {
       "id": "bartender_talk",
@@ -717,21 +818,26 @@
           "id": "A",
           "text": "蹲下身,和提燈女孩說話",
           "next": "lantern_girl",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Crouch down and speak with the lantern girl"
         },
         {
           "id": "B",
           "text": "依酒保指的近路,去鍋爐通道",
           "next": "boiler_door",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Take the bartender's shortcut to the boiler passage"
         },
         {
           "id": "C",
           "text": "攀上車頂,追那道掠過天窗的黑影",
           "next": "roof_climb",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Climb to the roof after the dark shape that crossed the skylight"
         }
-      ]
+      ],
+      "titleEn": "The Bartender's Ledger",
+      "narrationEn": "'Vesper Vane?' The bartender's polishing hand pauses half a beat. 'Every run of the Blood Moon Express carries that name. Sometimes a passenger, sometimes the cook. Once — the conductor.' He fetches a ledger from under the counter, opens it to a page and pushes it across: the same name in a dozen hands, and in the debts column, every entry is a small drawn moon. 'Everything he drinks goes on the account. He has never paid. The ones who pay are always someone else.' He tips his chin toward the end of the bar: 'That child, though — not a word since she boarded. The milk was on me. She only warms her hands at it. Never drinks.'"
     },
     {
       "id": "lantern_girl",
@@ -745,21 +851,26 @@
           "id": "A",
           "text": "陪她坐一會;她忽然指了指鍋爐的方向",
           "next": "boiler_door",
-          "alignment": 2
+          "alignment": 2,
+          "textEn": "Sit with her a while — until she suddenly points toward the boiler"
         },
         {
           "id": "B",
           "text": "伸手去探她的影子,她驚得吹熄了燈",
           "next": "dining_bar",
-          "alignment": -1
+          "alignment": -1,
+          "textEn": "Reach for her shadow — she starts, and blows out the lantern"
         },
         {
           "id": "C",
           "text": "不動聲色,先把這事壓在心底",
           "next": "dining_bar",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Betray nothing, and keep what you saw to yourself"
         }
-      ]
+      ],
+      "titleEn": "The Girl with the Lantern",
+      "narrationEn": "The girl lifts her head, her eyes strangely bright behind the flame. She says nothing — only nudges the little brass lantern toward you, as if to share a piece of its warmth. As you bow your thanks, you see it: the flame casts her shadow across the bar, and in the shadow she is holding not a lantern but a small square casket, its outline ringed with a fine tracery of starburst, pulsing light and dark in perfect time with the wheels. The casket in her shadow is sharper than any solid thing on this train."
     },
     {
       "id": "freight_car",
@@ -774,21 +885,26 @@
           "text": "撬開那只釘死的長箱",
           "next": "freight_ambush",
           "alignment": -1,
-          "checkHint": "力量檢定"
+          "checkHint": "力量檢定",
+          "textEn": "Prise open the nailed-down long crate"
         },
         {
           "id": "B",
           "text": "繞過貨堆,揪出躲著的人",
           "next": "freight_market",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Circle the stacks and drag out whoever is hiding"
         },
         {
           "id": "C",
           "text": "抄下貨單編號,回吧檯",
           "next": "dining_bar",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Copy down the docket number and go back to the bar"
         }
-      ]
+      ],
+      "titleEn": "The Freight Car",
+      "narrationEn": "The freight car is cold as a cellar, crates stacked into canyon walls under the red light. At the deepest point stands a long crate sealed with black iron nails, its face branded with the royal starburst — identical, to the last line, with the fabled mark of the Starfire Casket. But wasn't the casket stolen from Car Thirteen? What is it doing lying here? A bottle cork suddenly rolls out of the shadow beneath the crate, and from behind the stacks comes a cough pressed very low. Someone got here before you. And they are hiding."
     },
     {
       "id": "freight_ambush",
@@ -837,22 +953,27 @@
             "damageType": "穿刺"
           }
         ],
-        "intro": "兩具蠟臉屍偶自長箱坐起,用驗票員的腔調宣告查票。"
+        "intro": "兩具蠟臉屍偶自長箱坐起,用驗票員的腔調宣告查票。",
+        "introEn": "Two wax-faced corpse-puppets sit up out of the long crate and announce, in the ticket inspector's cadence, that tickets will now be checked."
       },
       "choices": [
         {
           "id": "A",
           "text": "細看箱底那只聖匣",
           "next": "decoy_box",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Look closely at the casket in the bottom of the crate"
         },
         {
           "id": "B",
           "text": "推倒貨箱堵住路,退回吧檯",
           "next": "dining_bar",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Topple the crates to block the way, and fall back to the bar"
         }
-      ]
+      ],
+      "titleEn": "Corpse-Puppets in the Crate",
+      "narrationEn": "Nails burst free, and the moment the lid lifts, two corpse-puppets in crew uniform sit bolt upright out of the crate — joints riveted in brass, faces moulded from wax, and each chest missing one silver button. Behind them, the 'holy casket' gleams at the bottom of the crate with the sheen of cheap lacquer. The wax faces turn to you as one, and from their throats rolls the inspector's cadence: 'Tick. Ets.' The wax hands rise, knuckles clacking as they curl into fists."
     },
     {
       "id": "decoy_box",
@@ -866,15 +987,19 @@
           "id": "A",
           "text": "帶著假匣和刻字回吧檯",
           "next": "dining_bar",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Take the false casket and its inscription back to the bar"
         },
         {
           "id": "B",
           "text": "直接去吧檯末端,找提燈女孩",
           "next": "lantern_girl",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Go straight to the end of the bar, to the lantern girl"
         }
-      ]
+      ],
+      "titleEn": "The Decoy Casket",
+      "narrationEn": "The casket at the bottom of the crate is showy work, but it sits hollow-light in the hand. The lid lifts at a touch — inside there is no starfire, only a small mirror, and scratched into its back with a needle-point, five words: 'The lantern-bearer in the shadow.' You raise the mirror: the canyon of crates it reflects carries one more layer than the real one, a wavering film of dark shapes, as if every shadow in this car were awake. This box was made for a thief — and for everyone too clever by half. The true thing was never in any box at all."
     },
     {
       "id": "freight_market",
@@ -888,21 +1013,26 @@
           "id": "A",
           "text": "採買停當,回吧檯",
           "next": "dining_bar",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Finish your buying and go back to the bar"
         },
         {
           "id": "B",
           "text": "加錢買他口中「鍋爐間的門路」",
           "next": "boiler_door",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Pay extra for his 'way into the boiler room'"
         },
         {
           "id": "C",
           "text": "逼問長箱來歷;他說箱子三站前就被動過",
           "next": "dining_bar",
-          "alignment": -1
+          "alignment": -1,
+          "textEn": "Press him about the long crate; he says it was tampered with three stops ago"
         }
-      ]
+      ],
+      "titleEn": "Black Market in the Hold",
+      "narrationEn": "Behind the stacks crouches a smuggler, gold tooth flashing in the red light: 'Don't shout, don't shout — I'm in business.' He spreads his greatcoat, the lining sewn full of pockets: silver-tempered daggers, damp cloths against smoke, spirits cut with holy water, and sundries left behind by 'passengers who never asked for refunds' — everything priced, if you care to stock up. 'Seven runs I've made on this train,' he drops his voice, 'and the trick to living through it comes to one rule: never let anything aboard learn your full name. Pet name, nickname, false name — all fine. Never the full one.'"
     },
     {
       "id": "boiler_door",
@@ -916,22 +1046,27 @@
           "id": "A",
           "text": "硬闖,把它撂倒",
           "next": "coal_golem",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Force your way through — put him down"
         },
         {
           "id": "B",
           "text": "攀進通風管繞過它",
           "next": "boiler_glimpse",
           "alignment": 0,
-          "checkHint": "敏捷檢定"
+          "checkHint": "敏捷檢定",
+          "textEn": "Climb into the vent and go around him"
         },
         {
           "id": "C",
           "text": "退回吧檯,從長計議",
           "next": "dining_bar",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Fall back to the bar and think it through"
         }
-      ]
+      ],
+      "titleEn": "The Boiler Passage",
+      "narrationEn": "Beyond the tender, the iron door of the boiler room is barred three times over, chalked in a crooked hand: 'Fire never dies. Keep out.' Before the door stands a boilerman — once a man; now coal slag crusts half his body, a shovel propped at his foot, an ember-red light waxing and waning inside his ribs. He has no shadow. At the sound of your steps he straightens slowly, sparks sifting from his shoulders. Overhead, a ventilation duct rattles — just wide enough for one person to crawl through."
     },
     {
       "id": "coal_golem",
@@ -973,22 +1108,27 @@
             "damageType": "火焰"
           }
         ],
-        "intro": "煤渣剝落,燒紅的鉚釘骨架掄起鐵鏟,熱浪貼地滾來。"
+        "intro": "煤渣剝落,燒紅的鉚釘骨架掄起鐵鏟,熱浪貼地滾來。",
+        "introEn": "The slag sloughs away; a red-hot riveted skeleton swings its iron shovel, and heat comes rolling low along the floor."
       },
       "choices": [
         {
           "id": "A",
           "text": "搜一搜爐工的置物櫃",
           "next": "boiler_shovel",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Search the boilerman's locker"
         },
         {
           "id": "B",
           "text": "湊近爐口的觀火窗",
           "next": "boiler_glimpse",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Step up to the firebox's viewing window"
         }
-      ]
+      ],
+      "titleEn": "The Cinder Golem",
+      "narrationEn": "The instant the boilerman raises his shovel, the slag sloughs off him in sheets, baring a red-hot frame of riveted iron beneath. One blow of the shovel against the door sets all three bars droning; the firelight in his throat flares sharply, and he speaks two words: 'More. Coal.' Sparks burst with his every step through the tender, a wave of heat rolls along the floor, and the shadow at your feet shrinks back from the bake."
     },
     {
       "id": "boiler_shovel",
@@ -1007,22 +1147,27 @@
             "properties": "對影類與祭壇造物額外有效;可鏟起燃燒的月焰而不傷手"
           }
         ],
-        "intro": "第七任司爐留下的傢伙,還帶著月亮的溫度。"
+        "intro": "第七任司爐留下的傢伙,還帶著月亮的溫度。",
+        "introEn": "The seventh stoker's tool, still warm with the heat of the moon."
       },
       "choices": [
         {
           "id": "A",
           "text": "拿著鏟子,湊近爐口觀火窗",
           "next": "boiler_glimpse",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Take the shovel and step up to the firebox's viewing window"
         },
         {
           "id": "B",
           "text": "帶上鏟子,回吧檯補給",
           "next": "dining_bar",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Take the shovel back to the bar and resupply"
         }
-      ]
+      ],
+      "titleEn": "The Moonfire Shovel",
+      "narrationEn": "Besides half a box of damp matches, the locker holds a shovel like no other: its blade quenched in some dark-red light, dragging a thread of moon-halo through the air when swung. Pasted inside the locker door is a yellowed duty roster — in the 'stoker' column, the name has been charcoaled out seven times. The eighth line is blank, and beside it, a note in chalk: 'Relief. Tonight.' You stare at that empty line for two seconds, and cannot shake the feeling that the empty place is staring back."
     },
     {
       "id": "boiler_glimpse",
@@ -1036,15 +1181,19 @@
           "id": "A",
           "text": "記下所見,回吧檯整備",
           "next": "dining_bar",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Fix what you've seen in mind and go back to the bar to prepare"
         },
         {
           "id": "B",
           "text": "攀上車頂,追那道盤旋不去的黑影",
           "next": "roof_climb",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Climb to the roof after the dark shape still circling there"
         }
-      ]
+      ],
+      "titleEn": "The Moon in the Firebox",
+      "narrationEn": "The glass of the viewing window scalds. You squint through into the firebox — there is no coal fire inside. A shrunken blood moon hangs at the centre of the chamber, fist-sized, dark red through and through, turning slowly on itself; the boiler's pressure gauge twitches in time with its spin. The coal shovelled at the firing door was never fuel for the boiler — it is feed. Each shovelful that comes near, the blood moon swallows whole; it brightens by one degree, and the beat of the wheels quickens by one beat. Suddenly you understand what road this train is racing: it is fattening a moon all the way down the line, hurrying to have it fed full before the tunnel."
     },
     {
       "id": "roof_climb",
@@ -1059,21 +1208,26 @@
           "text": "頂著風沿車脊直追",
           "next": "roof_gargoyle",
           "alignment": 0,
-          "checkHint": "運動檢定"
+          "checkHint": "運動檢定",
+          "textEn": "Chase straight down the spine of the train against the wind"
         },
         {
           "id": "B",
           "text": "矮身鑽檢修通道,從通風罩包抄",
           "next": "roof_vent",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Duck into the inspection channel and flank by way of the vent hood"
         },
         {
           "id": "C",
           "text": "風太烈,先退回車廂內",
           "next": "dining_bar",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "The wind is too fierce — go back inside first"
         }
-      ]
+      ],
+      "titleEn": "Onto the Roof",
+      "narrationEn": "The wind on the roof is a wall that hits at a slant. You haul yourself up the inspection ladder; the sheet iron drones underfoot, and the night of the Rift streams past on either side, smeared to ink. Three cars ahead, a dark figure stands on the spine of the train against the wind, cloak snapping, like a flag raised to call you on. Farther beyond it, toward the tunnel, a red point hangs at the edge of the sky, drawing closer — like a hole burned through black cloth."
     },
     {
       "id": "roof_vent",
@@ -1087,16 +1241,20 @@
           "id": "A",
           "text": "掀罩躍出,搶先發難",
           "next": "roof_gargoyle",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Throw back the hood and leap out — strike first"
         },
         {
           "id": "B",
           "text": "按兵不動,看它究竟要做什麼",
           "next": "mage_parley",
           "alignment": 0,
-          "checkHint": "隱匿檢定"
+          "checkHint": "隱匿檢定",
+          "textEn": "Hold still, and see what it means to do"
         }
-      ]
+      ],
+      "titleEn": "The Vent-Hood Ambush",
+      "narrationEn": "The inspection channel reeks of machine oil. You advance at a crouch while the wind slaps the sheet iron overhead. Through the slats of the vent hood you can see the dark figure standing just two paces above you, the hem of its cloak flipped up by the wind — beneath it there are no legs, only skeins of moonlight twisted tight. It seems to be waiting for something, facing the red point of the tunnel mouth, motionless as a stele set upon the spine of the train. You tighten your grip on your weapon. Forward or back — a single thought will decide."
     },
     {
       "id": "roof_gargoyle",
@@ -1145,22 +1303,27 @@
             "damageType": "火焰"
           }
         ],
-        "intro": "煙魅自排煙管擰出,狂風中的車脊窄得像刀背。"
+        "intro": "煙魅自排煙管擰出,狂風中的車脊窄得像刀背。",
+        "introEn": "Smoke-wraiths wring themselves from the flues; in the gale, the train's spine is narrow as the back of a blade."
       },
       "choices": [
         {
           "id": "A",
           "text": "拾起黑影拋下的一枚物件",
           "next": "mage_lens",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Pick up the object the figure has tossed down"
         },
         {
           "id": "B",
           "text": "不接,直接逼向那道黑影",
           "next": "mage_parley",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Ignore it and close on the dark figure"
         }
-      ]
+      ],
+      "titleEn": "The Rooftop Chase",
+      "narrationEn": "The instant you close in, the dark figure sweeps up a hand, and the roof's smoke-stacks scream in chorus: two smoke-wraiths wring themselves out of the flues — bones of smoke, eyes of sparks — and come skimming along the ridge of the car toward you. The gale shreds every sound to pieces; the sheet iron cants beneath you with the curve of the track, and one misstep is the Rift below. The figure stands where it is and watches, cloak cracking, as if grading you."
     },
     {
       "id": "mage_lens",
@@ -1177,22 +1340,27 @@
             "properties": "舉鏡可視影中藏物;每日一次,看穿一次偽裝或無形之物"
           }
         ],
-        "intro": "有些東西,只在鏡子裡誠實。"
+        "intro": "有些東西,只在鏡子裡誠實。",
+        "introEn": "Some things are honest only in a mirror."
       },
       "choices": [
         {
           "id": "A",
           "text": "收好鏡片,走向黑影",
           "next": "mage_parley",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Put the lens away and walk toward the dark figure"
         },
         {
           "id": "B",
           "text": "先用鏡片照一照自己的影子,再上前",
           "next": "mage_parley",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Turn the lens on your own shadow first, then go forward"
         }
-      ]
+      ],
+      "titleEn": "The Moonveil Lens",
+      "narrationEn": "It is a lens the size of a knuckle, its rim wound with moon-white thread, cool as well-water in the hand. You raise it to the rooftop — and the world in the glass gains a layer: something hidden in every shadow. In the smoke-wraiths' fading shades curl tiny weeping faces; in your own shadow, lying close against you, is the one piece of your past you would least want seen. You lower the lens. The dark figure inclines its head to you, slowly, as if the thing had been meant for your hands all along."
     },
     {
       "id": "mage_parley",
@@ -1206,21 +1374,26 @@
           "id": "A",
           "text": "與她聯手,先保乘客再尋匣",
           "next": "shadow_hunt",
-          "alignment": 2
+          "alignment": 2,
+          "textEn": "Join her — protect the passengers first, then seek the casket"
         },
         {
           "id": "B",
           "text": "口頭應允,盤算自己先找到聖匣",
           "next": "shadow_hunt",
-          "alignment": -2
+          "alignment": -2,
+          "textEn": "Agree aloud, while planning to find the casket first yourself"
         },
         {
           "id": "C",
           "text": "先逼問王室為何放血月上車",
           "next": "mage_secret",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "First press her: why did the Crown put a blood moon on a train"
         }
-      ]
+      ],
+      "titleEn": "The Masked Mage",
+      "narrationEn": "The figure pulls back its hood — beneath the mask, nothing shows but a pair of eyes red from sleeplessness. 'Mage of the royal vault. Moontrace.' In the wind her voice comes strangely clear. 'Save your strength; stop chasing that crate. The crate is bait — has been since the moment we left the station. The true Starfire Casket is hidden in the shadow of one passenger on this train, and even that passenger does not know it.' She looks toward the red point of the tunnel mouth: 'If it is not found before the Blood Moon Tunnel, the casket opens on the far side. To open it is to make the offering. The whole train. No one left.'"
     },
     {
       "id": "mage_secret",
@@ -1234,15 +1407,19 @@
           "id": "A",
           "text": "帶著真相,回車廂排查影子",
           "next": "shadow_hunt",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Carry the truth back to the cars and start sifting shadows"
         },
         {
           "id": "B",
           "text": "斥她:拿全車人陪葬,王室與祭壇何異",
           "next": "shadow_hunt",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Round on her: drowning a trainload with it — how is the Crown better than the altar?"
         }
-      ]
+      ],
+      "titleEn": "Moontrace's Confession",
+      "narrationEn": "The mage is silent for three beats of the wheels. 'The blood moon did not stow away. The Crown shrank it into the firebox for exile — from boiler to coupling, this whole express is one moving altar, built to carry it out of the living world.' Her fingers tighten on her cloak. 'The envoy's charge was to complete the sealing inside the tunnel. Now the envoy is dead, the casket has scattered into shadow, and the altar has no celebrant — so it seeks offerings for itself. That extra name on the manifest — you have seen it, yes? The altar always calls the roll early.'"
     },
     {
       "id": "shadow_hunt",
@@ -1256,21 +1433,26 @@
           "id": "A",
           "text": "先驗詩人那道殘缺的影子",
           "next": "suspect_poet",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Test the poet's truncated shadow first"
         },
         {
           "id": "B",
           "text": "去驗寡婦那道釘死的影子",
           "next": "suspect_widow",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Go and test the widow's nailed-down shadow"
         },
         {
           "id": "C",
           "text": "走向提燈女孩",
           "next": "suspect_lantern",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Walk over to the lantern girl"
         }
-      ]
+      ],
+      "titleEn": "A Roll Call of Shadows",
+      "narrationEn": "Back in the dining car, you look at everyone with changed eyes: every passenger under the lamps trails a shadow, and any shadow could be carrying the casket. The poet with half a shadow is starting his seventh drink; the widow's shadow is still nailed in place, unmoving; at the end of the bar the lantern girl swings her feet above the floor, and the flame throws her shadow long and sharp — altogether too sharp. The little blood moon inside the watch lid is seven parts full. If shadows are to be tested, it must be now."
     },
     {
       "id": "suspect_poet",
@@ -1284,15 +1466,19 @@
           "id": "A",
           "text": "轉去驗黑紗寡婦",
           "next": "suspect_widow",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Move on to the widow in black"
         },
         {
           "id": "B",
           "text": "直接走向提燈女孩",
           "next": "suspect_lantern",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Go straight to the lantern girl"
         }
-      ]
+      ],
+      "titleEn": "The Poet's Severed Shadow",
+      "narrationEn": "The poet is obliging enough, standing into the light to be examined head to toe. His shadow ends clean at the knees, the cut as level as if shorn by a ticket punch — the 'postage due' that was collected, a maimed shade that could hold nothing, no vessel for a casket. 'I told you,' he says, swirling the empty glass with a bitter smile. 'The half of me worth money went to settle the account. What's left, even the moon won't look at.' Then his voice drops: 'But that child. Her shadow never follows her lantern. Have you noticed? The lamp swings east — and the shadow leans east with it.'"
     },
     {
       "id": "suspect_widow",
@@ -1306,15 +1492,19 @@
           "id": "A",
           "text": "收下她塞來的物件",
           "next": "widow_charm",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Accept what she has pressed on you"
         },
         {
           "id": "B",
           "text": "道謝,立刻走向提燈女孩",
           "next": "suspect_lantern",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Thank her, and go at once to the lantern girl"
         }
-      ]
+      ],
+      "titleEn": "The Widow's Black Veil",
+      "narrationEn": "Before you can speak, the widow lifts a corner of her veil herself — beneath it there is no face, only a quiet, bottomless dark. 'Do not be afraid. I died on the last run of this train,' her voice comes out of the darkness. 'The body got off. The shadow kept its seat. The ticket is for life.' Her nailed shadow slowly raises a hand and points down the bar: 'The casket is not with me. It is in the shadow that glows. The child's lantern lights everyone in this car — everyone but herself. And not one of you noticed.' She presses something into your hand, through the veil, light as a sigh."
     },
     {
       "id": "widow_charm",
@@ -1331,22 +1521,27 @@
             "properties": "一次性:蒙眼可令全場影類一輪內無法察覺你,或抵銷一次來自影子的攻擊"
           }
         ],
-        "intro": "死者把僅剩的庇護,交給了還活著的人。"
+        "intro": "死者把僅剩的庇護,交給了還活著的人。",
+        "introEn": "The dead hand their last protection to the ones still living."
       },
       "choices": [
         {
           "id": "A",
           "text": "走向吧檯末端的女孩",
           "next": "suspect_lantern",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Walk to the girl at the end of the bar"
         },
         {
           "id": "B",
           "text": "深吸一口氣,把黑紗繫上手腕再過去",
           "next": "suspect_lantern",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Take a breath, tie the veil about your wrist, and go over"
         }
-      ]
+      ],
+      "titleEn": "The Black-Veil Charm",
+      "narrationEn": "You open your hand: a square of black gauze folded six times, a faded wedding ring stitched to one corner. 'Bind your eyes, and the shadows will not know you.' The widow's voice settles into your palm along with the veil. 'Once. It will hold only once. What I had left, I have given you all of it.' The gauze lies cool against the skin, like the side of things the moonlight never reaches. You tuck it into your breast pocket, and through the cloth you can still feel the small hard corners of the ring."
     },
     {
       "id": "suspect_lantern",
@@ -1360,21 +1555,26 @@
           "id": "A",
           "text": "蹲下平視她:「不怕,我們陪你一起提。」",
           "next": "shadows_rise",
-          "alignment": 2
+          "alignment": 2,
+          "textEn": "Kneel to her eye level: 'Don't be afraid. We'll carry it with you.'"
         },
         {
           "id": "B",
           "text": "伸手就要探進她的影子奪匣",
           "next": "shadows_rise",
-          "alignment": -2
+          "alignment": -2,
+          "textEn": "Reach straight into her shadow to seize the casket"
         },
         {
           "id": "C",
           "text": "擋在她身前,環視驟暗的車廂",
           "next": "shadows_rise",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Step in front of her and scan the darkening car"
         }
-      ]
+      ],
+      "titleEn": "The Lantern-Bearer in the Shadow",
+      "narrationEn": "The girl watches you come, and does not shrink away. You raise the lens — or simply hold the silver button up to the flame — and look at her feet: in the shadow she carries the casket, its starburst tracery pulsing light and dark in exact time with the wheels. She follows your gaze down, and for the first time sees her own shadow clearly; her small hands close slowly on the hem of her skirt. In that moment every red lamp in the car deepens by one shade, as if something has opened its eyes. She lifts her head and speaks at last, her voice thin as a wick: '...It has always been... so heavy.'"
     },
     {
       "id": "shadows_rise",
@@ -1430,22 +1630,27 @@
             "damageType": "暗影"
           }
         ],
-        "intro": "全車影子齊齊起立,離開各自的主人,朝提燈女孩圍攏。"
+        "intro": "全車影子齊齊起立,離開各自的主人,朝提燈女孩圍攏。",
+        "introEn": "Every shadow on the train rises as one, leaves its owner, and closes in around the lantern girl."
       },
       "choices": [
         {
           "id": "A",
           "text": "且戰且退,把乘客往燈下聚攏",
           "next": "inspector_true",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Fight a retreat, herding the passengers in under the lamps"
         },
         {
           "id": "B",
           "text": "抱起女孩,朝車頭方向突圍",
           "next": "inspector_true",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Scoop up the girl and break for the head of the train"
         }
-      ]
+      ],
+      "titleEn": "The Shadows Rise",
+      "narrationEn": "The wheels miss half a beat. In the dining car, every shadow sits up from the floor at once — the poet's truncated shade, the ones under the booths, the ones the chandelier throws; even the shadows of the wine glasses stand, a thin dark film, all facing the lantern girl. The passengers freeze where they stand, but their shadows step forward. From deep in the red light comes the click of a ticket punch, unhurried, like a roll being called. 'Tickets—' every shadow in the car says together, in one and the same voice."
     },
     {
       "id": "inspector_true",
@@ -1494,22 +1699,27 @@
             "damageType": "揮砍"
           }
         ],
-        "intro": "剪魂官撕去人皮,票屑如雪,巨鉗直取女孩的影子。"
+        "intro": "剪魂官撕去人皮,票屑如雪,巨鉗直取女孩的影子。",
+        "introEn": "The Soulclipper tears away its human skin; ticket-scraps fall like snow, and the great punch goes straight for the girl's shadow."
       },
       "choices": [
         {
           "id": "A",
           "text": "搜檢它散落的名冊與鉗子",
           "next": "inspector_spoils",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Search the register and punch it has scattered"
         },
         {
           "id": "B",
           "text": "顧不上戰利品,先安置乘客",
           "next": "last_supper",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Forget the spoils — see to the passengers first"
         }
-      ]
+      ],
+      "titleEn": "The Soulclipper Unmasked",
+      "narrationEn": "The shadow-tide draws back from both ends of the aisle, opening a path. The inspector comes on against the red light, 'taking off' himself as he walks — beneath the uniform there is no body, only a tall gaunt armature glued together from a million shredded tickets, two punched slits under the cap brim for eyes. 'Number Twenty-Seven. Inspection complete.' It raises a ticket punch grown monstrous, ink dripping from the jaws. 'Soulclipper of this service. Now collecting tickets. Ride by ticket—' the jaws swing slowly toward the girl's shadow, '—alight, by name.'"
     },
     {
       "id": "inspector_spoils",
@@ -1526,22 +1736,27 @@
             "properties": "可感知乘客生死;撕去一頁可自點名中除名一人;冊毀則點名失效"
           }
         ],
-        "intro": "點名的權柄,如今換了持有人。"
+        "intro": "點名的權柄,如今換了持有人。",
+        "introEn": "The authority to call the roll has changed hands."
       },
       "choices": [
         {
           "id": "A",
           "text": "帶名冊回餐車,安置乘客再出發",
           "next": "last_supper",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Take the register back to the dining car; settle the passengers, then set out"
         },
         {
           "id": "B",
           "text": "事不宜遲,直撲車頭",
           "next": "engine_corridor",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "No time to lose — straight for the engine"
         }
-      ]
+      ],
+      "titleEn": "The Blood Register",
+      "narrationEn": "The Soulclipper collapses into a drift of ticket-scraps, leaving only a register bound in dark red thread. You open it: all twenty-six names on the train, ordered by seat, each with a box for 'checked' beside it — most of them already stamped. On the twenty-seventh line, the name Vesper Vane sits under a moon-shaped official seal. The last page holds an endorsement in a hand identical to the conductor's notices: 'Complete the roll before the tunnel. For the celebrant's own hand.' The register is faintly warm to hold, and from inside it you can just hear, very softly, twenty-six different rhythms of heartbeat."
     },
     {
       "id": "last_supper",
@@ -1555,21 +1770,26 @@
           "id": "A",
           "text": "整備完畢,向車頭進發",
           "next": "tunnel_approach",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Preparations done — advance on the engine"
         },
         {
           "id": "B",
           "text": "教乘客以鹽與燈火守住餐車,再走",
           "next": "tunnel_approach",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Teach the passengers to hold the dining car with salt and lamplight, then go"
         },
         {
           "id": "C",
           "text": "把女孩托給酒保與寡婦照看,再走",
           "next": "tunnel_approach",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Leave the girl in the care of the bartender and the widow, then go"
         }
-      ]
+      ],
+      "titleEn": "The Dining Car Before the End",
+      "narrationEn": "The dining car has become a makeshift redoubt. The bartender has surrendered his counter for a barricade and is handing out salt packets, lamp oil, and the spirits from the bottom of his stock: 'On credit. Settle it when we're off the train.' The widow leads the passengers in setting the lamps out in a ring; the poet shields a window for the others with the half shadow he has left. The lantern girl sits at the centre of the lamp-ring, the little lantern hugged to her knees; when she sees you, she shifts aside to leave half a seat empty. The blood moon in the watch is one last sliver from full, and the pressure of the tunnel wind already aches against your eardrums. Whatever you would buy, rest, or say — do it now."
     },
     {
       "id": "tunnel_approach",
@@ -1583,22 +1803,27 @@
           "id": "A",
           "text": "從車廂內部強行突進",
           "next": "engine_corridor",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Force your way forward through the cars"
         },
         {
           "id": "B",
           "text": "再上車頂,搶最後一段路",
           "next": "engine_corridor",
           "alignment": 0,
-          "checkHint": "運動檢定"
+          "checkHint": "運動檢定",
+          "textEn": "Take to the roof again for the last stretch"
         },
         {
           "id": "C",
           "text": "回頭望一眼餐車的燈,再前進",
           "next": "engine_corridor",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Look back once at the dining car's lights, then go on"
         }
-      ]
+      ],
+      "titleEn": "The Blood Moon Tunnel Ahead",
+      "narrationEn": "The closer you come to the engine, the thicker the red lamps, and the wheel-beat is too fast now for a countdown — it is a palpitation. Out the windows, at the end of the Rift, the tunnel mouth gapes in the rock wall, rimmed with a dark red halo like a wound that will not scab. The tannoy wakes by itself; it is the conductor's voice, level beyond all inflection: 'Ladies and gentlemen, this train will shortly enter the Blood Moon Tunnel. Please check your ticket and confirm your name.' You take out your ticket. Your name on its face burns bright to the touch — hot, as if someone had signed the receipt for you, stroke by stroke, with a branding iron."
     },
     {
       "id": "engine_corridor",
@@ -1613,15 +1838,19 @@
           "text": "直撲鍋爐室,能閃就閃",
           "next": "boiler_core",
           "alignment": 0,
-          "checkHint": "敏捷檢定"
+          "checkHint": "敏捷檢定",
+          "textEn": "Break straight for the boiler room, dodging what you can"
         },
         {
           "id": "B",
           "text": "先清了這些爐奴,免得腹背受敵",
           "next": "coal_hell",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Clear out the furnace thralls first, lest they take you from behind"
         }
-      ]
+      ],
+      "titleEn": "The Tender Corridor",
+      "narrationEn": "The tender corridor is so narrow you must edge through sideways. Half-buried in the coal on either side are uniform sleeves, in halves and pieces — the ends of every past 'relief stoker', not one of them left whole. Ahead, dark red light pulses through the crack of the boiler-room door, in time with the blood moon inside your watch. Deep in the coal, a rustling; several pairs of ember eyes kindle one after another: the furnace thralls keep the last stretch of the road. Cutting straight through saves time; clearing them out is surer. But the tunnel waits for no one, and the wind's pressure has begun to squeeze at your ears."
     },
     {
       "id": "coal_hell",
@@ -1677,22 +1906,27 @@
             "damageType": "火焰"
           }
         ],
-        "intro": "三具爐奴自煤堆起身,鏟刃拖著火星,把窄廊堵得密不透風。"
+        "intro": "三具爐奴自煤堆起身,鏟刃拖著火星,把窄廊堵得密不透風。",
+        "introEn": "Three furnace thralls rise from the coal, shovel blades trailing sparks, and stop the narrow corridor tight."
       },
       "choices": [
         {
           "id": "A",
           "text": "記住溝槽的走向,衝進鍋爐室",
           "next": "boiler_core",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Memorise the run of the channels and burst into the boiler room"
         },
         {
           "id": "B",
           "text": "順手鏟一塊染月的爐渣護身",
           "next": "boiler_core",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Shovel up a lump of moon-tinged slag for a ward as you pass"
         }
-      ]
+      ],
+      "titleEn": "Clearing the Furnace Thralls",
+      "narrationEn": "The furnace thralls heave themselves up out of the coal, slag pouring off them in a clatter — three of them, shovels dragging sparks from the floor. They do not call for tickets; they simply advance on you, repeating the mechanical motion of stoking, as if you too were a shovelful of coal. In the narrow corridor, heat, coal dust and shovel blades bear down together. In the gaps of the fight, you make out what lies pressed beneath the lowest coal: a section of altar plinth, cut deep with channels, and every channel runs down toward the boiler — this is where the train's 'blood' begins its transfusion."
     },
     {
       "id": "boiler_core",
@@ -1706,16 +1940,20 @@
           "id": "A",
           "text": "推開主祭室的艙門",
           "next": "altar_reveal",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Push open the hatch to the celebrant's chamber"
         },
         {
           "id": "B",
           "text": "先掄起司爐鏟,試著封死爐口",
           "next": "altar_reveal",
           "alignment": 0,
-          "checkHint": "力量檢定"
+          "checkHint": "力量檢定",
+          "textEn": "Take up the stoker's shovel first and try to seal the firebox"
         }
-      ]
+      ],
+      "titleEn": "The Blood Moon in the Boiler Room",
+      "narrationEn": "There is no colour of fire in the boiler room; only the colour of moon. The shrunken blood moon hangs at the centre of the open firebox, grown now to the size of a millstone, tiny craters mottling its surface; with each slow turn it makes, the whole train dips gently, once. The stoker's place stands empty, a shovel planted in the coal, waiting for someone. The moonlight falls on you, and your shadow stops obeying — tilting, inch by inch, toward the firebox. Beyond the furnace, the hatch to the celebrant's chamber stands open a crack, and through it comes the sound of metal and flesh breathing together."
     },
     {
       "id": "altar_reveal",
@@ -1729,22 +1967,27 @@
           "id": "A",
           "text": "舉起銀鈕扣:「使節替我們留下了罪證。」",
           "next": "boss_altar",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Hold up the silver button: 'The envoy left us the proof of your crime.'"
         },
         {
           "id": "B",
           "text": "喊出名冊上他的本名,動搖祭壇",
           "next": "boss_altar",
           "alignment": 1,
-          "checkHint": "持血名冊者優勢"
+          "checkHint": "持血名冊者優勢",
+          "textEn": "Shout his true name from the register, and shake the altar"
         },
         {
           "id": "C",
           "text": "不廢話,直接斬向他胸口的祭壇",
           "next": "boss_altar",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "No more words — strike straight at the altar in his chest"
         }
-      ]
+      ],
+      "titleEn": "The Rolling Altar",
+      "narrationEn": "In the celebrant's chamber, the conductor stands with his back to you, both arms sunk to the elbow in the control console — not reaching into it; grown into it. Copper pipes wind up his spine and burrow into the body of the train; his uniform hangs open, and set into his chest is a small altar, its channels running dark red. The button's place on his left cuff is empty, the thread frayed to a fuzz — and it matches the break on the silver button in your palm, edge to edge, exactly. 'The envoy would not give up the casket,' his voice overlaps perfectly with the tannoy, 'so the celebrant had to collect the fare himself. This train was born an altar. I was born a part of it.' Outside the window, the tunnel mouth opens, like a jaw holding red light."
     },
     {
       "id": "boss_altar",
@@ -1793,22 +2036,27 @@
             "damageType": "火焰"
           }
         ],
-        "intro": "祭壇心臟裸露搏動,融軌的列車長掄起銅管手臂橫掃而來,隧道正逐節吞沒列車。"
+        "intro": "祭壇心臟裸露搏動,融軌的列車長掄起銅管手臂橫掃而來,隧道正逐節吞沒列車。",
+        "introEn": "The altar's heart beats bare; the rail-fused conductor swings a copper-piped arm in a scything arc, and the tunnel swallows the train car by car."
       },
       "choices": [
         {
           "id": "A",
           "text": "撕開血名冊,呼喊乘客的名字蓋過點名",
           "next": "final_choice",
-          "alignment": 2
+          "alignment": 2,
+          "textEn": "Tear the blood register open and shout the passengers' names over the roll call"
         },
         {
           "id": "B",
           "text": "把女孩影中的聖匣朝心臟裂口砸去",
           "next": "final_choice",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Hurl the casket from the girl's shadow into the crack in the heart"
         }
-      ]
+      ],
+      "titleEn": "The Altar's Heart",
+      "narrationEn": "The conductor throws back his head and howls, and the whistle takes the howl from him — and the whole train changes with him: rivets bristle upright, copper pipes swell like veins, the walls of the chamber fold back to bare the heart where boiler and altar have fused into one, the blood moon set beating in its ventricle. 'Inspection complete,' a thousand speaker-horns say at once. 'All passengers. Alight.' The dark red in the channels begins to run backward, the wheel-beat hardens wholly into a drum, and the tunnel's red glow has already swallowed the first car."
     },
     {
       "id": "final_choice",
@@ -1822,21 +2070,26 @@
           "id": "A",
           "text": "拉下制軔,斷開車鉤,獨留車頭載血月入隧道",
           "next": "pen_light",
-          "alignment": 2
+          "alignment": 2,
+          "textEn": "Pull the brake and break the coupling — let the engine alone carry the blood moon into the tunnel"
         },
         {
           "id": "B",
           "text": "把聖匣連同血月一起送進爐膛,同焚",
           "next": "pen_ash",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Send the casket into the firebox with the blood moon, and burn them together"
         },
         {
           "id": "C",
           "text": "抱起聖匣,踹開車門,自己先跳",
           "next": "pen_self",
-          "alignment": -2
+          "alignment": -2,
+          "textEn": "Snatch up the casket, kick open the door, and jump first"
         }
-      ]
+      ],
+      "titleEn": "The Final Choice",
+      "narrationEn": "Through the roar of the shattering heart, the train still drives on into the tunnel. The console stands empty now — brake lever, firing door, coupling, all waiting for a pair of hands. Moontrace screams that her wards will not hold many breaths longer; the bartender is hammering on doors, herding the passengers into the rear cars; the lantern girl stands at your side, and a corner of the casket in her shadow has already come solid, scalding, like holding a small sun. In which world the train stops, and who stays aboard, all hang on this one pull. The wheel-beat slows. For the first time, it seems to be listening to you."
     },
     {
       "id": "pen_light",
@@ -1850,21 +2103,26 @@
           "id": "A",
           "text": "壓到最後一息,把封印做完",
           "next": "end_dawn",
-          "alignment": 2
+          "alignment": 2,
+          "textEn": "Hold it down to the last breath and finish the seal"
         },
         {
           "id": "B",
           "text": "留下來,做這班車最後一任司爐",
           "next": "end_lantern",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Stay — and be this train's last stoker"
         },
         {
           "id": "C",
           "text": "撐到一半鬆手跳車,聽天由命",
           "next": "end_loop",
-          "alignment": -2
+          "alignment": -2,
+          "textEn": "Let go halfway and jump, leaving the rest to fate"
         }
-      ]
+      ],
+      "titleEn": "The Uncoupler",
+      "narrationEn": "In the great crash of the parting coupling, the rear cars, laden with every life aboard, slide slowly away; the warm yellow light of the dining car falls further and further behind, like a shore. The engine, carrying you and the blood moon in its firebox, dives at the tunnel's red. The brake lever burns in your grip; the casket hums in resonance beside the little lantern the girl left behind — if someone holds the brake to the floor and presses the casket to the firing door until the seal is complete, the blood moon will never leave this tunnel. Only one question remains: whether the one who holds it down will still have time to jump."
     },
     {
       "id": "pen_ash",
@@ -1878,15 +2136,19 @@
           "id": "A",
           "text": "死死抵住爐門,直到火色轉灰",
           "next": "end_ash",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Brace the furnace door with everything you have, until the fire turns grey"
         },
         {
           "id": "B",
           "text": "熱浪太烈,你先鬆了手",
           "next": "end_sacrifice",
-          "alignment": -1
+          "alignment": -1,
+          "textEn": "The heat is too fierce — your grip fails first"
         }
-      ]
+      ],
+      "titleEn": "The Shared Pyre",
+      "narrationEn": "You thrust the casket into the firebox, and the instant its starburst tracery aligns with the blood moon's craters, both give out a groan of overload. Moontrace throws herself against the furnace door beside you; together you brace it as the fire turns from red to a grey that is almost white. 'Mutual ruin,' she says, grinning through her teeth. 'The account the Crown fears most — the one where no one profits.' The furnace's shudder spreads through the train, and the whole express begins to drift loose between the living world and the far side, the scenery outside peeling away frame by frame. Your hands on the door must not slip: if they do, it is not a shared pyre. It is a burial."
     },
     {
       "id": "pen_self",
@@ -1900,21 +2162,26 @@
           "id": "A",
           "text": "抱緊聖匣,躍入夜色",
           "next": "end_thief",
-          "alignment": -2
+          "alignment": -2,
+          "textEn": "Clutch the casket tight and leap into the dark"
         },
         {
           "id": "B",
           "text": "最後一刻把匣拋回燈光裡,獨自墜落",
           "next": "end_ash",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "At the last instant, throw the casket back into the lamplight, and fall alone"
         },
         {
           "id": "C",
           "text": "遲了半步,影子攀上你的腳踝",
           "next": "end_sacrifice",
-          "alignment": -1
+          "alignment": -1,
+          "textEn": "Half a step too late — shadows close around your ankles"
         }
-      ]
+      ],
+      "titleEn": "The One Who Jumps",
+      "narrationEn": "The door tears outward in the wind's pressure; the scree of the Rift's slope streams past below. The casket in your arms scalds through the cloth, like carrying someone else's heart. Behind you, the girl does not give chase. She only stands in the red light with her lantern, watching you, the flame lighting the half-emptied shadow at her feet. The wheel-beat gathers speed beneath you one last time — jump now, and you land back on the soil of the living world; but the hotter the thing in your arms grows, the more certain you become: it does not mean to go with you. Deep in the corridor, the shadows are rising, quiet as the sea before the tide turns."
     },
     {
       "id": "end_dawn",
@@ -1923,7 +2190,9 @@
       "title": "黎明月臺",
       "endingKind": "good",
       "directive": "光明結局:封印完成、全員生還。逐一回收銀鈕扣、黑紗、殘影、提燈等意象,收在「等天亮的人」。",
-      "narration": "制軔壓到底的那一刻,封印的白光從爐口炸開,把隧道裡的紅一寸一寸洗淡。你們在車頭徹底停死前的最後幾息躍下,滾進裂谷邊的草坡。身後,隧道像一張慢慢閉上的嘴,把那輪吃撐了的血月連同半截車頭一起咽了回去,再也沒有吐出來。後段車廂順著坡道滑進黎明前最暗的那段夜,然後,天亮了。無名小站的月臺上,二十六名乘客一個不少。酒保清點人數清到第三遍才肯罷休;寡婦的黑紗在晨風裡輕輕飄;詩人的影子雖然還缺著半截,卻在朝陽下第一次有了暖色。提燈女孩把黃銅小燈吹熄,燈裡的火苗跳進晨光裡不見了——她的影子輕了,只是一個孩子該有的影子。溯月在站牌下朝你們行了個不合禮制的禮:「王室會記下今天。記不記得住另說,我記住了。」你摸了摸口袋,那顆向內彎曲的銀鈕扣還在,彎折的弧度貼著掌紋,像一句終於說完的遺言。車站的時刻表上,血月特快車的班次被一條紅線劃去。從此裂谷的夜裡再沒有紅色的燈,只有等著天亮的人。"
+      "narration": "制軔壓到底的那一刻,封印的白光從爐口炸開,把隧道裡的紅一寸一寸洗淡。你們在車頭徹底停死前的最後幾息躍下,滾進裂谷邊的草坡。身後,隧道像一張慢慢閉上的嘴,把那輪吃撐了的血月連同半截車頭一起咽了回去,再也沒有吐出來。後段車廂順著坡道滑進黎明前最暗的那段夜,然後,天亮了。無名小站的月臺上,二十六名乘客一個不少。酒保清點人數清到第三遍才肯罷休;寡婦的黑紗在晨風裡輕輕飄;詩人的影子雖然還缺著半截,卻在朝陽下第一次有了暖色。提燈女孩把黃銅小燈吹熄,燈裡的火苗跳進晨光裡不見了——她的影子輕了,只是一個孩子該有的影子。溯月在站牌下朝你們行了個不合禮制的禮:「王室會記下今天。記不記得住另說,我記住了。」你摸了摸口袋,那顆向內彎曲的銀鈕扣還在,彎折的弧度貼著掌紋,像一句終於說完的遺言。車站的時刻表上,血月特快車的班次被一條紅線劃去。從此裂谷的夜裡再沒有紅色的燈,只有等著天亮的人。",
+      "titleEn": "The Dawn Platform",
+      "narrationEn": "The moment the brake goes to the floor, the white light of the sealing bursts from the firing door and washes the red out of the tunnel, one span at a time. In the last few breaths before the engine dies for good, you leap, and roll down the grass bank at the Rift's edge. Behind you the tunnel closes like a slow mouth, swallowing the glutted blood moon back down along with half the engine — and never gives them up again. The rear cars glide down the grade into the darkest stretch of night before morning. And then it is morning. On the platform of a nameless halt, all twenty-six passengers stand counted, not one missing. The bartender tallies them three times before he will stop; the widow's black veil stirs gently in the dawn wind; the poet's shadow is still short by half, yet in the early sun it holds warmth for the first time. The lantern girl blows out the little brass lantern, and the flame inside skips away into the morning light and is gone — her shadow is light now, no more than the shadow a child ought to have. Under the station sign, Moontrace gives you a salute found in no royal protocol: 'The Crown will make a record of today. Whether it remembers is another matter. I will.' You feel your pocket: the inward-bent silver button is still there, its curve fitted to the lines of your palm, like a last testament finally spoken to its end. On the station timetable, the Blood Moon Express has been struck through with a single red line. From this night on there are no red lamps in the Rift — only people waiting for the dawn."
     },
     {
       "id": "end_lantern",
@@ -1932,7 +2201,9 @@
       "title": "留燈的司爐",
       "endingKind": "good",
       "directive": "有代價的光明:玩家(或其化身)留車看守血月,乘客全數獲救。回收司爐班表第八行與黃銅小燈,結尾是燈變站名。",
-      "narration": "你把同伴一個個推下車,最後是提燈女孩——她死死攥著你的衣角,你把那盞黃銅小燈掰進她手裡:「替我留著燈。」然後車鉤斷開,車頭載著你與血月一同沉進隧道。彼端沒有吞掉你。血月要人餵,祭壇要司爐,而你握著月火鏟,站上了那個空了八任的位置——不是獻祭,是看守。從此血月特快車永遠停在隧道正中,不進,不出。爐膛裡的血月一年比一年小:你一鏟一鏟,餵它的不再是煤,而是它自己的光。現世那頭,無名小站的月臺上多了一盞長明的黃銅小燈。燈下常坐著一個越長越高的女孩,後來是提著同款燈的年輕人,再後來,燈成了站名。乘客們都活著,活得很久,久到把那一夜講成了傳說。傳說的結尾各有版本,只有一句人人相同:隧道深處若隱若現的車輪聲,不是鬧鬼——是有人還在上班,替所有人,把那一班永遠開不到站的車,看到天亮。"
+      "narration": "你把同伴一個個推下車,最後是提燈女孩——她死死攥著你的衣角,你把那盞黃銅小燈掰進她手裡:「替我留著燈。」然後車鉤斷開,車頭載著你與血月一同沉進隧道。彼端沒有吞掉你。血月要人餵,祭壇要司爐,而你握著月火鏟,站上了那個空了八任的位置——不是獻祭,是看守。從此血月特快車永遠停在隧道正中,不進,不出。爐膛裡的血月一年比一年小:你一鏟一鏟,餵它的不再是煤,而是它自己的光。現世那頭,無名小站的月臺上多了一盞長明的黃銅小燈。燈下常坐著一個越長越高的女孩,後來是提著同款燈的年輕人,再後來,燈成了站名。乘客們都活著,活得很久,久到把那一夜講成了傳說。傳說的結尾各有版本,只有一句人人相同:隧道深處若隱若現的車輪聲,不是鬧鬼——是有人還在上班,替所有人,把那一班永遠開不到站的車,看到天亮。",
+      "titleEn": "The Stoker Who Keeps the Light",
+      "narrationEn": "You push your companions off the train one by one, the lantern girl last of all — she clings hard to your sleeve until you fold the little brass lantern into her hands: 'Keep the light for me.' Then the coupling parts, and the engine sinks into the tunnel carrying you and the blood moon together. The far side does not swallow you. The blood moon needs feeding; the altar needs a stoker; and with the Moonfire Shovel in your hands, you step into the place that stood empty through eight names — not as an offering, but as a keeper. From that night on, the Blood Moon Express stands forever at the tunnel's centre: never in, never out. Year by year the blood moon in the firebox grows smaller — shovel by shovel, what you feed it now is not coal, but its own light. On the living side, on the platform of a nameless halt, a brass lantern burns that is never allowed to go out. Beneath it often sits a girl growing taller by the year; later, a young stranger carrying a lantern of the same make; later still, the lantern becomes the station's name. The passengers live, and live long — long enough to tell that night into legend. The tellings end differently in every mouth, but one line is always the same: the faint wheel-beat deep in the tunnel is no haunting — it is someone still at their post, keeping watch for everyone over the one train that will never reach a station, until the dawn."
     },
     {
       "id": "end_ash",
@@ -1941,7 +2212,9 @@
       "title": "灰色月臺",
       "endingKind": "neutral",
       "directive": "蒼灰結局:聖匣與血月同毀,列車擱淺於兩界之間。全員活著但回不去,誰也沒贏誰也沒輸,收在分不清方向的鐵軌。",
-      "narration": "爐門合攏的剎那,聖匣與血月在爐膛裡相互咬碎,火色由紅轉灰。列車失速漂出了軌道,也漂出了現世——最終擱淺在一座兩界之間的月臺,天色永遠停在黎明前的灰。乘客們陸續醒來,推開車門,霧從月臺盡頭漫過來,每個人望進霧裡都看見了自己的來路:有人看見家門,有人看見墳,有人什麼也看不見。走進霧裡的人,再沒有回頭;留在月臺的人,在灰色裡搭起了新的站房。聖匣毀了,獻祭停了,血月熄成一枚嵌在天頂的暗斑,不再長大,也不再縮小。你們替全車人換來了活路,卻沒能把任何人送回原來的站——包括你們自己。提燈女孩的影子輕了,她把燈掛在站房門口,說要等下一班車。也許真的會有下一班。灰色的天光裡,鐵軌向兩個方向延伸,一頭亮些,一頭暗些,誰也說不準哪頭通向家。你們坐在月臺邊沿,聽著霧裡偶爾傳來不知屬於哪一界的汽笛。這就是兩不虧欠的帳:誰也沒贏,誰也沒輸;活著,但回不去了。"
+      "narration": "爐門合攏的剎那,聖匣與血月在爐膛裡相互咬碎,火色由紅轉灰。列車失速漂出了軌道,也漂出了現世——最終擱淺在一座兩界之間的月臺,天色永遠停在黎明前的灰。乘客們陸續醒來,推開車門,霧從月臺盡頭漫過來,每個人望進霧裡都看見了自己的來路:有人看見家門,有人看見墳,有人什麼也看不見。走進霧裡的人,再沒有回頭;留在月臺的人,在灰色裡搭起了新的站房。聖匣毀了,獻祭停了,血月熄成一枚嵌在天頂的暗斑,不再長大,也不再縮小。你們替全車人換來了活路,卻沒能把任何人送回原來的站——包括你們自己。提燈女孩的影子輕了,她把燈掛在站房門口,說要等下一班車。也許真的會有下一班。灰色的天光裡,鐵軌向兩個方向延伸,一頭亮些,一頭暗些,誰也說不準哪頭通向家。你們坐在月臺邊沿,聽著霧裡偶爾傳來不知屬於哪一界的汽笛。這就是兩不虧欠的帳:誰也沒贏,誰也沒輸;活著,但回不去了。",
+      "titleEn": "The Grey Platform",
+      "narrationEn": "The instant the furnace door seals shut, casket and blood moon grind each other to pieces inside the firebox, and the fire turns from red to grey. The train drifts loose of its rails, and loose of the living world — running aground at last at a platform between the two, under a sky stopped forever at the grey before dawn. The passengers wake one by one and push open the doors. Fog rolls in from the platform's end, and everyone who looks into it sees their own road back: some see a front door, some see a grave, some see nothing at all. Those who walk into the fog do not look back; those who stay raise a new station house in the grey. The casket is destroyed; the offerings have stopped; the blood moon has gone out, a dark blot set into the vault of the sky, growing no larger and no smaller. You bought the whole train its life, and could not send a single soul back to the station they started from — yourselves included. The lantern girl's shadow is light now; she hangs her lantern by the station-house door and says she will wait for the next train. Perhaps there truly will be one. In the grey light the rails run out in both directions, one end a little brighter, one a little darker, and no one can say which way leads home. You sit at the platform's edge and listen to a whistle drift now and then out of the fog, belonging to no world you could name. This is the account settled with no debt on either side: no one won, no one lost; alive — but there is no going back."
     },
     {
       "id": "end_loop",
@@ -1950,7 +2223,9 @@
       "title": "永夜循環",
       "endingKind": "bad",
       "directive": "壞結局(鬆手成因):封印半途而廢,玩家墮入循環成為新乘務員。首尾呼應開場節點,維斯佩·凡真相全回收。",
-      "narration": "你在最後一息鬆了手。制軔彈回,車頭載著沒封完的血月衝出隧道彼端——或者說,衝回了隧道此端。因為當你再睜開眼,列車正駛過裂谷鐵橋,猛地一震,第十三節車廂的燈整排轉紅,你手中車票上的名字,正緩慢蠕動成你的名字。一切重新開始。你想喊,喉嚨裡卻只發得出乘務員的腔調;你想逃,雙腳卻自己走向走道,白手套不知何時已經戴上了你的手。餐車裡,酒保朝你點頭致意,像對每一任新同事那樣;吧檯末端沒有提燈女孩,她的位置上坐著一個新的乘客,影子裡藏著一點星芒。名單第二十七行墨跡未乾,寫著你曾經的名字——現在,它叫維斯佩·凡了。血月特快車準點發車,永不到站。你成了它的一部分,在每一輪循環裡查票、點名、看著新的乘客登車,等著某一班車上,有誰能做到你當年沒做到的事。車輪的節拍一如既往,像倒數。只是你再也數不清,這是第幾遍。"
+      "narration": "你在最後一息鬆了手。制軔彈回,車頭載著沒封完的血月衝出隧道彼端——或者說,衝回了隧道此端。因為當你再睜開眼,列車正駛過裂谷鐵橋,猛地一震,第十三節車廂的燈整排轉紅,你手中車票上的名字,正緩慢蠕動成你的名字。一切重新開始。你想喊,喉嚨裡卻只發得出乘務員的腔調;你想逃,雙腳卻自己走向走道,白手套不知何時已經戴上了你的手。餐車裡,酒保朝你點頭致意,像對每一任新同事那樣;吧檯末端沒有提燈女孩,她的位置上坐著一個新的乘客,影子裡藏著一點星芒。名單第二十七行墨跡未乾,寫著你曾經的名字——現在,它叫維斯佩·凡了。血月特快車準點發車,永不到站。你成了它的一部分,在每一輪循環裡查票、點名、看著新的乘客登車,等著某一班車上,有誰能做到你當年沒做到的事。車輪的節拍一如既往,像倒數。只是你再也數不清,這是第幾遍。",
+      "titleEn": "The Endless Night Loop",
+      "narrationEn": "At the last breath, you let go. The lever springs back, and the engine, carrying its half-sealed blood moon, bursts out of the far end of the tunnel — or say rather, back in at this one. Because when you open your eyes again, the train is crossing the trestle over the Rift; it lurches hard; the lamps of Car Thirteen turn red in a single row; and on the ticket in your hand, a name is slowly squirming itself into yours. Everything begins again. You try to cry out, and your throat will produce only a crewman's cadence; you try to run, and your feet carry you up the aisle on their own, the white gloves already on your hands, though you never put them on. In the dining car the bartender nods to you, as he does to every new colleague; there is no lantern girl at the end of the bar — a new passenger sits in her place, a spark of starburst hidden in their shadow. On the manifest, the ink of the twenty-seventh line is not yet dry, and the name written there is the one that used to be yours. It is called Vesper Vane now. The Blood Moon Express departs on time, and never arrives. You are part of it: punching tickets through every circuit, calling the roll, watching the new passengers board — waiting for the one run when someone will manage what you, that night, could not. The wheel-beat is what it always was: like a countdown. Only you can no longer count which time this is."
     },
     {
       "id": "end_sacrifice",
@@ -1959,7 +2234,9 @@
       "title": "全車獻祭",
       "endingKind": "bad",
       "directive": "壞結局(失敗成因):聖匣在彼端開啟,全車獻祭。點名的儀式感寫足,結尾留下列車還會回來的餘寒。",
-      "narration": "影子攀上腳踝的那點涼意,是你在現世的最後知覺。列車穿過血月隧道的瞬間,聖匣在彼端張開——沒有巨響,沒有火光,只有滿車的燈同時熄滅,再亮起時,已是血的顏色。點名開始了。廣播平穩地念出二十七個名字,每念一個,便有一道影子替它的主人站起來,替他走完最後一段走道。乘客們安靜得可怕:尖叫是需要影子的,而他們的影子已經不屬於他們。爐膛裡的血月飽餐之後漲滿了整節車廂,透過車窗向外望的,不再是任何人的眼睛。彼端的曠野上,血月特快車放慢了速度,像一頭吃飽的獸緩緩踱步。它還會回來的——裂谷的鐵軌記得路。下一個月圓之夜,月臺上會再次停進這班準點的列車:車身鏽紅,燈光溫暖,名單上永遠留著空位。而你們的名字,連同全車二十六名乘客,都留在血名冊的「查訖」欄裡,墨色沉靜。再也不會有人,替你們撕去那一頁。"
+      "narration": "影子攀上腳踝的那點涼意,是你在現世的最後知覺。列車穿過血月隧道的瞬間,聖匣在彼端張開——沒有巨響,沒有火光,只有滿車的燈同時熄滅,再亮起時,已是血的顏色。點名開始了。廣播平穩地念出二十七個名字,每念一個,便有一道影子替它的主人站起來,替他走完最後一段走道。乘客們安靜得可怕:尖叫是需要影子的,而他們的影子已經不屬於他們。爐膛裡的血月飽餐之後漲滿了整節車廂,透過車窗向外望的,不再是任何人的眼睛。彼端的曠野上,血月特快車放慢了速度,像一頭吃飽的獸緩緩踱步。它還會回來的——裂谷的鐵軌記得路。下一個月圓之夜,月臺上會再次停進這班準點的列車:車身鏽紅,燈光溫暖,名單上永遠留著空位。而你們的名字,連同全車二十六名乘客,都留在血名冊的「查訖」欄裡,墨色沉靜。再也不會有人,替你們撕去那一頁。",
+      "titleEn": "The Whole Train Offered",
+      "narrationEn": "The cold of the shadow closing on your ankle is the last thing you feel of the living world. The instant the train passes through the Blood Moon Tunnel, the casket opens on the far side — no thunder, no burst of fire; only every lamp on the train going out at once, and when they come back, they are the colour of blood. The roll call begins. The tannoy reads out twenty-seven names, level and unhurried, and at each one a shadow stands up in its owner's place and walks the last stretch of the aisle for him. The passengers are terribly quiet: screaming requires a shadow, and their shadows are no longer theirs. Fed full, the blood moon in the firebox swells to fill a whole car, and whatever looks out through the windows after that is no one's eyes at all. On the open plain of the far side, the Blood Moon Express slows, pacing like a beast that has eaten well. It will come back — the rails of the Rift remember the way. On the next night of the full moon, the same punctual train will stand in at the platform: carriages rust-red, lamplight warm, and a manifest that always keeps a seat open. And your names, with all twenty-six passengers, remain in the register's 'checked' column, the ink calm and still. No one will ever tear that page out for you."
     },
     {
       "id": "end_thief",
@@ -1968,24 +2245,35 @@
       "title": "抱匣者",
       "endingKind": "bad",
       "directive": "壞結局(自保成因):獨自帶匣跳車,聖匣認影不認人,影子早已簽收。維斯佩·凡是位置不是人——最後一塊真相在此落地。",
-      "narration": "你落在裂谷邊坡的碎石上,滾了十幾圈,懷裡的聖匣完好無損。你活著,現世的風冷得真實。身後,血月特快車拖著滿車紅燈沉進隧道,像一根燒紅的針縫進黑布。你沒有回頭。三天後你才明白自己帶下車的是什麼:聖匣在懷裡越來越燙,夜裡貼著它睡,夢裡全是車輪的節拍。你的影子開始比你慢半拍,街上的燈一盞一盞,在你經過時泛起紅色。當鋪不收,法師不碰,王室的通緝令上畫著你的臉,懸賞欄寫的不是金額,是「連匣」。第七夜,你在旅店的鏡子裡看見影子先你一步坐下,朝你露出剪口似的笑,然後把匣蓋掀開了一條縫。原來聖匣認影不認人,而你的影子,在你抱著它跳車的那一刻就已經簽了收。隧道裡那班開不到站的車,不必來找你——你自己,正一步一步把自己送進第二十七行。名單上的墨跡永遠未乾。你終於知道,維斯佩·凡從來不是一個人的名字,而是一個位置。"
+      "narration": "你落在裂谷邊坡的碎石上,滾了十幾圈,懷裡的聖匣完好無損。你活著,現世的風冷得真實。身後,血月特快車拖著滿車紅燈沉進隧道,像一根燒紅的針縫進黑布。你沒有回頭。三天後你才明白自己帶下車的是什麼:聖匣在懷裡越來越燙,夜裡貼著它睡,夢裡全是車輪的節拍。你的影子開始比你慢半拍,街上的燈一盞一盞,在你經過時泛起紅色。當鋪不收,法師不碰,王室的通緝令上畫著你的臉,懸賞欄寫的不是金額,是「連匣」。第七夜,你在旅店的鏡子裡看見影子先你一步坐下,朝你露出剪口似的笑,然後把匣蓋掀開了一條縫。原來聖匣認影不認人,而你的影子,在你抱著它跳車的那一刻就已經簽了收。隧道裡那班開不到站的車,不必來找你——你自己,正一步一步把自己送進第二十七行。名單上的墨跡永遠未乾。你終於知道,維斯佩·凡從來不是一個人的名字,而是一個位置。",
+      "titleEn": "The Casket-Bearer",
+      "narrationEn": "You land on the scree of the Rift's slope and roll a dozen times over; the casket in your arms comes through without a scratch. You are alive, and the wind of the living world is cold and real. Behind you, the Blood Moon Express sinks into the tunnel trailing its carriages of red light, like a red-hot needle drawn into black cloth. You do not look back. It takes three days to understand what you carried off that train: the casket grows hotter against you night by night; sleeping beside it, you dream of nothing but the beat of wheels. Your shadow begins to lag half a beat behind you; the street lamps flush red, one by one, as you pass. The pawnshops will not take it, the mages will not touch it, and the Crown's warrant carries your face, with no sum in the bounty line — only the words 'with casket'. On the seventh night, in the inn's mirror, you watch your shadow seat itself one beat before you do, smile at you with a mouth like a punched slit, and lift the casket's lid a crack. So the letter had it right: the casket answers to the shadow, not the bearer — and your shadow signed for it the moment you jumped with it in your arms. The train that never reaches its station has no need to come for you. You are walking yourself, step by step, into the twenty-seventh line. The ink on the manifest never dries. And you understand at last that Vesper Vane was never one person's name. It is a position."
     }
   ],
   "stageObjectives": {
     "中期": {
       "objective": "查訪各節車廂與乘客,找出真正的聖匣與藏匿它的影子",
       "context": "發光箱子是誘餌;王室法師、驗票員與名單上多出的名字,各藏著半句真話。",
-      "stakes": "列車正逼近血月隧道;每過一站,影子們就更清醒一分。"
+      "stakes": "列車正逼近血月隧道;每過一站,影子們就更清醒一分。",
+      "objectiveEn": "Search the cars and question the passengers to find the true Starfire Casket and the shadow that hides it",
+      "contextEn": "The glowing crate is a decoy; the royal mage, the ticket inspector and the extra name on the manifest each hold half a truth.",
+      "stakesEn": "The train is closing on the Blood Moon Tunnel; with every station passed, the shadows grow one degree more awake."
     },
     "後期": {
       "objective": "奪回聖匣並奪下火車頭,在列車衝入血月隧道前做出了斷",
       "context": "鍋爐裡的血月已經睜眼,列車長的祭壇即將完工;煞車與封印,只來得及做一件。",
-      "stakes": "隧道入口張開如獸口;錯過這一程,全車乘客都將被點名。"
+      "stakes": "隧道入口張開如獸口;錯過這一程,全車乘客都將被點名。",
+      "objectiveEn": "Reclaim the casket and take the engine, and settle matters before the train plunges into the Blood Moon Tunnel",
+      "contextEn": "The blood moon in the boiler has opened its eye and the conductor's altar is nearly complete; there is time for the brake or the seal — not both.",
+      "stakesEn": "The tunnel mouth gapes like a beast's jaws; miss this passage, and every soul aboard will be called by name."
     },
     "結局": {
       "objective": "見證列車停在何界",
       "context": "聖匣、血月與乘客的命運已依你們的抉擇定下。",
-      "stakes": "結局已定,不可回頭。"
+      "stakes": "結局已定,不可回頭。",
+      "objectiveEn": "Witness in which world the train comes to rest",
+      "contextEn": "The fates of the casket, the blood moon and the passengers are sealed by your choices.",
+      "stakesEn": "The ending is set; there is no turning back."
     }
   }
 }

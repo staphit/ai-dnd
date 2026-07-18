@@ -16,22 +16,27 @@
           "id": "A",
           "text": "直奔廣場,查看那棵發光的古樹",
           "next": "plaza_tree",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Head straight for the square and the glowing tree"
         },
         {
           "id": "B",
           "text": "先進最近的民宅,看看灶邊的人去了哪裡",
           "next": "soup_kitchen",
           "alignment": 0,
-          "checkHint": "調查:飯桌與灶邊的痕跡"
+          "checkHint": "調查:飯桌與灶邊的痕跡",
+          "textEn": "Enter the nearest house first and see where its people have gone"
         },
         {
           "id": "C",
           "text": "村外有商旅營火,先去打聽情況",
           "next": "caravan_camp",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Seek out the caravan fire outside the village and ask what happened"
         }
-      ]
+      ],
+      "titleEn": "The Open Gate",
+      "narrationEn": "The gate of Mossbell Village stands wide open, its bar lying in the mud as if tossed aside in passing. You came to deliver a crate of salves for the caravan; now you hear nothing but your own footsteps. The first house on the left stands open too — soup still steaming on the stove, the wooden ladle propped against the pot's rim, a stool tipped askew at the table, as if whoever was eating had only stepped away for a moment. The wind comes off the forest, and the wet green smell of it carries flowers — sweet, far too sweet, with a thread of rot pressed underneath. Deep in the village, above the square, the crown of the old tree glows with a faint emerald light that has no business belonging to any hour but dusk."
     },
     {
       "id": "plaza_tree",
@@ -45,22 +50,27 @@
           "id": "A",
           "text": "伸手觸碰那朵借聲說話的花",
           "next": "vine_ambush",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Reach out and touch the flower that speaks with a borrowed voice"
         },
         {
           "id": "B",
           "text": "不碰,湊近細聽花裡還說了什麼",
           "next": "flower_voice",
           "alignment": 1,
-          "checkHint": "感知:從氣音裡聽出更多字句"
+          "checkHint": "感知:從氣音裡聽出更多字句",
+          "textEn": "Do not touch it — lean close and listen for what else it says"
         },
         {
           "id": "C",
           "text": "退開古樹,先繞去民宅查證",
           "next": "soup_kitchen",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Back away from the tree and check the houses first"
         }
-      ]
+      ],
+      "titleEn": "Emerald Bloom",
+      "narrationEn": "The old tree is larger than you imagined — its crown roofs the whole sky above the square, and overnight it has burst into emerald flowers. The petals are translucent, like thin jade, faint light drifting slowly through their veins; the whole tree glows as if it were breathing. You stand beneath it, and you hear a voice. \"Save me.\" The flower hangs at the height of a face. The voice is quiet, but it freezes all of you at once — it is the voice of the youngest of your company, down to the little slur at the end of the words. Yet he stands right beside you, lips unmoving, face paler than the petals. The flower speaks again: \"Save me. Before the bell rings.\""
     },
     {
       "id": "flower_voice",
@@ -74,22 +84,27 @@
           "id": "A",
           "text": "進沉睡者的屋子,聽他們念的是不是同一個名字",
           "next": "sleeper_houses",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Enter the sleepers' houses and hear whether they murmur the same name"
         },
         {
           "id": "B",
           "text": "去商旅營地,問問外地人聽過瑟芙沒有",
           "next": "caravan_camp",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Go to the caravan camp and ask the outsiders about Seffa"
         },
         {
           "id": "C",
           "text": "去鐘樓查村史,找被抹去的名字",
           "next": "bell_tower",
           "alignment": 0,
-          "checkHint": "調查:翻找刻文與名冊"
+          "checkHint": "調查:翻找刻文與名冊",
+          "textEn": "Search the bell tower records for an erased name"
         }
-      ]
+      ],
+      "titleEn": "A Whisper in the Flower",
+      "narrationEn": "You hold your breath and bring your ears close to the petals. The borrowed voice is faint and urgent, like someone speaking through the surface of water: \"Seffa… my name is Seffa.\" A pause; the light in the flower's veins trembles. \"Don't let them light the fire. Not this time.\" Another pause, so long you think the flower has withered, before the last words squeeze through: \"After sundown, the dream lets no one go. The whole village. You too.\" The light drains from the veins and the petals droop, like a hand letting go. No stone in this village, no mouth, has ever spoken the name Seffa — yet the sleeping villagers murmur it, house after house."
     },
     {
       "id": "soup_kitchen",
@@ -103,21 +118,26 @@
           "id": "A",
           "text": "挨家查看,確認其他沉睡者念的是否同一名字",
           "next": "sleeper_houses",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Go house to house and confirm the other sleepers murmur the same name"
         },
         {
           "id": "B",
           "text": "回廣場,古樹的花或許知道這名字",
           "next": "plaza_tree",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Return to the square — the tree's flowers may know this name"
         },
         {
           "id": "C",
           "text": "帶著畫去商旅營地問外地人",
           "next": "caravan_camp",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Take the drawing to the caravan camp and ask the outsiders"
         }
-      ]
+      ],
+      "titleEn": "Hot Soup and a Drawing",
+      "narrationEn": "Inside, a family of three lies slumped over the dinner table — the mother's hand still on the ladle, the father's brow against the rim of his bowl, their breathing as even as a single body's. You check their pulses: alive, all of them, only impossible to wake — the kind of sleep that would not break if you shook a shoulder from its socket. The soup is hot, the noodles soft; they fell asleep between one mouthful and the next, and so did the whole village. The child lies at the table's corner, hugging a crayon drawing: a green-haired girl beneath a great tree, holding hands with a small stick figure, a crooked sun scribbled above them both. The child's lips part and close in his sleep. You lean down to listen. He is saying a name: \"Seffa.\""
     },
     {
       "id": "sleeper_houses",
@@ -131,22 +151,27 @@
           "id": "A",
           "text": "拔刀割斷藤蔓,先把人從藤上解下來",
           "next": "vine_ambush",
-          "alignment": -1
+          "alignment": -1,
+          "textEn": "Draw a blade and cut the sleepers free of the vines"
         },
         {
           "id": "B",
           "text": "不動藤,循著藤蔓出屋追蹤它的去向",
           "next": "vine_trail",
           "alignment": 0,
-          "checkHint": "生存:辨認藤蔓匯流的主脈"
+          "checkHint": "生存:辨認藤蔓匯流的主脈",
+          "textEn": "Leave the vines be — follow them out and trace where they run"
         },
         {
           "id": "C",
           "text": "先去鐘樓查村史,弄清瑟芙是誰",
           "next": "bell_tower",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Go first to the bell tower and learn who Seffa was"
         }
-      ]
+      ],
+      "titleEn": "Vines About the Houses",
+      "narrationEn": "The second house, the third, the fifth — every sleeper's lips shape the same word: Seffa, Seffa. And the vines got into the houses before the name did. Green tendrils probe in through window cracks, under doors, down the stove flues — some thin as thread, some thick as arms — winding gently, gently around every sleeper's wrists and ankles. They do not squeeze. They do not pull. They only hold. You push open a back window and see every vine in the village joining into one strand outside, hugging the ground, climbing the fences, running toward the deep forest — green and shining, like a river flowing backward. Someone touches a vine, lightly. The sleeping old woman's brow creases at once, and a small animal whimper rises in her throat."
     },
     {
       "id": "vine_trail",
@@ -160,15 +185,19 @@
           "id": "A",
           "text": "跟著那股回頭藤,進村長家看個究竟",
           "next": "elder_house",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Follow the returning vine into the Elder's House"
         },
         {
           "id": "B",
           "text": "先回商旅營地整備,再作打算",
           "next": "caravan_camp",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Go back to the caravan camp first and take stock"
         }
-      ]
+      ],
+      "titleEn": "The Green River Flowing Backward",
+      "narrationEn": "At the village's edge the vines gather into a green river. Crouched by the fence you count at least a hundred strands, crawling out of every house, twisting together at the treeline into one trunk thick as a man's thigh before it dives into the deep forest. The mist in the woods is green too, thick as dissolved waterweed; one breath of it leaves flowers and silt on the back of your tongue. Just as you set to marking the bearing, someone notices the exception: one of the thickest vines splits away from the main trunk and doubles back into the village, hugging the base of the walls all the way to a carved wooden window, and slips inside. It is the handsomest house in the village. The plaque above the door reads: the Elder's House."
     },
     {
       "id": "vine_ambush",
@@ -236,7 +265,8 @@
             "damageType": "鈍擊"
           }
         ],
-        "intro": "藤蔓絞成三具無臉的人形,空心的胸腔裡各懸一點翡翠光,朝你們無聲圍攏。"
+        "intro": "藤蔓絞成三具無臉的人形,空心的胸腔裡各懸一點翡翠光,朝你們無聲圍攏。",
+        "introEn": "The vines twist into three faceless human shapes, a point of emerald light hanging in each hollow chest, and close in on you without a sound."
       },
       "choices": [
         {
@@ -244,15 +274,19 @@
           "text": "檢視斷藤——裡面纏著一縷綠色長髮",
           "next": "flower_voice",
           "alignment": 0,
-          "checkHint": "調查:辨認髮絲與花脈同源"
+          "checkHint": "調查:辨認髮絲與花脈同源",
+          "textEn": "Examine the severed vines — a lock of long green hair is tangled inside"
         },
         {
           "id": "B",
           "text": "退回商旅營地包紮整備",
           "next": "caravan_camp",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Fall back to the caravan camp to bind your wounds and resupply"
         }
-      ]
+      ],
+      "titleEn": "The Vine Binders",
+      "narrationEn": "The vines move. Not the way wind moves them — the strands nearest you rear up off the ground, coiling layer over layer into three human outlines, each hollow chest holding a point of emerald light, like a heart that refuses to go out. They have no faces, yet they \"look\" at you as one, the green light waxing and waning with your breathing. Across the square, several low vines swell into fist-sized buds, skins stretched shining-tight, ready to burst and throw their spores. In their houses, the sleeping villagers frown in the same instant — as if every blow that follows will land on the skin of the dream."
     },
     {
       "id": "caravan_camp",
@@ -266,21 +300,26 @@
           "id": "A",
           "text": "去找藥婆瑪珂,她是村裡唯一醒著的人",
           "next": "herbalist_wagon",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Find Marko the herb-woman — the only villager still awake"
         },
         {
           "id": "B",
           "text": "付幾枚銀幣,向巴魯打聽這村子的舊事",
           "next": "balu_rumors",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Pay Balu a few silver and ask about the village's past"
         },
         {
           "id": "C",
           "text": "補給完畢,前往鐘樓查村史",
           "next": "bell_tower",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Finish resupplying, then search the bell tower records"
         }
-      ]
+      ],
+      "titleEn": "The Caravan Camp",
+      "narrationEn": "On the slope outside the village three canvas tents stand pitched, their campfire burning high — high the way a fire burns when someone needs the courage. Balu, a fat merchant clutching a short cudgel, hurries to meet you, and lets out a long breath when he sees you are not sleepwalking villagers: \"They were fine last night! I went in this morning to buy mountain goods, and the whole village was sprawled out asleep — you can't drag them awake!\" His wagon stands open: salves, torches, rope, a few second-hand weapons, every price marked plain. No credit in troubled times. \"Buy while you can. I break camp before sundown, no matter what.\" He lowers his voice and juts his chin toward the camp's edge: \"Marko's awake too — the village herb-woman. Been sitting by her wagon since morning. Not a word. Just shaking.\""
     },
     {
       "id": "balu_rumors",
@@ -294,21 +333,26 @@
           "id": "A",
           "text": "去水井邊看看,巴魯說夜裡井裡有歌聲",
           "next": "well_rim",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Go look at the well — Balu says there is singing in it at night"
         },
         {
           "id": "B",
           "text": "去鐘樓,查那口十年不響的鐘",
           "next": "bell_tower",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Go to the bell tower and the bell ten years silent"
         },
         {
           "id": "C",
           "text": "去找藥婆瑪珂對質舊事",
           "next": "herbalist_wagon",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Confront Marko the herb-woman with the old story"
         }
-      ]
+      ],
+      "titleEn": "Balu's Old Tales",
+      "narrationEn": "The silver disappears into his purse and Balu's tongue comes loose. \"This village has been wrong for a long while. Ten years back, my father and I ran this route and hit their Vow-Keeping Festival — the whole village in masks, singing that nursery rhyme, fire burning half the sky red. From that year on, the tower bell never rang again. You ever heard of a place called Mossbell with no bell?\" He rubs his fingers together, remembering. \"There was a notice posted at the gate that year, like a wanted bill. A green-haired woman, and under her, words like forest witch, root of calamity. My father said: don't ask. A merchant minds the road.\" He pauses, then pushes a bundle of torches into your arms. \"Take them, on the house. The nights here can't be trusted.\""
     },
     {
       "id": "herbalist_wagon",
@@ -322,21 +366,26 @@
           "id": "A",
           "text": "順著她的目光去水井查探",
           "next": "well_rim",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Follow her glance and go search the well"
         },
         {
           "id": "B",
           "text": "不逼她,買下苦茶,轉去鐘樓",
           "next": "bell_tower",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Press her no further — buy the bitter tea and turn for the bell tower"
         },
         {
           "id": "C",
           "text": "回營地與巴魯核對她的說法",
           "next": "caravan_camp",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Go back to the camp and check her story against Balu's"
         }
-      ]
+      ],
+      "titleEn": "The Herb-Woman's Wagon",
+      "narrationEn": "Marko's wagon stands at the camp's edge, its boards spread with drying herbs, its owner huddled on the shaft with her knuckles clenched white. When you approach she rallies like a drowning woman catching driftwood, digging out packets of salve and a pot of pitch-black bitter tea: \"Drink this and your mind stays lit even in sleep — you'll dream and know you're dreaming. An old recipe. Cheap.\" Her hands are quick and her talk runs freely, but when you say the words ten years ago, her hands stop for half a beat; when you ask who Seffa is, she turns away to fuss with her herb packets, voice gone tight: \"Never heard it. No such person in this village.\" And her eyes, disobedient, flick once toward the village well."
     },
     {
       "id": "well_rim",
@@ -351,21 +400,26 @@
           "text": "繫繩下井,潛向那點翡翠光",
           "next": "well_bottom",
           "alignment": 0,
-          "checkHint": "運動:憋氣潛入冰冷井水"
+          "checkHint": "運動:憋氣潛入冰冷井水",
+          "textEn": "Rope up and dive for the point of emerald light"
         },
         {
           "id": "B",
           "text": "不下井,記全童謠歌詞,去比對沉睡者的呢喃",
           "next": "lullaby_learn",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Stay above — write down the whole rhyme and match it against the sleepers' murmurs"
         },
         {
           "id": "C",
           "text": "先去鐘樓,查「鐘響三聲」的說法",
           "next": "bell_tower",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Go first to the bell tower, and the matter of the bell ringing thrice"
         }
-      ]
+      ],
+      "titleEn": "The Rhyme in the Well",
+      "narrationEn": "The well stands where two lanes cross, thick moss on its stone lip, the windlass rope long rotted. Before you even reach it you hear the singing — drifting up out of the well, a little girl's voice, humming a cradle-song of a rhyme: \"When the bell rings thrice the flowers wake, the name goes under the loam; the name in the loam puts out a shoot — and who forgets it never goes home…\" The tune is gentle. The words crawl up your spine. You lean over the rim: the water is black as ink, but far down there is a point of emerald light, pulsing — the same colour as the flowers on the tree in the square. The singing rises from exactly where the light is. The water's surface holds not one ripple."
     },
     {
       "id": "well_bottom",
@@ -386,22 +440,27 @@
             "properties": "十年前鑄造,邊緣有火燒熔痕;可作為當年那場火的物證"
           }
         ],
-        "intro": "井底淤泥裡,一枚翡翠種子安靜地搏動著,像被人特意沉進最深的地方。"
+        "intro": "井底淤泥裡,一枚翡翠種子安靜地搏動著,像被人特意沉進最深的地方。",
+        "introEn": "In the silt at the well's bottom an emerald seed pulses quietly, as if someone had sunk it, deliberately, as deep as it would go."
       },
       "choices": [
         {
           "id": "A",
           "text": "把種子貼近沉睡者,聽清他們在念什麼",
           "next": "lullaby_learn",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Hold the seed near the sleepers and hear their murmuring turn clear"
         },
         {
           "id": "B",
           "text": "帶上種子,去鐘樓查村史",
           "next": "bell_tower",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Take the seed and go search the bell tower records"
         }
-      ]
+      ],
+      "titleEn": "The Seed at the Well's Bottom",
+      "narrationEn": "The well water is cold as knives. Halfway down, the water turns thick — not with weeds, but with dream. Images burst open that belong to no well: fire climbing the sky, wooden masks turning in slow circles, a child's scream swallowed by a bell. Inside the vision you choke on water, lungs scalding, up and down nearly lost, and only the rope hauls you back. But your fist is clenched around something: a warm seed, emerald, light drifting slowly through its veins, pulsing gently in your palm like a small heart. From the silt you also bring up a few old silver coins, minted ten years ago, every edge melted by fire."
     },
     {
       "id": "lullaby_learn",
@@ -415,15 +474,19 @@
           "id": "A",
           "text": "去村長家——歌裡的「影子」也許不是比喻",
           "next": "elder_house",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Go to the Elder's House — the shadow in the song may be no metaphor"
         },
         {
           "id": "B",
           "text": "去鐘樓,查「鐘停十年」對得上什麼",
           "next": "bell_tower",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Go to the bell tower and test the line about the bell stopped ten years"
         }
-      ]
+      ],
+      "titleEn": "The Song Pieced Together",
+      "narrationEn": "House by house you crouch at the sleepers' bedsides, ears close to the moving lips. Every one of them recites the same rhyme, but each their own scattered verse of it, like a choir taken apart. With charcoal you write the lines down, splice them, check them against the song in the well — and at last the whole rhyme comes together. The first half is a lullaby's tune. The last verse drops like a stone: \"Fear not the flowers, cry not at the fire, borrow a shadow and hide it awhile; ten years the bell stops, the name keeps the earth — and in ten years the debt comes home in full.\" As you write the final word, every murmur in the village stops in the same breath — a silence like the whole of Mossbell waiting to hear you sing this song to someone."
     },
     {
       "id": "bell_tower",
@@ -437,21 +500,26 @@
           "id": "A",
           "text": "去村長家,查當年是誰下令鑿碑",
           "next": "elder_house",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Go to the Elder's House and learn who ordered the tablet chiselled"
         },
         {
           "id": "B",
           "text": "回頭比對沉睡者的呢喃,拼出被鑿去的內容",
           "next": "lullaby_learn",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Go back to the sleepers' murmurs and piece out what was destroyed"
         },
         {
           "id": "C",
           "text": "天色不早,回營地作入夜的準備",
           "next": "first_sleep",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "The light is failing — return to camp and prepare for nightfall"
         }
-      ]
+      ],
+      "titleEn": "The Bell Ten Years Silent",
+      "narrationEn": "The tower stair creaks under you. The Moss Bell hangs at the top, its bronze crusted with moss yet polished sound beneath — not broken, but silenced: the clapper has been taken out whole, only a stub of cut rope left on the ring. Set into the wall are three stone tablets of village record, year by year, the script neat. You read down the years, and at the year ten years past the record snaps off: the whole entry chiselled away, the stone face pitted, the cuts deep and hurried, as if they feared it might grow back. Only in one place, where a name once stood, the chisel went shallower; by slanted light you can still trace the outline of two characters: Sef-fa. In the tablet's lowest corner, in a different hand, a small line has been added: \"Forgetting is our offering, that sleep be kept forever.\""
     },
     {
       "id": "elder_house",
@@ -468,28 +536,34 @@
             "properties": "十年前的判決殘片:「……林中女子,惑村之罪,處以火祭……」受刑者姓名被墨塗死,告發人簽名處只剩一角「瑪」字"
           }
         ],
-        "intro": "暗格裡的殘頁邊緣焦黑,墨塗的名字底下,紙背透出淺淺的筆鋒。"
+        "intro": "暗格裡的殘頁邊緣焦黑,墨塗的名字底下,紙背透出淺淺的筆鋒。",
+        "introEn": "The page in the hidden drawer is charred at its edges; beneath the inked-out name, faint strokes show through the back of the paper."
       },
       "choices": [
         {
           "id": "A",
           "text": "守在村長身邊,等夜色降臨看影子要做什麼",
           "next": "first_sleep",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Keep watch at the elder's side and see what the shadow does at nightfall"
         },
         {
           "id": "B",
           "text": "帶著殘頁回沉睡者中比對呢喃",
           "next": "lullaby_learn",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Take the page and match it against the sleepers' murmuring"
         },
         {
           "id": "C",
           "text": "趕回營地做最後補給",
           "next": "caravan_camp",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Hurry back to camp for final supplies"
         }
-      ]
+      ],
+      "titleEn": "The Elder's Shadow",
+      "narrationEn": "Elder Odell lies slumped over the desk in his study, sleeping exactly as the village sleeps — but his shadow is wrong. The curtains are drawn tight; not a shaft of direct light enters the room; and still his shadow lies black as spilled ink across the floorboards, edges sharp, and moving — a slow, creeping churn, like a sack with something alive inside. The thick vine that climbed into the house swings three paces wide of the shadow, choosing to scale the bookshelf rather than touch it. You test the shadow's edge with a knife-point: the blade sinks as into cold mud and is pushed back by a dense, patient force. On the desk, a hidden drawer stands half open, a scorched page pressed inside."
     },
     {
       "id": "first_sleep",
@@ -503,16 +577,20 @@
           "id": "A",
           "text": "圍成一圈牽手躺下,約定在夢裡的鐘樓下集合",
           "next": "festival_gate",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Lie down in a circle, hands joined, and agree to meet beneath the dream's bell tower"
         },
         {
           "id": "B",
           "text": "分喝苦茶再睡,盡量保持夢中神智清明",
           "next": "festival_gate",
           "alignment": 0,
-          "checkHint": "體質:抵抗花粉,帶著清醒入夢"
+          "checkHint": "體質:抵抗花粉,帶著清醒入夢",
+          "textEn": "Share out the bitter tea before sleeping, and carry what clarity you can into the dream"
         }
-      ]
+      ],
+      "titleEn": "Pollen Like Snow",
+      "narrationEn": "Without warning the old tree shudders, and every emerald flower lets go its pollen at once — green dust falling through the light like snow in reverse, settling soundless over the whole village. The sleep does not creep in; it comes down. Knees buckle, eyelids weigh a hundredweight, even fear is wrapped in warm water. You pinch each other's arms, throw cold water, slap cheeks with the flat of a blade — every trick buys a breath or two of clarity, no more. The pollen does not itch where it lands. It is only gentle — gentle like a hand stroking your hair from the far side of a dream. In your last clear moment you hear the whole village murmuring again, in perfect unison now: the first line of the rhyme."
     },
     {
       "id": "festival_gate",
@@ -526,22 +604,27 @@
           "id": "A",
           "text": "混入人流,前往慶典廣場",
           "next": "festival_hub",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Join the crowd flowing toward the festival square"
         },
         {
           "id": "B",
           "text": "先登上這座「會響」的鐘樓看清全村",
           "next": "festival_bell",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "First climb this bell tower that rings, and take in the whole village"
         },
         {
           "id": "C",
           "text": "跟上那個獨自逆著人流走的綠髮孩子",
           "next": "child_seffa",
           "alignment": 0,
-          "checkHint": "隱匿:不驚動人群悄悄尾隨"
+          "checkHint": "隱匿:不驚動人群悄悄尾隨",
+          "textEn": "Follow the green-haired child walking alone against the crowd"
         }
-      ]
+      ],
+      "titleEn": "The Gate of Ten Years Gone",
+      "narrationEn": "You wake at the same village gate, the same mud beneath your knees, and the world is ten years younger. The paint on the lintels is fresh, the fences stand straight, and the sky has stopped in a dusk of orange braided with green that will not move one minute onward. Strangest of all is the sound — the bell is ringing. The Moss Bell tolls stroke after stroke, mixed with laughter, drums, the smell of fritters in hot oil. Lanterns and emerald paper flowers hang the length of the street, and villagers in festival clothes stream toward the square, every face smiling, smiling identically, as if cut from a single face. A woman with a basket brushes past, wooden masks knocking together inside it. She nods to you: \"The Vow-Keeping Festival, honoured guests — come to ask a blessing too?\""
     },
     {
       "id": "festival_hub",
@@ -555,21 +638,26 @@
           "id": "A",
           "text": "逛面具攤——慶典裡人人都得有張面具",
           "next": "mask_stall",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Browse the mask stall — at this festival, everyone must have a mask"
         },
         {
           "id": "B",
           "text": "沿燈籠長街打聽「還願祭」還什麼願",
           "next": "lantern_row",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Work down the lantern street and ask what vow this festival keeps"
         },
         {
           "id": "C",
           "text": "直接去廣場中央,查那座越搭越高的柴堆",
           "next": "pyre_square",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Go straight to the centre of the square and the ever-taller pyre"
         }
-      ]
+      ],
+      "titleEn": "The Festival Square",
+      "narrationEn": "The festival square is a size larger than its waking self, stalls ringing the old tree: candied berries, roast chestnuts, medicine broth, little knives ground bright — everything, and no one takes money. The stallholders take memory. They reach out two fingers, press the air before a customer's temple, and pinch away a faintly glowing thread; the customer blinks, takes their goods, and walks off smiling — a shade fainter than before. Beneath the old tree there are no emerald flowers yet, only a ring of prayer plaques nailed to the bark. And in the very centre of the square, grown men are stacking firewood, log by log, high and steady, as if building toward a great bonfire. Children circle the woodpile singing the rhyme — the very one you wrote down."
     },
     {
       "id": "mask_stall",
@@ -584,15 +672,19 @@
           "text": "各交出一段記憶,換上慶典面具",
           "next": "young_elder",
           "alignment": 0,
-          "checkHint": "自述交出哪段記憶,由DM裁定其份量"
+          "checkHint": "自述交出哪段記憶,由DM裁定其份量",
+          "textEn": "Each give up a memory, and put on the festival masks"
         },
         {
           "id": "B",
           "text": "捨不得記憶,空著臉離開攤位",
           "next": "lantern_row",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Keep your memories, and leave the stall bare-faced"
         }
-      ]
+      ],
+      "titleEn": "The Mask Stall",
+      "narrationEn": "The mask stall stands where the lantern-light is thickest. The stallholder is tall — unreasonably tall — his face always turned at an angle the light cannot reach. Wooden masks hang in rows: stag, owl, laughing face, weeping face, every eyehole deep and empty. \"One mask, one memory.\" His voice rises as if from under water. \"Wear it, and tonight you are village-born — stand in the front row at the fire and no one will look at you twice.\" He extends two overlong fingers and pinches the air, delicately. \"Any memory will do. A first kiss. An old grudge. A dead mother's face. What you hand over fades in the waking world too.\" Seeing you hesitate, he slides a plain white mask an inch closer: \"Or don't buy. Only — tonight, the fire remembers the faces that go bare.\""
     },
     {
       "id": "lantern_row",
@@ -606,21 +698,26 @@
           "id": "A",
           "text": "去找方才那個逆著人流的綠髮孩子",
           "next": "child_seffa",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Go find the green-haired child who walked against the crowd"
         },
         {
           "id": "B",
           "text": "去廣場中央的柴堆,看看火要燒誰",
           "next": "pyre_square",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Go to the pyre at the square's centre and see who the fire is for"
         },
         {
           "id": "C",
           "text": "折回廣場攤位間再補些裝備",
           "next": "festival_hub",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Turn back to the square's stalls and stock up again"
         }
-      ]
+      ],
+      "titleEn": "Lantern Row",
+      "narrationEn": "On the long lantern street everyone is glad to talk to you; mouths are looser in a dream than awake. A hiccuping drunk at the wine stall says the Vow-Keeping Festival comes once every ten years, and the vow it keeps is the village's wish for sleep: \"Sleep sweet, forget clean, and the crops come up fine.\" The old lamp-keeper squints and adds his piece: \"The vow was made to the 'heart' in the forest. Tonight's fire is burnt for it to see — burn it clean, and only then will it accept.\" A pedlar drops his voice as if pronouncing a blessing: \"They say once the sun outside sets, this dream takes root in the ground, and no one ever need wake. Isn't that fine?\" He laughs. There is no light in his eyes at all."
     },
     {
       "id": "child_seffa",
@@ -634,22 +731,27 @@
           "id": "A",
           "text": "蹲下來,提起她畫裡的大樹,答應幫她一起藏",
           "next": "seffa_hide",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Crouch down, speak of the great tree in her drawing, and promise to help her hide it"
         },
         {
           "id": "B",
           "text": "不驚動她,遠遠跟著看她把種子藏到哪",
           "next": "seffa_hide",
           "alignment": 0,
-          "checkHint": "隱匿:保持距離不被察覺"
+          "checkHint": "隱匿:保持距離不被察覺",
+          "textEn": "Stay unseen and follow at a distance to see where she hides the seed"
         },
         {
           "id": "C",
           "text": "先趕去柴堆,阻止「燒阿娘」這件事",
           "next": "pyre_square",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Hurry to the pyre first, and stop the burning of her mother"
         }
-      ]
+      ],
+      "titleEn": "The Green-Haired Child",
+      "narrationEn": "The child is tucked behind the dye-stall's hangings, green hair roughly tied with a straw cord, stove-ash not quite wiped from her face. She is clutching something to her chest, clutching it white-knuckled, a thread of emerald light leaking between her fingers. You know that colour. You know this face, too: the girl from the crayon drawing, under the great tree, holding the little figure's hand — it is her. She looks up and sees you, freezes, then whips the glowing hand behind her back, though her eyes dart helplessly toward the square — toward the pyre. \"They're going to burn my mama.\" Her voice shakes badly. \"Mama said hide the seed, hide it where no one can ever find it. But I can't think of anywhere no one finds.\""
     },
     {
       "id": "seffa_hide",
@@ -663,21 +765,26 @@
           "id": "A",
           "text": "跟上年輕村長歐德,盯住那片藏著種子的影子",
           "next": "young_elder",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Follow young Elder Odell, and keep your eyes on the shadow holding the seed"
         },
         {
           "id": "B",
           "text": "先送孩子離開,再趕往柴堆",
           "next": "pyre_square",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "See the child to safety first, then make for the pyre"
         },
         {
           "id": "C",
           "text": "在暗巷多留片刻,確認沒人看見這一幕",
           "next": "dream_hounds",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Linger in the dark lane a moment, and make sure no one saw"
         }
-      ]
+      ],
+      "titleEn": "Hidden in a Shadow",
+      "narrationEn": "Little Seffa threads the lanes at a crouch, trying the hen-coop, the woodpile, the gap under the tiles, shaking her head at each. Then footsteps at the lane's mouth — Elder Odell, ten years younger, on his rounds with a lantern, his shadow stretched long up the wall. The child has nowhere to dodge, and in her panic does the one thing none of you expects: she turns and presses the small fist holding the seed into the shadow on the wall. Like pressing it into water. Emerald light flashes once inside the shadow, sinks, and is gone without a trace. Odell walks past the lane-mouth yawning, never feeling his shadow grow one measure heavier. Little Seffa opens her empty palm, and whispers, laughing and crying at once: \"Borrow a shadow and hide it awhile… Mama taught me.\""
     },
     {
       "id": "young_elder",
@@ -692,21 +799,26 @@
           "text": "潛入帳中,偷出那份判決書原件",
           "next": "stolen_verdict",
           "alignment": 0,
-          "checkHint": "隱匿:避開執事的目光取走文書"
+          "checkHint": "隱匿:避開執事的目光取走文書",
+          "textEn": "Slip into the tent and steal the original verdict"
         },
         {
           "id": "B",
           "text": "風險太大,退回廣場人流裡",
           "next": "festival_hub",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Too dangerous — fall back into the crowd on the square"
         },
         {
           "id": "C",
           "text": "掀簾而入,當面質問歐德要燒的是誰",
           "next": "dream_hounds",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Throw the flap aside and demand of Odell, face to face, who burns tonight"
         }
-      ]
+      ],
+      "titleEn": "The Elder's Tent",
+      "narrationEn": "Odell ducks into the presiding tent at the square's edge; the flap does not quite close. Through the gap you see a document spread on the desk, its ink still wet, the elder's vermilion seal ready at hand. By lantern-light you can make out the heading: Verdict. This is the page that ten years on will survive as a burnt corner with its names inked out — and here it lies whole, the condemned's name, the accuser's signature, not a stroke missing. Outside, two stewards pace back and forth, nodding at masked villagers, watching unfamiliar faces hard. Farther off in the lantern-shadow, something four-legged seems to move low along the ground — the light sweeps across, and there is nothing there."
     },
     {
       "id": "stolen_verdict",
@@ -723,22 +835,27 @@
             "properties": "十年前火祭的完整判決:受刑人艾溫、告發人瑪珂、主判歐德俱全;喚醒村民直面真相時的關鍵鐵證"
           }
         ],
-        "intro": "墨跡未乾的判決書上,每一個十年後被抹去的名字,此刻都清清楚楚。"
+        "intro": "墨跡未乾的判決書上,每一個十年後被抹去的名字,此刻都清清楚楚。",
+        "introEn": "On the verdict, its ink not yet dry, every name that ten years will erase stands out clear and whole."
       },
       "choices": [
         {
           "id": "A",
           "text": "揣好文書,趕往柴堆,處刑快開始了",
           "next": "pyre_square",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Tuck the verdict away and make for the pyre — the execution is close"
         },
         {
           "id": "B",
           "text": "犬吠漸近,先退回廣場人流裡避風頭",
           "next": "festival_hub",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "The baying draws nearer — melt back into the crowd first"
         }
-      ]
+      ],
+      "titleEn": "The Original Verdict",
+      "narrationEn": "The moment the document is in your hands your fingertips prickle, and the whole dream shivers, very slightly, like a water-surface touched by one finger. You unfold it and read, word by word: the condemned, Aewen, herb-wife of the wood, dwelling with her daughter Seffa at the village's eastern treeline; the charge, bewitching the village by sorcery, to the ruin of three harvests; the sentence, fire-offering in payment of the vow, to appease the Forest Heart. Beneath sits Elder Odell's vermilion seal — and in the accuser's line, a signature neat and unhesitating, every stroke sure: Marko. The herb-woman who, ten years on, sold you bitter tea and knew nothing of anything. Somewhere deep in the tent-lit dusk comes the first bay of a hound — long, drawn out, not quite a dog. More like something learning to sound like one."
     },
     {
       "id": "dream_hounds",
@@ -806,22 +923,27 @@
             "damageType": "穿刺"
           }
         ],
-        "intro": "三頭由燈影拼成的獵犬自街角包抄而來,空空的眼窩鎖定你們身上「醒著」的氣味。"
+        "intro": "三頭由燈影拼成的獵犬自街角包抄而來,空空的眼窩鎖定你們身上「醒著」的氣味。",
+        "introEn": "Three hounds pieced together from lantern-shadow close in from the street corners, empty sockets locked on the scent of waking about you."
       },
       "choices": [
         {
           "id": "A",
           "text": "檢視傷口——齒痕泛著淡綠,痛得真實",
           "next": "hound_wake",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Examine your wounds — the bite-marks glow faint green, and the pain is real"
         },
         {
           "id": "B",
           "text": "顧不上傷,直奔柴堆廣場",
           "next": "pyre_square",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Never mind the wounds — run straight for the pyre square"
         }
-      ]
+      ],
+      "titleEn": "Dream Hounds",
+      "narrationEn": "The baying closes from three directions, faster than legs could carry it. They grow out of the lantern-shadows — shadow arriving first, beast after: three hounds pieced together from overlapping lamplight and the sound of barking, eye-sockets empty, the baying humming not from their throats but from the whole barrel of their bodies. The villagers in the street hear nothing; the lantern-bearers keep bearing lanterns, the singers keep singing. The lead hound puts its nose to the ground and draws one deep breath, and when its head lifts, the empty sockets fix squarely on you: what it has caught is not a scent, but the waking on you. Where its fangs land, dream tears as easily as skin."
     },
     {
       "id": "hound_wake",
@@ -835,15 +957,19 @@
           "id": "A",
           "text": "咬牙沉回夢中,與同伴在慶典會合",
           "next": "festival_hub",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Grit your teeth, sink back into the dream, and rejoin the others at the festival"
         },
         {
           "id": "B",
           "text": "沉回夢中,直奔柴堆不再繞路",
           "next": "pyre_square",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Sink back into the dream and go straight for the pyre, no more detours"
         }
-      ]
+      ],
+      "titleEn": "The Waking Wound",
+      "narrationEn": "Pain flings one of you clean out of the dream. The worst-wounded wakes on real mud, chest heaving — the real Mossbell, the real sky before dusk, the orange light already slanting low. Look down: where the dream bit, the cloth is torn, the tooth-marks are there, and so is the blood, seeping drop by drop into the moss. The vines on the square have thickened by a girth since you slept; they have climbed onto every roof-ridge, gathering the whole village gently toward the forest. Sleep floods back almost at once, heavy, brooking no refusal. In the last instant before your eyes close, you fix two things in memory: the wounds taken in dreams are real — and there is very little daylight left."
     },
     {
       "id": "pyre_square",
@@ -857,21 +983,26 @@
           "id": "A",
           "text": "擠到柴堆最前排,看清整場儀式",
           "next": "pyre_vision",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Push through to the front row and see the whole rite clearly"
         },
         {
           "id": "B",
           "text": "混入人群,聽村民議論是誰告發的她",
           "next": "accuser_row",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Stay in the crowd and listen for who informed against her"
         },
         {
           "id": "C",
           "text": "退回廣場攤位,備妥再來",
           "next": "festival_hub",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Fall back to the square's stalls, and come back prepared"
         }
-      ]
+      ],
+      "titleEn": "The Pyre and the Prison Cart",
+      "narrationEn": "The pyre has risen half again a man's height, oil-soaked wood glowing dully in the dusk. At some point the drums changed — from festival patter to a single flat stroke, one, one, landing on every chest in the square. The prison cart comes down the long street in time with it, and in the cart, bound with coarse rope that bites into her shoulders, rides a green-haired woman. She does not cry her innocence. She does not struggle. She only searches the crowd with her eyes, quietly, inch by inch — searching for a small green head. Stewards move along the street handing out wooden masks, and one by one the villagers tuck their smiles away behind the wood. Someone presses a mask into your hands as well. The wood is cold. The drum lands, one stroke heavier."
     },
     {
       "id": "accuser_row",
@@ -885,15 +1016,19 @@
           "id": "A",
           "text": "站上前排,把整場儀式看到底",
           "next": "pyre_vision",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Take the front row and see the rite through to its end"
         },
         {
           "id": "B",
           "text": "退開人群,回廣場整備",
           "next": "festival_hub",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Draw back from the crowd and regroup on the square"
         }
-      ]
+      ],
+      "titleEn": "The Accuser's Face",
+      "narrationEn": "The whispers in the crowd run thicker than the drumbeats. \"They say it was Marko gave the name.\" \"Of course — both of them herb-gatherers, and Aewen's cures worked. Took the living from her mouth.\" \"A failed harvest wants a reason. Wants someone to answer for it…\" The voices stay low, but everyone is glad to pass them on once more. You follow the glances to the front row and find Marko, ten years younger: clutching a wooden mask, clutching it white-knuckled, never putting it on, never once looking at the cart. Aewen has found her, though. Across the crowd she watches her, steadily — no anger, no blame, only watching. And Marko's shoulders sink, little by little, as if that gaze were pressing her into the earth."
     },
     {
       "id": "pyre_vision",
@@ -907,22 +1042,27 @@
           "id": "A",
           "text": "衝上柴堆救人,哪怕撕破這場夢",
           "next": "mask_mob",
-          "alignment": 2
+          "alignment": 2,
+          "textEn": "Charge the pyre and cut her free, though it tear the dream apart"
         },
         {
           "id": "B",
           "text": "按住怒火,把儀式每個細節默記進骨頭裡",
           "next": "pyre_relics",
           "alignment": 0,
-          "checkHint": "意志:在合唱與火光中保持神智"
+          "checkHint": "意志:在合唱與火光中保持神智",
+          "textEn": "Choke down your rage, and carve every detail of the rite into your bones"
         },
         {
           "id": "C",
           "text": "摘下面具,當眾怒斥全村的沉默",
           "next": "mask_mob",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Pull off the mask and curse the village's silence to its face"
         }
-      ]
+      ],
+      "titleEn": "The Burning Replayed",
+      "narrationEn": "Odell mounts the platform and unrolls the verdict, his voice as level as a man reading harvest accounts. Aewen is bound to the pyre. She looks around one last time, and toward a certain corner of the crowd gives the smallest shake of her head: stay hidden. The torch falls; the oiled wood roars into flame. In the same instant the whole village puts on its masks, and the rhyme rises in chorus — the gentle tune sung by hundreds of wooden faces until it tolls like a funeral bell: \"Fear not the flowers, cry not at the fire…\" Somewhere in the blaze a child's scream tears through the chorus, and is pressed down under louder song. You stand in the crowd, the wooden masks cold in your hands. To wear it, or not; to bear it, or not — the dream is waiting for your answer."
     },
     {
       "id": "mask_mob",
@@ -990,22 +1130,27 @@
             "damageType": "揮砍"
           }
         ],
-        "intro": "幾百張木面具齊齊轉向你們,前排的鐮刀與火把壓著走調的童謠圍攏上來。"
+        "intro": "幾百張木面具齊齊轉向你們,前排的鐮刀與火把壓著走調的童謠圍攏上來。",
+        "introEn": "Hundreds of wooden masks turn on you as one; sickles and torches close in from the front ranks under a rhyme gone out of tune."
       },
       "choices": [
         {
           "id": "A",
           "text": "殺開一條路,衝向火熄後的柴堆殘燼",
           "next": "pyre_relics",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Cut a path through, to the pyre's embers where the fire has died"
         },
         {
           "id": "B",
           "text": "且戰且退,任夢境把你們彈醒",
           "next": "wake_interlude",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Fight a retreat, and let the dream throw you back into waking"
         }
-      ]
+      ],
+      "titleEn": "The Masked Throng",
+      "narrationEn": "The chorus jams on a single note and slides into a low drone. Row upon row, hundreds of wooden masks turn — one motion, countless faces on a single body. \"Outsiders.\" The word rolls out of the drone, from no mouth you can name, or from every one. The front ranks raise what their hands hold — sickles, flails, burning torches — and close in out of step, firelight swimming in the empty eyeholes. You know some of those clothes: the father asleep at his stove, the woman by the well. The dream is striking at you with their hands, while their true bodies lie ten years away in the village, frowning on the dream's behalf."
     },
     {
       "id": "pyre_relics",
@@ -1026,22 +1171,27 @@
             "properties": "封著艾溫臨終望向女兒的一道目光;於瑟芙面前出示時,勝過千言萬語"
           }
         ],
-        "intro": "餘燼深處,一枚木護符完好如初,像被那場火刻意繞了過去。"
+        "intro": "餘燼深處,一枚木護符完好如初,像被那場火刻意繞了過去。",
+        "introEn": "Deep in the embers a wooden charm lies whole and unburnt, as if the fire had gone deliberately around it."
       },
       "choices": [
         {
           "id": "A",
           "text": "帶著遺物退出夢境,身上的燙傷仍在作痛",
           "next": "wake_interlude",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Carry the relics out of the dream, the scalds still aching"
         },
         {
           "id": "B",
           "text": "趁夢未合攏,再去那座會響的鐘樓一趟",
           "next": "festival_bell",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Before the dream closes over, go once more to the bell tower that rings"
         }
-      ]
+      ],
+      "titleEn": "Relics from the Fire",
+      "narrationEn": "The dream goes quiet after the fire dies. The masked throng ebbs away like a tide, and the square is left to the blackened pyre and ash turning in low circles along the ground. The embers look dark; only a hand thrust in learns that dream-fire keeps no rules — the scald runs from fingertip to elbow, and you dig through the ash with your teeth set, raising blisters that are real, the kind waking will not take away. Deep in the ash your fingers find whole wood: a palm-sized wooden charm carved with a great tree and a cradle, the fire's scorch circling right around it without biting in. Beneath the charm lies a small piece of amber-coloured crystal — hold it close, and sealed inside is a gaze turned toward something far away, and very gentle."
     },
     {
       "id": "festival_bell",
@@ -1056,15 +1206,19 @@
           "text": "敲響苔鐘,哪怕全夢都聽見",
           "next": "pyre_square",
           "alignment": 1,
-          "checkHint": "力量:拉動十年未動的鐘舌"
+          "checkHint": "力量:拉動十年未動的鐘舌",
+          "textEn": "Ring the Moss Bell, though the whole dream hear it"
         },
         {
           "id": "B",
           "text": "不敲,循梯而下混回人流",
           "next": "festival_hub",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Leave it silent — take the stairs down and melt into the crowd"
         }
-      ]
+      ],
+      "titleEn": "The Bell That Rings",
+      "narrationEn": "The dream's bell tower matches the waking one brick for brick; the single difference hangs overhead. The clapper is still there, its brass rubbed bright, the rope trailing down to hand-height like a sentence waiting for a mouth. From the tower you look down on festival lights spread over the whole village, the pyre's embers burning a black point at its centre. You remember the waking tablet: forgetting is our offering. And the rhyme: ten years the bell stops, the name keeps the earth. Whether this bell stops or rings seems to be the very line between forgetting and remembering. The rope is rough, hanging within reach. Ring it, and the sound will thin the dream by one layer — and in the same stroke, the whole dream will know exactly where you are."
     },
     {
       "id": "wake_interlude",
@@ -1078,21 +1232,26 @@
           "id": "A",
           "text": "拿出判決書,當面問瑪珂那個簽名",
           "next": "marko_confession",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Take out the verdict and ask Marko about that signature to her face"
         },
         {
           "id": "B",
           "text": "時間不多,補給完立刻循主藤入林",
           "next": "forest_march",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Time is short — resupply and follow the great vine into the forest at once"
         },
         {
           "id": "C",
           "text": "託巴魯載走幾個沉睡的孩子再動身",
           "next": "dusk_camp",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Ask Balu to carry away some of the sleeping children before you set out"
         }
-      ]
+      ],
+      "titleEn": "Dusk's Last Light",
+      "narrationEn": "This time, it is the dream that lets you go. The village you wake to is quiet as a held breath: the sun's disc already rests on the western ridge, orange light raking sideways, dragging the vines' shadows long — they have covered every roof-ridge now, the whole village cradled in a green net drawing gently taut toward the forest. Balu paces the camp, his wagon already in harness: \"The moment the sun drops, I'm gone! Anything to carry, anything to buy — last chance!\" Marko is still sitting by her wagon. She sees you coming, and her gaze finds the corner of the document showing at your breast — and the colour drains from her face, inch by inch."
     },
     {
       "id": "marko_confession",
@@ -1106,15 +1265,19 @@
           "id": "A",
           "text": "收下銀鈴,趕在日落前循主藤入林",
           "next": "forest_march",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Take the silver bell, and follow the great vine into the forest before sundown"
         },
         {
           "id": "B",
           "text": "先回營地做最後整備再出發",
           "next": "dusk_camp",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Return to camp for one last preparation before setting out"
         }
-      ]
+      ],
+      "titleEn": "Marko's Confession",
+      "narrationEn": "Marko stares at the signature a long time — long enough for the light to slant another degree. \"I wrote it.\" When she speaks at last her voice is terribly level. \"Her cures worked better than mine. She and the girl lived well without ever setting foot in the village. That year the harvest failed, and the village wanted a reason… so I gave it one.\" From inside her coat she brings out a little silver bell, snowflakes engraved on its skirt, polished bright. \"Aewen's. It hung at their door. Ring it, and the child will hear her mother's voice.\" She presses the bell into your hands, her own shaking hard, but the words come one at a time, steady: \"In the forest — don't plead for me. When you tell the truth aloud, tell my name with it.\""
     },
     {
       "id": "dusk_camp",
@@ -1128,15 +1291,19 @@
           "id": "A",
           "text": "整備完畢,沿主藤正面入林",
           "next": "forest_march",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Ready at last — enter the forest along the great vine"
         },
         {
           "id": "B",
           "text": "走獵人舊道,從高處藤橋抄近路",
           "next": "vine_bridge",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Take the hunters' old trail and cut across by the high vine bridge"
         }
-      ]
+      ],
+      "titleEn": "Breaking Camp at the Wood's Edge",
+      "narrationEn": "One fire is left in the camp. Balu heaves the last crates onto the wagon bed in a single burst, then turns and spreads his hands at you: \"Fire sale! Salves half price, torches free, take the best of the rope — call it my good deed for this village.\" The wagon bed is spread with thick blankets, sleeping children laid out in a row, their breathing clean and even; someone has tucked the crayon drawing carefully into the crook of the smallest one's arm. You eat a few mouthfuls of hot food by the fire and bind your wounds afresh. At the treeline the green mist has thickened into a wall. The great vine lies quiet in the mist, and the emerald light passes along it, joint by joint by joint, into the deep forest — as if something in there were counting, and waiting."
     },
     {
       "id": "forest_march",
@@ -1150,21 +1317,26 @@
           "id": "A",
           "text": "走正面,穿過那道荊棘拱門",
           "next": "thorn_gate",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Take the way ahead, through the arch of thorns"
         },
         {
           "id": "B",
           "text": "攀上樹冠,走藤橋抄近路",
           "next": "vine_bridge",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Climb to the canopy and cross by the vine bridge"
         },
         {
           "id": "C",
           "text": "繞去那座亮燈的獵屋看看",
           "next": "root_cellar",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Turn aside to the lamplit hunting lodge"
         }
-      ]
+      ],
+      "titleEn": "Into the Forest by the Vine",
+      "narrationEn": "There is no road in the forest, only the vine. It thickens beside you as you walk, until it lies like a glowing serpent at rest, the emerald light along its body waxing and waning — and slowly its rhythm finds your heartbeat, and keeps it. The mist is green; breathed in, it tastes of flowers, breathed out, it leaves a trace of rot, as if this forest were blooming and going overripe in the same hour. Very far off a bell tolls, folded into the rhyme's tune, one stroke at a time, seeping up from under the roots. Ahead the way splits three: the great vine dives through an archway twisted out of thorns; to the left, high up, several strands weave a hanging bridge through the canopy; and to the right, deep between the trunks, a hunting lodge stands with a dim lamp burning."
     },
     {
       "id": "vine_bridge",
@@ -1179,15 +1351,19 @@
           "text": "壓低身子快速通過,直抵巨樹外圈",
           "next": "sleepwalker_ring",
           "alignment": 0,
-          "checkHint": "敏捷:在濕滑起伏的藤身上保持平衡"
+          "checkHint": "敏捷:在濕滑起伏的藤身上保持平衡",
+          "textEn": "Keep low and cross fast, straight to the great tree's outer ring"
         },
         {
           "id": "B",
           "text": "橋太活了,折返走荊棘拱門",
           "next": "thorn_gate",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "The bridge is too alive — turn back and take the thorn arch"
         }
-      ]
+      ],
+      "titleEn": "The Canopy Bridge",
+      "narrationEn": "The bridge is more alive than it looks. At your first step the whole span settles softly, like treading on a breathing spine; the vine's skin is slick, green mist welling slowly up out of the gulf below, and the tree-shadows a hundred feet down are black without bottom. Halfway across, the whole vine begins to stir uneasily, and there is nothing for it but to press yourselves flat, knuckles dug into the bark-skin, and let it carry you swaying across the worst of the span. Through a gap in the canopy you see it: at the forest's centre a tree that swallows half the sky, its trunk wound in glowing vines — and between its roots, a ring of small figures walking slowly around the base. Around, and around."
     },
     {
       "id": "root_cellar",
@@ -1255,7 +1431,8 @@
             "damageType": "揮砍"
           }
         ],
-        "intro": "兩隻藤繭轟然繃裂,繭衣翻捲成鞭,護著窖底最後一隻繭向你們抽來。"
+        "intro": "兩隻藤繭轟然繃裂,繭衣翻捲成鞭,護著窖底最後一隻繭向你們抽來。",
+        "introEn": "Two vine cocoons burst with a crack, their casings whipping into lashes, striking out at you in defence of the last cocoon at the cellar's rear."
       },
       "treasure": {
         "gold": 60,
@@ -1271,22 +1448,27 @@
             "properties": "塗抹傷口可穩定心神,恢復少量生命;夢中使用同樣有效"
           }
         ],
-        "intro": "工具架上,獵人的銀剪仍然雪亮,剪口沾著一層乾涸的綠色汁液。"
+        "intro": "工具架上,獵人的銀剪仍然雪亮,剪口沾著一層乾涸的綠色汁液。",
+        "introEn": "On the tool rack the hunter's silver shears are still bright as snow, their blades crusted with a film of dried green sap."
       },
       "choices": [
         {
           "id": "A",
           "text": "帶上銀剪,回岔路走荊棘拱門",
           "next": "thorn_gate",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Take the silver shears, and return to the fork for the thorn arch"
         },
         {
           "id": "B",
           "text": "從獵屋後坡攀上樹冠藤橋",
           "next": "vine_bridge",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Climb from the slope behind the lodge up to the canopy bridge"
         }
-      ]
+      ],
+      "titleEn": "The Hunting-Lodge Cellar",
+      "narrationEn": "The lodge door stands ajar. The old hunter sleeps face-down at his table, an oil lamp burning at his hand — a fine tendril wound around the wick, the flame jumping: the vines are keeping the forest's lamp lit with his hand. In the corner the cellar door gapes, cold green air rising out of it. You carry fire down the ladder and find three man-high cocoons of woven vine hanging in the dark, their skins half-translucent, blurred shapes curled inside. The instant the light nears, two cocoons split as one, their casings whipping loose into fine lashing tendrils that guard the innermost cocoon — the one still growing — and come whistling down at your heads. On the tool rack against the wall, a great silver shear glints in the firelight."
     },
     {
       "id": "thorn_gate",
@@ -1354,22 +1536,27 @@
             "damageType": "穿刺"
           }
         ],
-        "intro": "斷藤與獸骨絞成的兩尊守衛自拱門陰影中立起,濕木擰絞般的呻吟裡沉沉逼近。"
+        "intro": "斷藤與獸骨絞成的兩尊守衛自拱門陰影中立起,濕木擰絞般的呻吟裡沉沉逼近。",
+        "introEn": "Two wardens twisted from broken vine and beast-bone rise out of the arch's shadow, closing in heavily amid groans like wrung wet wood."
       },
       "choices": [
         {
           "id": "A",
           "text": "穿過枯萎的拱門,直入巨樹外圈",
           "next": "sleepwalker_ring",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Pass through the withered arch, into the great tree's outer ring"
         },
         {
           "id": "B",
           "text": "先探拱門旁那條野花小徑",
           "next": "grove_shrine",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "First follow the small wildflower path beside the arch"
         }
-      ]
+      ],
+      "titleEn": "The Thorn Arch",
+      "narrationEn": "The arch of thorns stands three men high, faded strips of cloth snagged on its spikes — by their age, left across ten years by whoever strayed into this wood. In the shadow beneath, two heaps of \"deadwood\" rise slowly to their feet: wardens twisted out of broken vine and beast-bone, shoulder-blades of stag skulls, knuckles of snapped thorn, their joints turning with the groan of wet wood being wrung. Show your charm, your mask, what you will — the two hollow skulls do hesitate, one heartbeat's worth. Then the arms come up all the same, slow and heavy. This deep in, the forest honours no token. It knows only what stands outside its door — and itself."
     },
     {
       "id": "grove_shrine",
@@ -1386,22 +1573,27 @@
             "properties": "刻著童謠失傳的最後一句:「名字若有人肯唱,土裡的孩子就回家」;有了它,那支童謠才算完整"
           }
         ],
-        "intro": "無名墳前的木龕裡,一塊刻片安靜躺著,笨拙的刀工一筆一筆都刻得很深。"
+        "intro": "無名墳前的木龕裡,一塊刻片安靜躺著,笨拙的刀工一筆一筆都刻得很深。",
+        "introEn": "In the wooden shrine before the nameless grave a carved tablet lies quiet, every stroke of its clumsy knife-work cut deep."
       },
       "choices": [
         {
           "id": "A",
           "text": "在墳前默立片刻,再前往巨樹",
           "next": "memory_pool",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Stand a moment in silence at the grave, then go on toward the great tree"
         },
         {
           "id": "B",
           "text": "帶上刻片,直接趕往巨樹外圈",
           "next": "sleepwalker_ring",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Take the tablet and make straight for the tree's outer ring"
         }
-      ]
+      ],
+      "titleEn": "The Nameless Grave",
+      "narrationEn": "At the path's end even the bell has withdrawn into silence. A low earthen mound lies amid the wildflowers, no stone, no name — but the flowers on it grow all wrong: everywhere else blooms emerald or withers, and only here open ordinary, living daisies and briar-roses, as if someone came every year to pull the weeds. Before the mound sits a palm-sized wooden shrine holding a carved tablet and a few coins of offering-silver. The knife-work on the tablet is clumsy, and what it carves is the rhyme's last line — the line missing from the verses you pieced together: \"If ever a soul will sing the name, the child in the earth comes home.\" On the tablet's back, cut very small, is the beginning of a name: \"Mar—\"."
     },
     {
       "id": "memory_pool",
@@ -1416,15 +1608,19 @@
           "text": "潛到潭底,把最後一幕看完",
           "next": "sleepwalker_ring",
           "alignment": 0,
-          "checkHint": "意志:承受十年孤獨的重量"
+          "checkHint": "意志:承受十年孤獨的重量",
+          "textEn": "Dive to the pool's floor and watch the last scene to its end"
         },
         {
           "id": "B",
           "text": "不忍再看,找地方稍作喘息再上路",
           "next": "rest_hollow",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "You cannot bear to watch more — find a place to breathe before going on"
         }
-      ]
+      ],
+      "titleEn": "The Pool of Memory",
+      "narrationEn": "The green pool lies flat as a mirror, and what it reflects is not the canopy but firelight. You lean over and look down: the night of the burning, little Seffa hugging her two empty hands at the treeline, crying herself into hiccups, crying herself asleep; the great tree's root-tendrils lifting slowly out of the soil, like a pair of hands that has never learned how to comfort anyone, gathering the child up, clumsy and careful, into its heart. The image turns, and ten years run through the pool-water in a single thread: the tree growing its flowers on her dreams, she listening to the village through its flowers — listening for ten years, and never once hearing anyone speak her name. The water settles last on this morning: she has finally stopped waiting, and drawn the whole village, gently, into the dream."
     },
     {
       "id": "rest_hollow",
@@ -1438,15 +1634,19 @@
           "id": "A",
           "text": "整備完畢,前往巨樹外圈",
           "next": "sleepwalker_ring",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Rested and ready, head for the great tree's outer ring"
         },
         {
           "id": "B",
           "text": "折回無名墳,把沒看完的線索補齊",
           "next": "grove_shrine",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Go back to the nameless grave and gather what you left unfinished"
         }
-      ]
+      ],
+      "titleEn": "A Breath in the Hollow",
+      "narrationEn": "A length of hollow deadfall lies across the moss, dry inside, floored with years of fallen leaves — a ready-made den. You crawl in, raise a small smokeless fire, dress your wounds again, and spread everything the road has given you across your knees: the warm seed, the charm fire would not take, the verdict with its ink still glistening, the little silver bell, the tablet carved with the last line. Each is light. Stacked together they press on the hand. In the hollow, the border of dream and waking is thin as paper — eyes closed, you hear festival drums and the even smiling under masks; eyes open, the bell tolling one stroke at a time from the forest's deep. No one speaks. Some decisions are best settled while there is quiet to settle them in."
     },
     {
       "id": "sleepwalker_ring",
@@ -1460,23 +1660,28 @@
           "id": "A",
           "text": "揮開村民硬闖進圈,顧不得許多",
           "next": "elder_shadow_boss",
-          "alignment": -2
+          "alignment": -2,
+          "textEn": "Shove through the villagers and force the ring, whatever it costs"
         },
         {
           "id": "B",
           "text": "唱起那支童謠,引夢遊者讓出一條路",
           "next": "sleepwalker_mercy",
           "alignment": 1,
-          "checkHint": "表演:把童謠唱得像十年前那樣"
+          "checkHint": "表演:把童謠唱得像十年前那樣",
+          "textEn": "Sing the rhyme, and draw the sleepwalkers into opening a path"
         },
         {
           "id": "C",
           "text": "戴上慶典面具,跟著繞行的隊伍混進內圈",
           "next": "sleepwalker_mercy",
           "alignment": 0,
-          "checkHint": "隱匿:模仿夢遊者的步伐"
+          "checkHint": "隱匿:模仿夢遊者的步伐",
+          "textEn": "Put on the festival masks and join the circling walk into the inner ring"
         }
-      ]
+      ],
+      "titleEn": "The Sleepwalkers' Ring",
+      "narrationEn": "The great tree stands before you, its trunk broad as a tower, glowing vines woven through its bark like veins; the whole tree brightens and dims — the heartbeat of this forest. Around the roots' outer ring, dozens of villagers shuffle slowly with their eyes closed, circle after circle. Their true bodies are not here — and yet you know these faces: the mother from the stove-side, the woman from the well, the steward who handed out masks. They walk as a living fence, holding the tree at its centre. Someone tests half a step into the ring, and the three or four nearest villagers tilt their heads toward the sound at once, dozens of hands lifting softly, together, in your direction. Harm them here, and the sleeping bodies back in the village will never wake at all."
     },
     {
       "id": "sleepwalker_mercy",
@@ -1490,15 +1695,19 @@
           "id": "A",
           "text": "迎上那道立起的影子",
           "next": "elder_shadow_boss",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Go to meet the risen shadow"
         },
         {
           "id": "B",
           "text": "退回樹洞稍整,再入內圈",
           "next": "rest_hollow",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Withdraw to the hollow to regroup, then enter the inner ring"
         }
-      ]
+      ],
+      "titleEn": "The Wall That Parted",
+      "narrationEn": "The first line of the song drops into the wall of walkers, and the shuffling stumbles half a beat. By the second line the nearest woman has stopped, eyes still closed, her throat working softly — and she hums the third line with you. The stove-side mother's voice is cracked and off-key, and tears slide line after line from under her closed lids — in the deepest part of the dream, they have heard the song. Slowly, soundlessly, the wall of people parts, a wheat-field letting a wind through. You walk the opened seam between sleeping faces wet with weeping. In the inner ring the roots coil into a bare clearing, and at its centre stands a small pool of black too thick to dissolve — the elder's shadow has arrived before you, and is rising slowly off the ground into the shape of a man."
     },
     {
       "id": "elder_shadow_boss",
@@ -1566,22 +1775,27 @@
             "damageType": "鈍擊"
           }
         ],
-        "intro": "村長的影子立成高出真人一頭的黑,胸腔裡那點翡翠光一明一滅,無數隻影手自它腳下的黑潭裡撐地而起。"
+        "intro": "村長的影子立成高出真人一頭的黑,胸腔裡那點翡翠光一明一滅,無數隻影手自它腳下的黑潭裡撐地而起。",
+        "introEn": "The elder's shadow rears up a head taller than the living man, the point of emerald light in its chest pulsing, as countless shadow-hands push up from the black pool at its feet."
       },
       "choices": [
         {
           "id": "A",
           "text": "剖開攤回地面的影子,取出那枚種子",
           "next": "shadow_seed",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Cut open the collapsed shadow, and take out the seed"
         },
         {
           "id": "B",
           "text": "不碰影核,直接走向巨樹",
           "next": "heart_approach",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Leave the shadow's core untouched and walk on to the great tree"
         }
-      ]
+      ],
+      "titleEn": "The Elder's Dream-Shadow",
+      "narrationEn": "The pool of black rises into Odell's shape, a head taller than the living man, its outline endlessly pushed and remade by the dark haze. In its chest hangs a point of emerald light — the seed a pair of small hands pressed in ten years ago, waxing and waning inside the blackness like a sentence that can be neither swallowed nor spoken. The shadow opens its mouth, in Odell's voice and in the whole village's voice at once: \"Forget, and it stops hurting. Forget, and all is well.\" It raises a hand and pulls — and your own shadows are wrenched three inches off the ground, a strange drowsiness welling up through the seams of your bones. This is where the village's sin has hidden for ten years. And today it has finally stood up, to let no one drag it into the light."
     },
     {
       "id": "shadow_seed",
@@ -1598,22 +1812,27 @@
             "properties": "封存著全村十年的悔與罪的原本;吞下者代村背負全部記憶,交還瑟芙則由她定奪;是結局分配的核心"
           }
         ],
-        "intro": "黑霧散處,那枚被影子藏了十年的種子靜靜發著光,沉得不像一枚種子。"
+        "intro": "黑霧散處,那枚被影子藏了十年的種子靜靜發著光,沉得不像一枚種子。",
+        "introEn": "Where the black haze thins, the seed the shadow hid for ten years glows quietly — far too heavy, now, for a seed."
       },
       "choices": [
         {
           "id": "A",
           "text": "捧著種子,走向巨樹森心",
           "next": "heart_approach",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Carry the seed onward, toward the Forest Heart"
         },
         {
           "id": "B",
           "text": "讓種子貼近護符——樹身傳來一聲嗚咽",
           "next": "heart_hollow",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Hold the seed to the wooden charm — and a sob passes through the tree"
         }
-      ]
+      ],
+      "titleEn": "The Seed in the Shadow",
+      "narrationEn": "The shadow spreads flat on the ground again; the black haze thins and dies, and the point of emerald light lies quietly on the soil. You gather it up — the very seed from the lane, the one little Seffa pressed into a shadow in her panic, only heavy now, heavy in the palm like a heart poured full of lead. Held close to the ear, thin whispers come through the shell, layer pressed upon layer: Odell's voice reading the verdict, saying I could have chosen not to judge; the steward with the masks, saying I could have chosen not to hand them out; some voice in the crowd, saying I saw, and I said nothing. Everything the village spent ten years straining to forget — not one word of it was lost. It is all here."
     },
     {
       "id": "heart_approach",
@@ -1627,15 +1846,19 @@
           "id": "A",
           "text": "輕聲喚她的名字:「瑟芙。」",
           "next": "heart_hollow",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Call her name, gently: \"Seffa.\""
         },
         {
           "id": "B",
           "text": "握緊武器逼近,不給她先手的機會",
           "next": "final_choice",
-          "alignment": -1
+          "alignment": -1,
+          "textEn": "Close in with weapons ready, and give her no first move"
         }
-      ]
+      ],
+      "titleEn": "Beneath the Forest Heart",
+      "narrationEn": "The great tree parts slowly before you, a seam of light opening like a chest laid bare. Inside the hollow, light floods like water, and a woman's silhouette hangs at its centre — Seffa, grown: green hair unbound, its ends fraying into a thousand fine vines that run away into the trunk, until you cannot tell where her spine ends and the tree's rings begin. The light at her breast keeps the same rhythm as the whole tree's brightening and dimming — one beat, one beat: the heartbeat you have followed through the length of this forest. Through gaps in the canopy the last daylight leaks down; outside, the sun's disc stands half a finger from the ridge. Her eyes are closed, a faint knot in her brow — asleep, or ten years in pain, having forgotten the way to wake."
     },
     {
       "id": "heart_hollow",
@@ -1649,21 +1872,26 @@
           "id": "A",
           "text": "「我們替你把真相帶回日光底下。」",
           "next": "final_choice",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "\"We will carry the truth back into daylight for you.\""
         },
         {
           "id": "B",
           "text": "「睡吧,瑟芙。遺忘也是一種安寧。」",
           "next": "forgetting_rite",
-          "alignment": -1
+          "alignment": -1,
+          "textEn": "\"Sleep, Seffa. Forgetting is a kind of peace too.\""
         },
         {
           "id": "C",
           "text": "沉默不語,先把手中每樣信物擺在她面前",
           "next": "final_choice",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Say nothing — lay every token you carry before her, one by one"
         }
-      ]
+      ],
+      "titleEn": "Seffa's Borrowed Voice",
+      "narrationEn": "She opens her eyes; the pupils are the emerald of flower-veins. And when she speaks, every heart among you clenches at once: it is that voice again — the youngest of your company, note for note the flower on the square. \"I'm sorry. I'm borrowing your throat,\" she says. \"No one has spoken to me in ten years. Borrowing is all I ever learned.\" The thousand vines rise and fall gently with her breathing. \"I didn't pull the village into the dream to burn it back. I only wanted — before the sun goes down — for one person to be willing to sing my name to the end of that song.\" She lowers her eyes. \"But the moment they wake, the sin wakes too. Peace, or the truth — choose for me. I have been choosing for ten years, and I cannot any more.\""
     },
     {
       "id": "final_choice",
@@ -1677,21 +1905,26 @@
           "id": "A",
           "text": "喚醒全村——罪與名,都該在日光下說清",
           "next": "seffa_parley",
-          "alignment": 2
+          "alignment": 2,
+          "textEn": "Wake the whole village — sin and name alike belong in daylight"
         },
         {
           "id": "B",
           "text": "隊伍吞下罪核,替這村子背著走",
           "next": "seffa_parley",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Swallow the sin-core yourselves, and carry it for this village"
         },
         {
           "id": "C",
           "text": "斬斷森心,把這一切連根燒盡",
           "next": "heart_seffa_boss",
-          "alignment": -2
+          "alignment": -2,
+          "textEn": "Cut down the Forest Heart, and burn all of it out by the roots"
         }
-      ]
+      ],
+      "titleEn": "Who Shall Bear It",
+      "narrationEn": "Beyond the canopy, the sun's lower rim touches the ridge. The light in the vines quickens; the forest's heartbeat crowds stroke against stroke — the dream is putting down roots into the real, and underfoot you can feel the ground already learning the dream's shape. Seffa hangs in the light and watches you, not urging, not pleading her case. In your palm lies the sin-core with all its weight; against your chest, the verdict, the charm, the silver bell, and the tablet with the last line. Wake the village, and the truth comes into daylight with the sin joined to it — Mossbell will never again be what it was. Swallow the seed, and the sin grows in your own bones instead. Or set the fire, and let the Forest Heart and everything past burn clean together. The sun sinks another line."
     },
     {
       "id": "seffa_parley",
@@ -1705,21 +1938,26 @@
           "id": "A",
           "text": "「醒來吧。這一次,全村陪你記得。」",
           "next": "ending_village_remembers",
-          "alignment": 2
+          "alignment": 2,
+          "textEn": "\"Wake now. This time, the whole village remembers with you.\""
         },
         {
           "id": "B",
           "text": "當著她的面吞下罪核:「我們替他們記。」",
           "next": "ending_bearers",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Swallow the sin-core before her eyes: \"We will remember for them.\""
         },
         {
           "id": "C",
           "text": "勸不動就搶——奪過種子,點火燒樹",
           "next": "ending_second_pyre",
-          "alignment": -2
+          "alignment": -2,
+          "textEn": "If she will not be persuaded, take — seize the seed and set fire to the tree"
         }
-      ]
+      ],
+      "titleEn": "Parley Before the Forest Heart",
+      "narrationEn": "You set the tokens out in the light, one by one. The silver bell rings, and out of the ringing rises Aewen's lull-to-sleep voice; Seffa's vines shudder, hard. The amber lifts, and that dying gaze crosses ten years to rest on her face. The verdict opens, and the names the ink once drowned are here entire, not a stroke missing. Last of all, you sing — the rhyme from its first line down to the line on the grave-tablet: \"If ever a soul will sing the name, the child in the earth comes home.\" The song settles. Every emerald flower on the tree goes still at once. Seffa hangs at the centre of the light, emerald eyes on you, unblinking — weighing whether, after these ten years, she dares trust a person one last time."
     },
     {
       "id": "forgetting_rite",
@@ -1733,21 +1971,26 @@
           "id": "A",
           "text": "點頭,送她和所有記憶一起沉入樹心",
           "next": "ending_seffa_burden",
-          "alignment": -1
+          "alignment": -1,
+          "textEn": "Nod — and let her sink into the tree's heart with every memory"
         },
         {
           "id": "B",
           "text": "霧漫過腳背的瞬間反悔——喊出她的名字",
           "next": "seffa_parley",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Repent the instant the mist crosses your feet — call out her name"
         },
         {
           "id": "C",
           "text": "趁霧起時伸手探向森心,想連力量一併取走",
           "next": "ending_green_veil",
-          "alignment": -2
+          "alignment": -2,
+          "textEn": "Reach through the rising mist toward the Forest Heart, to take its power with you"
         }
-      ]
+      ],
+      "titleEn": "The Mist of Forgetting",
+      "narrationEn": "Seffa listens, and is silent a long, long time — long enough for the tree's heartbeat to slow. \"All right,\" she says at last, still in the borrowed voice. \"Forgetting — that, I know how to do.\" The thousand vines begin drawing back from the village, slow as a tide going out; her figure sinks inch by inch toward the deep of the tree's heart, and green mist spills from the hollow, cool, flower-scented — whoever it brushes, their brow loosens a little. \"They'll wake thinking they only slept well.\" Her voice grows lighter and lighter. \"The song in the well — I'll take that too. The name… let the name go.\" The mist reaches your feet and stops there, like one last question: truly — is this how it ends? The sun has a single line of light left."
     },
     {
       "id": "heart_seffa_boss",
@@ -1815,7 +2058,8 @@
             "damageType": "鈍擊"
           }
         ],
-        "intro": "森心的光暴漲,千股藤蔓絞成護心的千手,花瓣繃直如刃——瑟芙的每一擊都夾著哭腔。"
+        "intro": "森心的光暴漲,千股藤蔓絞成護心的千手,花瓣繃直如刃——瑟芙的每一擊都夾著哭腔。",
+        "introEn": "The Forest Heart's light blazes; a thousand vines twist into a thousand guarding hands, petals drawn knife-straight — and every blow Seffa strikes carries a sob."
       },
       "choices": [
         {
@@ -1823,21 +2067,26 @@
           "text": "在她力竭停頓的一瞬唱起童謠,遞出護符",
           "next": "ending_seffa_burden",
           "alignment": 2,
-          "checkHint": "表演:在刀光裡把歌唱穩"
+          "checkHint": "表演:在刀光裡把歌唱穩",
+          "textEn": "In the pause of her spent strength, sing the rhyme and hold out the charm"
         },
         {
           "id": "B",
           "text": "不容遲疑,一鼓作氣斬斷森心",
           "next": "ending_second_pyre",
-          "alignment": -2
+          "alignment": -2,
+          "textEn": "Allow no hesitation — cut the Forest Heart down in one stroke"
         },
         {
           "id": "C",
           "text": "棄戰撤出森林,任夢境漫過村莊",
           "next": "ending_green_veil",
-          "alignment": -2
+          "alignment": -2,
+          "textEn": "Abandon the fight and flee the forest, and let the dream take the village"
         }
-      ]
+      ],
+      "titleEn": "Seffa of the Forest Heart",
+      "narrationEn": "The instant a blade lifts, the whole forest cries out — not wind, but Seffa's voice, hundreds of flowers weeping at once. The light at her breast blazes; a thousand vines burst from the trunk and twist into a thousand hands guarding the Forest Heart; emerald petals pull knife-straight; green mist rolls and presses down what light remains. \"Fire again… burning, again…\" Her voice breaks apart inside the whipping of the vines. Every lash lands heavy enough to crack bone, and every lash carries a sob in it, like a child howling as she swings her fists. In the outer ring the sleepwalking villagers sink to their knees as one, weeping behind closed eyes. Beyond the canopy the sun is down to a single line. However this battle ends, someone will have to let go first."
     },
     {
       "id": "ending_village_remembers",
@@ -1847,7 +2096,9 @@
       "endingKind": "good",
       "directive": "最佳結局(村民承擔):瑟芙信了最後一次。玩家搖鈴、出示判決、唱完整首童謠,她收回夢境喚醒全村;村民在廣場上聽完全部真相,歐德與瑪珂當眾認罪。代價由全村分擔——羞恥、離散、漫長的和解。收尾要有鐘聲、刻回的名字與每年一開的翡翠花,克制而有餘溫。",
       "narration": "瑟芙閉上眼,滿樹的花同時轉向村莊的方向。藤蔓退潮般縮回森林,苔鐘村在暮色裡一戶接一戶地醒來——而她借著每一朵花,把十年前那一夜原原本本地放給全村看完。沒有人能移開眼睛。人群自己讓出一條路,歐德走到廣場中央,把判決書的每一個字唸了一遍,包括自己的名字;瑪珂跪在無名墳的方向,把「告發人」三個字說得清清楚楚。那晚沒有人吃得下飯,也沒有人再睡得著,有人連夜收拾行李離開了村子,也有人提著燈,把鐘舌重新裝回了鐘樓。你們離村那天,苔鐘響了三聲,十年來頭一回。石碑上被鑿去的地方,新刻的「瑟芙」二字還泛著石粉的白。村史往後添了難看的一頁,可孩子們在樹下唱的童謠,終於唱到了最後一句。廣場的古樹每年開一次翡翠花,只開一夜。開花那夜,全村都到樹下守著,誰也不許忘。",
-      "choices": []
+      "choices": [],
+      "titleEn": "A Village That Remembers",
+      "narrationEn": "Seffa closes her eyes, and every flower on the tree turns toward the village at once. The vines draw back into the forest like a tide going out, and in the dusk Mossbell wakes house by house — while through every flower she plays that night of ten years ago back to the whole village, from its first moment to its last. No one can look away. The crowd parts of its own accord. Odell walks to the centre of the square and reads the verdict aloud, every word of it, his own name included; Marko kneels toward the nameless grave and speaks the word accuser clearly, so all can hear. No one eats that night, and no one sleeps either; some pack their bags in the dark and leave the village for good, and some carry lanterns to the tower and set the clapper back into the Moss Bell. The day you leave, the bell rings three times — the first time in ten years. Where the chisel gouged the tablet, the fresh-cut name Seffa still shows white with stone-dust. The village record has gained an ugly page; but the rhyme the children sing beneath the tree now reaches its last line. And once a year the old tree blooms emerald, for a single night — and on that night the whole village keeps watch beneath the branches, and no one is permitted to forget."
     },
     {
       "id": "ending_bearers",
@@ -1857,7 +2108,9 @@
       "endingKind": "good",
       "directive": "有代價的善結局(隊伍承擔):玩家吞下罪核,全村的十年悔罪長進隊伍的記憶裡。村民安然醒來,只當睡了一個長覺;瑟芙得以安眠於樹心,託付而非消散。代價具體:隊員夜夜輪流夢見火刑、身上花香不散、每年鐘鳴之日須回村講述。寫出「背著走」的重量與一點驕傲。",
       "narration": "罪核入喉,是燙的。十年的低語順著喉嚨往下沉,在你們每個人的骨頭裡找地方住下:歐德的「我本可以不判」、瑪珂的簽名、幾百張面具後整齊的沉默。從今往後,這些都是你們的記憶了,和自己的初吻、舊仇、亡母的臉擺在同一層。瑟芙看著你們把它吞完,像看著什麼不可思議的東西。「會很重。」她說。「我們人多。」你們答。她笑了,十年來第一次,然後散作滿樹流螢似的光,沉入樹心安眠——不是消散,是託付。村民在暮色裡醒來,伸著懶腰互相打趣睡過了頭,灶上的湯重新熱過,誰也不記得這一天。只有你們記得。此後的年月裡,你們夜夜輪流夢見那場火,身上的花香洗不掉,每年苔鐘自己輕響的那一日,無論人在天涯何處,都得回村一趟,在古樹底下把整個故事講一遍,講給樹聽,講給睡得安穩的村子聽。擔子沉。可你們人多,擔得動。",
-      "choices": []
+      "choices": [],
+      "titleEn": "The Bearers",
+      "narrationEn": "The sin-core goes down burning. Ten years of whispers sink through your throats and find lodging in each of your bones: Odell's I could have chosen not to judge, Marko's signature, the even silence behind hundreds of masks. From now on these are your memories, shelved beside your own first kisses, old grudges, dead mothers' faces. Seffa watches you swallow it down as if watching something impossible. \"It will be heavy,\" she says. \"There are several of us,\" you answer. She smiles — the first time in ten years — then scatters into light like a treeful of fireflies and sinks into the tree's heart to sleep: not a vanishing, but a trust. The villagers wake in the dusk, stretching, teasing each other for oversleeping; the soup is reheated on the stove; no one remembers the day. Only you remember. In the years after, you dream the fire in turns, night after night; the flower-scent never quite washes from your skin; and on the one day each year when the Moss Bell hums softly of itself, wherever in the world you are, you return to the village and tell the whole story beneath the old tree — telling it to the tree, and to the village sleeping soundly around it. The burden is heavy. But there are several of you, and it can be carried."
     },
     {
       "id": "ending_seffa_burden",
@@ -1867,7 +2120,9 @@
       "endingKind": "neutral",
       "directive": "中立結局(瑟芙承擔):無論經由遺忘儀式或戰後止戈,瑟芙收回全部記憶與怨憤,獨自帶著真相沉入樹心。村民醒來一無所知,安寧完好,但廣場古樹不再開花,鐘每年那一日發悶。玩家全身而退卻各懷心事。寫出「太平無事」底下那一點空,不控訴、不昇華。",
       "narration": "瑟芙沒有再說什麼。她朝你們極輕地點了一下頭,然後連同滿樹的光、滿村的藤、井底的歌和所有沒人肯唱的名字,一起沉進樹心最深處。綠霧漫過村莊又退去,像一場誰也沒看見的潮。村民在飯桌邊醒來,揉著眼睛把涼了的湯重新熱過,笑話彼此睡迷糊了;孩子找不到懷裡那張畫,哭了一場,第二天也就忘了。巴魯的商隊照舊每月進村收山貨,瑪珂照舊賣她的苦茶,只是再沒人見她睡過一個整覺。你們領了謝禮離開,誰也沒提森林裡的事——說了也不會有人信,更不會有人記得該信什麼。只是往後每逢途經林緣,你們總會不約而同地放慢腳步。廣場的古樹自那天起再沒開過花,枝葉依舊繁茂,只是綠得沉默。鐘樓的鐘修好了,平日敲得清亮,唯獨每年同一個日子,那一聲會發悶,像隔著什麼東西。全村只有你們知道隔著的是什麼。而你們,也只是路過的人。",
-      "choices": []
+      "choices": [],
+      "titleEn": "The Warden Who Sleeps Alone",
+      "narrationEn": "Seffa says nothing more. She gives you the smallest nod, and then — with all the tree's light, all the village's vines, the song in the well and every name no one would sing — she sinks into the deepest heart of the tree. Green mist washes over the village and withdraws, a tide no one sees. The villagers wake at their tables, rub their eyes, reheat the cooled soup, laugh at each other for dozing off; the child cannot find the drawing he was holding, cries over it, and by the next day has forgotten. Balu's caravan comes through monthly for mountain goods, as it always has; Marko sells her bitter tea, as she always has — only no one ever again sees her sleep a whole night. You take your reward and go, and speak of the forest to no one — no one would believe it, and no one is left who could remember what to believe. Only, ever after, passing the treeline, you find yourselves slowing, all at the same step, without a word. The old tree has not flowered since that day; its leaves are as full as ever, only green in a way that keeps silent. The tower bell is mended and rings clear the year round — except on one same day each year, when the stroke comes out muffled, as if through some thickness. In all the village, only you know what the thickness is. And you are only passers-by."
     },
     {
       "id": "ending_green_veil",
@@ -1877,7 +2132,9 @@
       "endingKind": "bad",
       "directive": "壞結局其一(森林承擔/覆寫):因拖延、棄戰或貪取森心之力,日落降臨,夢境落地生根。苔鐘村徹底併入森林,村民化為永眠的綠影,慶典在藤蔓間永恆重演。玩家僥倖逃出(或半身沾綠),留下悔恨的餘韻與多年後的傳聞。成因是「錯過與貪念」,寫出緩慢溫柔的恐怖。",
       "narration": "日輪沉底的那一瞬,森林深處傳來一聲極輕的嘆息,像誰終於等累了。夢不再挽留誰,也不再放過誰——它落了地。你們是踩著瘋長的藤蔓逃出林口的,身後的苔鐘村在暮色裡以肉眼可見的速度返青:屋脊抽芽,牆垣開花,街道成溪,炊煙化霧。全村的沉睡者站了起來,卻沒有醒,他們提著並不存在的燈籠,在藤蔓間緩緩走成一圈,面具長在了臉上,童謠在花叢裡一遍一遍地唱,永遠唱不到最後一句。有人回頭看了一眼,從此左半邊的頭髮再沒褪去那層綠。商道自那年起繞開了這片林子。多年後仍有旅人賭咒發誓,說月圓之夜路過林緣,能看見林子深處燈火通明,鼓點與笑語隱約,像一場永不散席的慶典;林口開滿翡翠色的花,每一朵湊近了聽,都用不同的聲音說著同一句話:「留下來,一起睡。」你們知道那些聲音是誰的。每一個,你們都叫得出名字。",
-      "choices": []
+      "choices": [],
+      "titleEn": "The Emerald Veil",
+      "narrationEn": "The instant the sun's disc goes under, a very small sigh drifts out of the forest's depths, as of someone finally grown too tired to wait. The dream stops holding anyone back — and stops letting anyone go. It takes root. You escape the treeline over vines growing faster than a man can run, and behind you Mossbell greens in the dusk before your eyes: roof-ridges budding, walls flowering, streets running into brooks, chimney-smoke turning to mist. The sleepers rise to their feet without waking; carrying lanterns that do not exist, they walk their slow circle among the vines; the masks have grown onto their faces; and among the flowers the rhyme sings itself over and over, never once reaching its last line. One of you looks back — once — and the left side of their hair never loses its green again. The trade road has bent around this forest since that year. Yet travellers long after still swear that, passing the treeline on full-moon nights, they have seen lights deep in the wood, drums and laughter faint inside — a festival that never ends; and that the emerald flowers at the forest's mouth, leaned close to, speak in different voices, every one saying the same thing: \"Stay. Sleep with us.\" You know whose voices they are. Every one of them, you can call by name."
     },
     {
       "id": "ending_second_pyre",
@@ -1887,24 +2144,35 @@
       "endingKind": "bad",
       "directive": "壞結局其二(以火了結):玩家斬斷森心或奪核焚樹,瑟芙第二次死於火,臨終只輕輕說了一句「和上次一樣」。村民醒來毫無記憶,森林連同水井一起枯死,村莊得救卻失了根。結尾必須落在輪迴的暗示:灰土裡抽出新芽。成因是「暴力與掩蓋」,與翡翠覆村的成因區隔。",
       "narration": "森心斷裂的聲音不像木頭,倒像一根繃了十年的弦。火順著藤蔓的脈絡吞下整棵巨樹,滿樹翡翠花在烈焰裡一朵一朵爆成碎光,像一場倒放的雪。瑟芙沒有掙扎。火合攏之前,她懸在光裡看著你們,用那個借來的、你們熟悉的聲音輕輕說:「和上次一樣。」然後火就把剩下的話燒完了。村民在暮色裡醒來,對這一天毫無記憶,他們歡天喜地款待你們這些「除了林妖」的英雄,殺雞宰羊,篝火燒到半夜——火光映在每張笑臉上,你們卻誰也吃不下去。此後的苔鐘村太平無事:藤蔓枯了,怪夢絕了,森林一年年往後退,退成一片灰白的枯木;水井跟著乾了,井底再沒有歌。石碑上被鑿去的那段村史,終究沒人補上,新一代的孩子連問都不會問。只有你們偶爾想起灰燼裡最後看到的一幕:焦黑的土裡,一點翡翠色的新芽,正安安靜靜地,頂開灰殼。十年,或者二十年。它等得起。",
-      "choices": []
+      "choices": [],
+      "titleEn": "The Second Pyre",
+      "narrationEn": "The Forest Heart does not break like wood; it breaks like a string kept taut for ten years. Fire swallows the great tree along the veins of its own vines, and the emerald flowers burst one by one into scattering sparks, a snowfall played backward. Seffa does not struggle. Before the fire closes she hangs in the light, watching you, and says softly, in that borrowed voice you know so well: \"Same as last time.\" Then the fire finishes whatever else she had to say. The villagers wake in the dusk with no memory of the day; overjoyed, they feast you — the heroes who slew the forest witch — kill chickens, roast a sheep, burn a bonfire half the night; the firelight plays across every laughing face, and not one of you can eat. Mossbell is peaceful ever after: the vines wither, the strange dreams end, and the forest retreats year by year into a stand of grey-white deadwood; the well dries with it, and there is no more singing at its bottom. The chiselled gap in the village record is never filled; the next generation of children never even think to ask. Only sometimes you remember the last thing you saw in the ashes: in the scorched black earth, a point of emerald — a new shoot, quietly, calmly, lifting away its cap of ash. Ten years, or twenty. It can wait."
     }
   ],
   "stageObjectives": {
     "中期": {
       "objective": "進出共享夢境,查明十年前處刑的真相與記憶種子的下落",
       "context": "夢中慶典重演舊罪,年幼的瑟芙握著喚醒全村的關鍵;夢外的藤蔓仍在收緊。",
-      "stakes": "日落後夢境將永久覆寫現實,村民將忘記自己曾經醒著。"
+      "stakes": "日落後夢境將永久覆寫現實,村民將忘記自己曾經醒著。",
+      "objectiveEn": "Pass between waking and the shared dream, and uncover the truth of the execution ten years past and the whereabouts of the memory seed",
+      "contextEn": "In the dream the festival replays the old sin, and the child Seffa holds the key to waking the village; outside the dream, the vines are still drawing tight.",
+      "stakesEn": "After sundown the dream will overwrite reality for good, and the villagers will forget they were ever awake."
     },
     "後期": {
       "objective": "深入森林心臟,與森心瑟芙做個了斷——喚醒村莊,或讓它長眠",
       "context": "成年瑟芙與巨樹合而為一;喚醒即揭罪,遺忘即安寧,代價總要有人擔。",
-      "stakes": "夢根已纏上隊伍的手腕;再猶豫,你們也將成為夢的一部分。"
+      "stakes": "夢根已纏上隊伍的手腕;再猶豫,你們也將成為夢的一部分。",
+      "objectiveEn": "Go deep into the forest's heart and settle things with Seffa of the Forest Heart — wake the village, or let it sleep forever",
+      "contextEn": "The grown Seffa and the great tree are now one; to wake the village is to unbury its sin, to forget is to keep its peace — and someone must always bear the cost.",
+      "stakesEn": "The dream's roots are already wound about your wrists; hesitate longer, and you too become part of the dream."
     },
     "結局": {
       "objective": "見證苔鐘村的甦醒或沉眠",
       "context": "記憶的代價已依你們的抉擇落定。",
-      "stakes": "結局已定,不可回頭。"
+      "stakes": "結局已定,不可回頭。",
+      "objectiveEn": "Witness Mossbell Village wake, or sleep on",
+      "contextEn": "The price of memory has come due, according to your choice.",
+      "stakesEn": "The ending is set. There is no turning back."
     }
   }
 }
