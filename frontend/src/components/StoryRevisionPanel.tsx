@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowCounterClockwise, ChatTeardropText, PaperPlaneRight, X } from '@phosphor-icons/react';
+import { useI18n } from '../i18n';
 
 export interface RevisionChatLine {
   id: string;
@@ -29,6 +30,7 @@ export function StoryRevisionPanel({
   chat,
   onSubmit,
 }: StoryRevisionPanelProps) {
+  const { tz } = useI18n();
   const [draft, setDraft] = useState('');
   const endRef = useRef<HTMLDivElement | null>(null);
 
@@ -47,42 +49,42 @@ export function StoryRevisionPanel({
   }
 
   return (
-    <aside className="story-revision-panel" aria-label="修正 DM 對話">
+    <aside className="story-revision-panel" aria-label={tz('修正 DM 對話')}>
       <header className="story-revision-head">
         <div>
-          <p className="eyebrow">修正小窗</p>
+          <p className="eyebrow">{tz('修正小窗')}</p>
           <strong>
             <ChatTeardropText size={16} weight="fill" />
-            修正上一則 DM 對話
+            {tz('修正上一則 DM 對話')}
           </strong>
         </div>
-        <button type="button" className="story-revision-close" aria-label="關閉修正小窗" onClick={onClose}>
+        <button type="button" className="story-revision-close" aria-label={tz('關閉修正小窗')} onClick={onClose}>
           <X size={16} />
         </button>
       </header>
 
       <div className="story-revision-draft">
-        <span>目前草稿</span>
-        <p>{previousDraft || '尚無可修正的 DM 對話。'}</p>
+        <span>{tz('目前草稿')}</span>
+        <p>{previousDraft || tz('尚無可修正的 DM 對話。')}</p>
       </div>
 
       <div className="story-revision-chat" aria-live="polite">
         {chat.length === 0 && (
           <p className="story-revision-empty">
-            告訴 DM 哪裡不對（事實錯誤、語氣、遺漏、矛盾…），再按「重寫」。只改敘事，不重算 HP／XP。
+            {tz('告訴 DM 哪裡不對（事實錯誤、語氣、遺漏、矛盾…），再按「重寫」。只改敘事，不重算 HP／XP。')}
           </p>
         )}
         {chat.map((line) => (
           <div key={line.id} className={`story-revision-line story-revision-${line.role}`}>
-            <span>{line.role === 'player' ? '你' : '系統'}</span>
+            <span>{line.role === 'player' ? tz('你') : tz('系統')}</span>
             <p>{line.text}</p>
             <time>{line.time}</time>
           </div>
         ))}
         {loading && (
           <div className="story-revision-line story-revision-system">
-            <span>系統</span>
-            <p>DM 正在依你的說明就地修正上一則對話…</p>
+            <span>{tz('系統')}</span>
+            <p>{tz('DM 正在依你的說明就地修正上一則對話…')}</p>
           </div>
         )}
         <div ref={endRef} />
@@ -101,7 +103,7 @@ export function StoryRevisionPanel({
           value={draft}
           rows={3}
           disabled={loading || disabled}
-          placeholder="例如：NPC 不該知道我們的名字；把氣氛改得更緊繃；別跳過搜查結果…"
+          placeholder={tz('例如：NPC 不該知道我們的名字；把氣氛改得更緊繃；別跳過搜查結果…')}
           onChange={(event) => setDraft(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
@@ -111,10 +113,10 @@ export function StoryRevisionPanel({
           }}
         />
         <div className="story-revision-actions">
-          <small>Ctrl+Enter 送出</small>
+          <small>{tz('Ctrl+Enter 送出')}</small>
           <button type="submit" disabled={loading || disabled || !draft.trim()}>
             {loading ? <ArrowCounterClockwise size={15} className="hourglass" /> : <PaperPlaneRight size={15} weight="fill" />}
-            {loading ? '重寫中…' : '依修正重寫'}
+            {loading ? tz('重寫中…') : tz('依修正重寫')}
           </button>
         </div>
       </form>

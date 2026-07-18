@@ -306,6 +306,8 @@ export interface DmTurnRequest {
   model?: string;
   effort?: string;
   dmProvider?: string;
+  /** "en" asks the DM to narrate in English; empty/absent keeps Traditional Chinese. */
+  language?: string;
   demo?: boolean;
   actions?: Array<{ playerId: PlayerId; text: string }>;
   intents?: Partial<Record<PlayerId, DmIntent>>;

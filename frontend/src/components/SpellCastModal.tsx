@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Crosshair, MagicWand, Sparkle, Timer, X } from '@phosphor-icons/react';
 import type { CharacterSpell, PlayerCharacter } from '../types';
 import { abilityLabels } from '../labels';
+import { useI18n, type Language } from '../i18n';
 
 export type SpellTargetOption = { id: string; name: string; side: 'party' | 'enemy' };
 
@@ -20,7 +21,7 @@ export function spellTargetOptions(
   if (spell.effect?.target === 'creature') {
     return spellTargets.filter((entry) => entry.side === 'enemy');
   }
-  return [...spellTargets, { id: 'scene', name: '目前場景／指定位置', side: 'party' }];
+  return [...spellTargets, { id: 'scene', name: '目前場景／指定位置', side: 'party' }];  // renamed for display in the modal below
 }
 
 export function defaultSpellTargetId(player: PlayerCharacter, spell: CharacterSpell): string | undefined {
@@ -28,7 +29,7 @@ export function defaultSpellTargetId(player: PlayerCharacter, spell: CharacterSp
   return undefined;
 }
 
-export function spellCastMeta(spell: CharacterSpell, player: PlayerCharacter) {
+export function spellCastMeta(spell: CharacterSpell, player: PlayerCharacter, lang: Language = 'zh') {
   const canCast = spell.level === 0 || spell.prepared || spell.alwaysPrepared;
   const canRitual = spell.ritual && (spell.prepared || spell.inSpellbook);
   const hasFreeUse = Boolean(spell.freeUseResourceId && player.resources.some((entry) => entry.id === spell.freeUseResourceId && entry.current > 0));
@@ -37,17 +38,17 @@ export function spellCastMeta(spell: CharacterSpell, player: PlayerCharacter) {
     : undefined;
   const hasSlot = spell.level === 0 || hasFreeUse || Boolean(player.spellcasting?.slots.some((slot) => slot.level >= spell.level && slot.current > 0));
   const rollRule = spell.effect?.attackRoll
-    ? '施放後擲法術攻擊 d20'
+    ? (lang === 'en' ? 'Roll a d20 spell attack after casting' : '施放後擲法術攻擊 d20')
     : spell.effect?.saveAbility
-      ? `目標進行${abilityLabels[spell.effect.saveAbility]}豁免`
+      ? (lang === 'en' ? `Target makes a ${abilityLabels[spell.effect.saveAbility]} saving throw` : `目標進行${abilityLabels[spell.effect.saveAbility]}豁免`)
       : spell.effect?.automaticHit
-        ? '自動命中'
+        ? (lang === 'en' ? 'Hits automatically' : '自動命中')
         : null;
   const costLabel = spell.level === 0
-    ? '戲法・不消耗法術位'
+    ? (lang === 'en' ? 'Cantrip・no spell slot' : '戲法・不消耗法術位')
     : hasFreeUse
-      ? `可消耗「${freeResource?.name || '免費施法'}」`
-      : `消耗 ${spell.level} 環以上法術位`;
+      ? (lang === 'en' ? `Can spend 「${freeResource?.name || 'free casting'}」` : `可消耗「${freeResource?.name || '免費施法'}」`)
+      : (lang === 'en' ? `Uses a level ${spell.level}+ spell slot` : `消耗 ${spell.level} 環以上法術位`);
   return { canCast, canRitual, hasFreeUse, hasSlot, rollRule, costLabel, freeResource };
 }
 
@@ -61,6 +62,7 @@ interface SpellCastModalProps {
 }
 
 export function SpellCastModal({ open, player, spell, spellTargets, onClose, onCast }: SpellCastModalProps) {
+  const { lang, tz } = useI18n();
   const titleId = useId();
   const targets = useMemo(
     () => (spell ? spellTargetOptions(player, spell, spellTargets) : []),
@@ -85,7 +87,7 @@ export function SpellCastModal({ open, player, spell, spellTargets, onClose, onC
   }, [open, onClose]);
 
   if (!spell) return null;
-  const meta = spellCastMeta(spell, player);
+  const meta = spellCastMeta(spell, player, lang);
   const isScene = targetId === 'scene';
   const resolvedTarget = isScene ? (sceneText.trim() || 'scene') : targetId;
   const canConfirm = Boolean(meta.canCast && meta.hasSlot && targetId && (!isScene || sceneText.trim()));
@@ -123,56 +125,56 @@ export function SpellCastModal({ open, player, spell, spellTargets, onClose, onC
             <header className="spell-cast-head">
               <div className="spell-cast-sigil" aria-hidden="true"><MagicWand size={22} weight="duotone" /></div>
               <div className="spell-cast-titles">
-                <p className="eyebrow">Cast spell／施法</p>
+                <p className="eyebrow">{tz('Cast spell／施法')}</p>
                 <h2 id={titleId}>{spell.name}</h2>
                 <span>{spell.englishName}・{spell.school}</span>
               </div>
-              <button type="button" className="spell-cast-close" onClick={onClose} aria-label="關閉施法視窗"><X size={18} /></button>
+              <button type="button" className="spell-cast-close" onClick={onClose} aria-label={tz('關閉施法視窗')}><X size={18} /></button>
             </header>
 
             <div className="spell-cast-badges">
-              <span className="spell-cast-level">{spell.level === 0 ? '戲法' : `${spell.level} 環`}</span>
+              <span className="spell-cast-level">{spell.level === 0 ? tz('戲法') : lang === 'en' ? `level ${spell.level}` : `${spell.level} 環`}</span>
               <span><Timer size={12} />{spell.castingTime}</span>
               <span><Crosshair size={12} />{spell.range}</span>
-              {spell.concentration && <span className="spell-cast-flag"><Sparkle size={12} />專注</span>}
-              {spell.ritual && <span className="spell-cast-flag">儀式</span>}
-              {spell.alwaysPrepared && <span className="spell-cast-flag">常備</span>}
-              {!meta.canCast && <span className="spell-cast-warn">未準備</span>}
+              {spell.concentration && <span className="spell-cast-flag"><Sparkle size={12} />{tz('專注')}</span>}
+              {spell.ritual && <span className="spell-cast-flag">{tz('儀式')}</span>}
+              {spell.alwaysPrepared && <span className="spell-cast-flag">{tz('常備')}</span>}
+              {!meta.canCast && <span className="spell-cast-warn">{tz('未準備')}</span>}
             </div>
 
             <p className="spell-cast-desc">{spell.description}</p>
-            {meta.rollRule && <p className="spell-cast-roll"><strong>結算：</strong>{meta.rollRule}</p>}
+            {meta.rollRule && <p className="spell-cast-roll"><strong>{tz('結算：')}</strong>{meta.rollRule}</p>}
 
             <div className="spell-cast-stats">
-              <div><small>施法屬性</small><strong>{ability}</strong></div>
-              <div><small>法術攻擊</small><strong>{attack}</strong></div>
-              <div><small>豁免 DC</small><strong>{saveDc}</strong></div>
-              <div><small>消耗</small><strong>{meta.costLabel}</strong></div>
+              <div><small>{tz('施法屬性')}</small><strong>{ability}</strong></div>
+              <div><small>{tz('法術攻擊')}</small><strong>{attack}</strong></div>
+              <div><small>{tz('豁免 DC')}</small><strong>{saveDc}</strong></div>
+              <div><small>{tz('消耗')}</small><strong>{meta.costLabel}</strong></div>
             </div>
 
             <div className="spell-cast-form">
               <label>
-                <span>目標</span>
+                <span>{tz('目標')}</span>
                 <select
-                  aria-label={`${spell.name}目標`}
+                  aria-label={lang === 'en' ? `${spell.name} target` : `${spell.name}目標`}
                   value={targetId}
                   onChange={(event) => setTargetId(event.target.value)}
                 >
-                  <option value="" disabled>選擇施法目標…</option>
+                  <option value="" disabled>{tz('選擇施法目標…')}</option>
                   {targets.map((target) => (
                     <option key={target.id} value={target.id}>
-                      {target.name}{target.side === 'enemy' ? '（敵）' : target.id === player.id ? '（自己）' : target.id === 'scene' ? '' : '（友）'}
+                      {target.id === 'scene' ? tz('目前場景／指定位置') : target.name}{target.side === 'enemy' ? tz('（敵）') : target.id === player.id ? tz('（自己）') : target.id === 'scene' ? '' : tz('（友）')}
                     </option>
                   ))}
                 </select>
               </label>
               {isScene && (
                 <label>
-                  <span>施法位置／區域</span>
+                  <span>{tz('施法位置／區域')}</span>
                   <input
                     className="spell-scene-target"
-                    aria-label={`${spell.name}施法位置`}
-                    placeholder="例：洞穴深處的祭壇、門廊中央"
+                    aria-label={lang === 'en' ? `${spell.name} cast location` : `${spell.name}施法位置`}
+                    placeholder={tz('例：洞穴深處的祭壇、門廊中央')}
                     value={sceneText}
                     onChange={(event) => setSceneText(event.target.value)}
                     autoFocus
@@ -182,14 +184,14 @@ export function SpellCastModal({ open, player, spell, spellTargets, onClose, onC
             </div>
 
             {!meta.hasSlot && meta.canCast && (
-              <p className="spell-cast-hint spell-cast-hint-warn" role="status">目前沒有可用的法術位或免費施法次數。</p>
+              <p className="spell-cast-hint spell-cast-hint-warn" role="status">{tz('目前沒有可用的法術位或免費施法次數。')}</p>
             )}
             {!targetId && meta.canCast && meta.hasSlot && (
-              <p className="spell-cast-hint" role="status">請先指定目標，才能施放並鎖定本回合行動。</p>
+              <p className="spell-cast-hint" role="status">{tz('請先指定目標，才能施放並鎖定本回合行動。')}</p>
             )}
 
             <footer className="spell-cast-actions">
-              <button type="button" className="spell-cast-cancel" onClick={onClose}>取消</button>
+              <button type="button" className="spell-cast-cancel" onClick={onClose}>{tz('取消')}</button>
               {meta.canRitual && (
                 <button
                   type="button"
@@ -197,7 +199,7 @@ export function SpellCastModal({ open, player, spell, spellTargets, onClose, onC
                   disabled={!canRitualConfirm}
                   onClick={() => onCast(spell, true, resolvedTarget)}
                 >
-                  儀式施放
+                  {tz('儀式施放')}
                 </button>
               )}
               {meta.canCast && (
@@ -208,7 +210,7 @@ export function SpellCastModal({ open, player, spell, spellTargets, onClose, onC
                   onClick={() => onCast(spell, false, resolvedTarget)}
                 >
                   <MagicWand size={16} weight="fill" />
-                  施放並鎖定行動
+                  {tz('施放並鎖定行動')}
                 </button>
               )}
             </footer>

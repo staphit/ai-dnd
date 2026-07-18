@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowClockwise, Crosshair, Flask, Lightning, MagicWand, Plus, Shield, Skull, Sword, X } from '@phosphor-icons/react';
 import type { Campaign, CharacterSpell, CombatState, PlayerCharacter, PlayerId } from '../types';
 import { combatAttack, combatEndTurn, combatEnemyTurn, combatStart, revive, type EnemySpec } from '../api';
+import { useI18n } from '../i18n';
 
 interface CombatTrackerProps {
   campaignId: string;
@@ -25,6 +26,7 @@ const combatConsumables = new Set(['治療藥水', '解毒劑']);
 const emptyEnemy: EnemySpec = { name: '骸骨守衛', ac: 13, hp: 13, initiativeBonus: 2, attackBonus: 4, damage: '1d6+2', damageType: '穿刺' };
 
 export function CombatTracker({ campaignId, players, combat, onView, onEnd, onCastSpell, onUseResource, onUseItem }: CombatTrackerProps) {
+  const { lang, tz } = useI18n();
   const [enemies, setEnemies] = useState<EnemySpec[]>([]);
   const [draft, setDraft] = useState(emptyEnemy);
   const [targetId, setTargetId] = useState('');
@@ -120,22 +122,22 @@ export function CombatTracker({ campaignId, players, combat, onView, onEnd, onCa
   if (!combat?.active) {
     return (
       <section className="combat-console">
-        <header><div><p className="eyebrow">Encounter setup</p><h2>建立戰鬥</h2></div><Sword size={24} /></header>
-        <p className="muted-copy">玩家會自動加入。新增敵人後擲先攻；每次攻擊由伺服器判斷命中、重擊、傷害並記錄至故事。</p>
+        <header><div><p className="eyebrow">Encounter setup</p><h2>{tz('建立戰鬥')}</h2></div><Sword size={24} /></header>
+        <p className="muted-copy">{tz('玩家會自動加入。新增敵人後擲先攻；每次攻擊由伺服器判斷命中、重擊、傷害並記錄至故事。')}</p>
         <div className="enemy-builder">
-          <label>名稱<input value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} /></label>
+          <label>{tz('名稱')}<input value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} /></label>
           <label>AC<input type="number" min="1" max="40" value={draft.ac} onChange={(event) => setDraft({ ...draft, ac: Number(event.target.value) })} /></label>
           <label>HP<input type="number" min="1" max="999" value={draft.hp} onChange={(event) => setDraft({ ...draft, hp: Number(event.target.value) })} /></label>
-          <label>先攻<input type="number" min="-10" max="20" value={draft.initiativeBonus} onChange={(event) => setDraft({ ...draft, initiativeBonus: Number(event.target.value) })} /></label>
-          <label>命中<input type="number" min="-10" max="30" value={draft.attackBonus} onChange={(event) => setDraft({ ...draft, attackBonus: Number(event.target.value) })} /></label>
-          <label>傷害<input value={draft.damage} pattern="\d+d\d+([+-]\d+)?" onChange={(event) => setDraft({ ...draft, damage: event.target.value })} /></label>
-          <button type="button" onClick={addEnemy}><Plus />加入敵人</button>
+          <label>{tz('先攻')}<input type="number" min="-10" max="20" value={draft.initiativeBonus} onChange={(event) => setDraft({ ...draft, initiativeBonus: Number(event.target.value) })} /></label>
+          <label>{tz('命中')}<input type="number" min="-10" max="30" value={draft.attackBonus} onChange={(event) => setDraft({ ...draft, attackBonus: Number(event.target.value) })} /></label>
+          <label>{tz('傷害')}<input value={draft.damage} pattern="\d+d\d+([+-]\d+)?" onChange={(event) => setDraft({ ...draft, damage: event.target.value })} /></label>
+          <button type="button" onClick={addEnemy}><Plus />{tz('加入敵人')}</button>
         </div>
         <div className="enemy-roster">
           {enemies.map((enemy, index) => <span key={`${enemy.name}-${index}`}>{enemy.name}／AC {enemy.ac}／HP {enemy.hp}<button type="button" onClick={() => setEnemies((list) => list.filter((_, entryIndex) => entryIndex !== index))}><X /></button></span>)}
         </div>
         {error && <p className="combat-error" role="alert">{error}</p>}
-        <button type="button" className="primary-action" onClick={begin} disabled={busy || enemies.length === 0}><Crosshair />擲先攻並開始</button>
+        <button type="button" className="primary-action" onClick={begin} disabled={busy || enemies.length === 0}><Crosshair />{tz('擲先攻並開始')}</button>
       </section>
     );
   }
@@ -143,43 +145,43 @@ export function CombatTracker({ campaignId, players, combat, onView, onEnd, onCa
   return (
     <section className="combat-console">
       <header>
-        <div><p className="eyebrow">第 {combat.round} 輪</p><h2>{current?.name} 的回合</h2></div>
+        <div><p className="eyebrow">{lang === 'en' ? `Round ${combat.round}` : `第 ${combat.round} 輪`}</p><h2>{lang === 'en' ? `${current?.name} - turn` : `${current?.name} 的回合`}</h2></div>
         <div className="combat-head-tools">
           {/* Top-right on purpose: kept away from the per-turn action row so an
               early conclude can't be fat-fingered. */}
-          <button type="button" className="combat-end-button" onClick={onEnd} disabled={busy}><X size={14} />結束戰鬥並敘述</button>
+          <button type="button" className="combat-end-button" onClick={onEnd} disabled={busy}><X size={14} />{tz('結束戰鬥並敘述')}</button>
           <Sword size={24} />
         </div>
       </header>
       <div className="initiative-list">
         {combat.combatants.map((entry, index) => (
           <article key={entry.id} className={`${index === combat.turnIndex ? 'initiative-active' : ''} ${entry.defeated ? 'initiative-defeated' : ''}`}>
-            <b>{entry.initiative}</b><span><strong>{entry.name}</strong><small>{entry.side === 'party' ? '隊伍' : '敵方'}</small></span><em><Shield />{entry.ac}</em><i>{entry.hp}/{entry.maxHp} HP</i>
+            <b>{entry.initiative}</b><span><strong>{entry.name}</strong><small>{entry.side === 'party' ? tz('隊伍') : tz('敵方')}</small></span><em><Shield />{entry.ac}</em><i>{entry.hp}/{entry.maxHp} HP</i>
           </article>
         ))}
       </div>
-      {currentEconomy && <div className="turn-economy"><span className={currentEconomy.actionUsed ? 'used' : ''}>動作：{currentEconomy.actionUsed ? '已使用' : '可用'}</span><span className={currentEconomy.bonusActionUsed ? 'used' : ''}>附贈動作：{currentEconomy.bonusActionUsed ? '已使用' : '可用'}</span><span className={currentEconomy.reactionUsed ? 'used' : ''}>反應：{currentEconomy.reactionUsed ? '已使用' : '可用'}</span></div>}
-      {enemyIntent && <p className="enemy-intent" role="status"><Skull size={16} weight="fill" />【敵方】{enemyIntent}</p>}
+      {currentEconomy && <div className="turn-economy"><span className={currentEconomy.actionUsed ? 'used' : ''}>{tz('動作：')}{currentEconomy.actionUsed ? tz('已使用') : tz('可用')}</span><span className={currentEconomy.bonusActionUsed ? 'used' : ''}>{tz('附贈動作：')}{currentEconomy.bonusActionUsed ? tz('已使用') : tz('可用')}</span><span className={currentEconomy.reactionUsed ? 'used' : ''}>{tz('反應：')}{currentEconomy.reactionUsed ? tz('已使用') : tz('可用')}</span></div>}
+      {enemyIntent && <p className="enemy-intent" role="status"><Skull size={16} weight="fill" />{tz('【敵方】')}{enemyIntent}</p>}
       {error && <p className="combat-error" role="alert">{error}</p>}
       <div className="combat-actions">
         {current?.side === 'enemy' ? (
-          <button type="button" className="primary-action" onClick={enemyTurn} disabled={busy}><Skull />{busy ? '敵方行動結算中…' : '敵方行動'}</button>
+          <button type="button" className="primary-action" onClick={enemyTurn} disabled={busy}><Skull />{busy ? tz('敵方行動結算中…') : tz('敵方行動')}</button>
         ) : (
           <>
             {availableAttacks.length > 0 && (
               <label>
-                攻擊方式（可切換武器）
+                {tz('攻擊方式（可切換武器）')}
                 <select value={attackId || availableAttacks[0]?.id} onChange={(event) => setAttackId(event.target.value)}>
                   {availableAttacks.map((entry) => (
                     <option key={entry.id} value={entry.id}>
-                      {entry.name}{(entry.upgradeLevel || 0) > 0 ? ` +${entry.upgradeLevel}` : ''}／命中 +{entry.attackBonus}／{entry.damage}{(entry.attacksPerAction || 1) > 1 ? `／每動作 ${entry.attacksPerAction} 擊` : ''}
+                      {entry.name}{(entry.upgradeLevel || 0) > 0 ? ` +${entry.upgradeLevel}` : ''}／命中 +{entry.attackBonus}／{entry.damage}{(entry.attacksPerAction || 1) > 1 ? (lang === 'en' ? ` / ${entry.attacksPerAction} attacks per action` : `／每動作 ${entry.attacksPerAction} 擊`) : ''}
                     </option>
                   ))}
                 </select>
               </label>
             )}
             <label>
-              攻擊目標
+              {tz('攻擊目標')}
               <select value={targetId} onChange={(event) => setTargetId(event.target.value)}>
                 {validTargets.map((entry) => (
                   <option key={entry.id} value={entry.id}>{entry.name}（AC {entry.ac}）</option>
@@ -187,7 +189,7 @@ export function CombatTracker({ campaignId, players, combat, onView, onEnd, onCa
               </select>
             </label>
             <button type="button" className="primary-action" onClick={attack} disabled={busy || !validTargets.length || currentEconomy?.actionUsed}>
-              <Crosshair />攻擊（使用動作）
+              <Crosshair />{tz('攻擊（使用動作）')}
             </button>
             {downedAllies.length > 0 && currentPlayer && (
               <button
@@ -200,17 +202,17 @@ export function CombatTracker({ campaignId, players, combat, onView, onEnd, onCa
                   void run(() => revive(campaignId, target.playerId!, currentPlayer.id), (view) => onView(view));
                 }}
               >
-                <Shield />救援 {downedAllies[0].name}（使用動作）
+                <Shield />{tz('救援')} {downedAllies[0].name}{tz('（使用動作）')}
               </button>
             )}
             {onUseItem && currentPlayer && currentPlayer.equipment.some((item) => combatConsumables.has(item)) && (
-              <div className="combat-resources combat-consumables" aria-label="消耗品">
+              <div className="combat-resources combat-consumables" aria-label={tz('消耗品')}>
                 {currentPlayer.equipment.filter((item) => combatConsumables.has(item)).map((item, index) => (
                   <button
                     key={`${item}-${index}`}
                     type="button"
                     disabled={busy || currentEconomy?.bonusActionUsed}
-                    title={currentEconomy?.bonusActionUsed ? '本輪附贈動作已使用' : '使用消耗品（附贈動作）'}
+                    title={currentEconomy?.bonusActionUsed ? tz('本輪附贈動作已使用') : tz('使用消耗品（附贈動作）')}
                     onClick={() => onUseItem(currentPlayer.id, item)}
                   >
                     <Flask size={14} weight="fill" />
@@ -220,7 +222,7 @@ export function CombatTracker({ campaignId, players, combat, onView, onEnd, onCa
               </div>
             )}
             {onUseResource && currentPlayer && currentPlayer.resources.length > 0 && (
-              <div className="combat-resources" aria-label="職業資源">
+              <div className="combat-resources" aria-label={tz('職業資源')}>
                 {currentPlayer.resources.map((resource) => (
                   <button
                     key={resource.id}
@@ -238,11 +240,11 @@ export function CombatTracker({ campaignId, players, combat, onView, onEnd, onCa
             {onCastSpell && currentPlayer && castableSpells.length > 0 && (
               <div className="combat-spell-cast">
                 <label>
-                  法術
+                  {tz('法術')}
                   <select value={spellId || castableSpells[0]?.id} onChange={(event) => setSpellId(event.target.value)}>
                     {castableSpells.map((spell) => (
                       <option key={spell.id} value={spell.id}>
-                        {spell.name}（{spell.level === 0 ? '戲法' : `${spell.level} 環`}）
+                        {spell.name}（{spell.level === 0 ? tz('戲法') : lang === 'en' ? `level ${spell.level}` : `${spell.level} 環`}）
                       </option>
                     ))}
                   </select>
@@ -256,13 +258,13 @@ export function CombatTracker({ campaignId, players, combat, onView, onEnd, onCa
                     if (spell && currentPlayer) onCastSpell(currentPlayer.id, spell);
                   }}
                 >
-                  <MagicWand />施放法術
+                  <MagicWand />{tz('施放法術')}
                 </button>
               </div>
             )}
           </>
         )}
-        <button type="button" onClick={endTurn} disabled={busy}><ArrowClockwise />結束回合</button>
+        <button type="button" onClick={endTurn} disabled={busy}><ArrowClockwise />{tz('結束回合')}</button>
       </div>
     </section>
   );

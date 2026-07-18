@@ -10,7 +10,8 @@ import './styles.css';
 import './feature-vars.css';
 import './features.css';
 import App from './App';
+import { LanguageProvider } from './i18n';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode><App /></React.StrictMode>,
+  <React.StrictMode><LanguageProvider><App /></LanguageProvider></React.StrictMode>,
 );

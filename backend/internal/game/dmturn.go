@@ -675,8 +675,8 @@ func (s *Service) ApplyDMTurn(id string, prepared PreparedDMTurn, turn *dm.Turn)
 	// DM's own suggestions fill the remaining slots.
 	if mod := scriptModuleFor(st.script); mod != nil && !st.script.Ended && (st.combat == nil || !st.combat.Active) {
 		if node := mod.node(st.script.NodeID); node != nil {
-			for _, c := range node.Choices {
-				choices = append(choices, rules.Choice{Text: c.Text})
+			for i := range node.Choices {
+				choices = append(choices, rules.Choice{Text: node.Choices[i].text(prepared.Input.Language)})
 			}
 		}
 	}

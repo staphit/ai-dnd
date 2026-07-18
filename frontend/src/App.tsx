@@ -22,16 +22,17 @@ import {
   type AdvanceInput,
 } from './app/app-utils';
 import { useDiceAnimation } from './hooks/useDiceAnimation';
-import { useNarrationAudio } from './hooks/useNarrationAudio';
 import { useSceneMedia } from './hooks/useSceneMedia';
 import { useCampaignSettings } from './hooks/useCampaignSettings';
 import { useCampaignLibrary } from './hooks/useCampaignLibrary';
+import { useI18n } from './i18n';
 import { CharactersPage } from './components/pages/CharactersPage';
 import { JournalPage } from './components/pages/JournalPage';
 import { SettingsPage } from './components/pages/SettingsPage';
 import { TablePage } from './components/pages/TablePage';
 
 export default function App() {
+  const { lang } = useI18n();
   const [campaign, setCampaignState] = useState<Campaign>(() => structuredClone(initialCampaign));
   const [campaigns, setCampaigns] = useState<CampaignSummary[]>([]);
   const [page, setPage] = useState<Page>('table');
@@ -50,7 +51,6 @@ export default function App() {
     setErrorState(message);
     if (message.trim()) pushToast('error', message);
   }
-  const { speaking: dmSpeaking, speakNarration } = useNarrationAudio(setNotice);
   const { diceAnimation: diceAnim, playDiceAnimation: playDiceAnim } = useDiceAnimation();
   const [spellRoll, setSpellRoll] = useState<{ check: RequiredCheck; casterId: PlayerId; spell: CharacterSpell; asRitual: boolean; targetId: string } | null>(null);
   const [spellModal, setSpellModal] = useState<{ playerId: PlayerId; spell: CharacterSpell } | null>(null);
@@ -306,7 +306,6 @@ export default function App() {
       });
       setCampaign(resp.view);
       setRevisionChat((chat) => [...chat, { id: `${Date.now()}-s`, role: 'system', text: '已依你的說明就地修正上一則 DM 對話。', time: now() }]);
-      if (settings.ttsEnabled && resp.text) void speakNarration(resp.text);
     } catch (caught) {
       if (caught instanceof ApiError && caught.status === 409 && caught.data.needsConsent) {
         setCodexConn({ alive: false, storyId: '' });
@@ -451,6 +450,7 @@ export default function App() {
           model: settings.selectedModel || '',
           effort: settings.selectedEffort || '',
           dmProvider: activeDmProvider,
+          language: lang === 'en' ? 'en' : '',
           demo: demoMode,
           ...(input.checkRoll
             ? { checkRoll: { natural: input.checkRoll.natural } }
@@ -476,7 +476,6 @@ export default function App() {
       if ((settings.autoSceneImages || combatStarted) && resp.text) {
         void generateImage(resp.text, resp.view.imagePrompt || resp.sceneSlot?.imagePrompt, resp.view.scene, resp.sceneSlot?.id);
       }
-      if (settings.ttsEnabled && resp.text) void speakNarration(resp.text);
     } catch (caught) {
       if (caught instanceof ApiError && caught.status === 409 && caught.data.needsConsent) {
         setCodexConn({ alive: false, storyId: '' });
