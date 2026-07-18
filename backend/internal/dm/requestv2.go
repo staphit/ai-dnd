@@ -48,6 +48,7 @@ type TurnInputV2 struct {
 	DeltaMode        bool
 	MemRef           string
 	RulesRef         string
+	Language         string // "" = Traditional Chinese (default); "en" = English narration
 }
 
 // BuildDMRequestV2 renders the slim server-built DM prompt: campaign meta,
@@ -72,6 +73,12 @@ func BuildDMRequestV2(in TurnInputV2) string {
 		"回合：" + numToStr(float64(maxIntV2(1, in.Round))),
 		"上一回合你提供的選項（玩家若照著宣告就必須接受）：" + firstNonEmpty(jsSlice(in.PrevChoices, 400), "（無）"),
 		combat,
+	}
+	if in.Language == "en" {
+		lines = append(lines,
+			"語言指令（優先於守則中的繁體中文要求）：本戰役語言為英文。narration、privateMessages、choices、check.reason 與 actionIssues 的理由一律以英文書寫。",
+			"LANGUAGE OVERRIDE: this campaign is played in English. Write narration, privateMessages, choices, check.reason and actionIssues prose in natural English. Keep mechanical identifiers exactly as the system provides them (skill/ability names such as 先攻, spell and item names) untranslated inside structured fields.",
+		)
 	}
 	lines = append(lines, in.ArcLines...)
 	lines = append(lines, in.ScriptLines...)

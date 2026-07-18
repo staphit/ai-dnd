@@ -231,6 +231,7 @@ type dmRequest struct {
 	Model      string `json:"model"`
 	Effort     string `json:"effort"`
 	DmProvider string `json:"dmProvider"`
+	Language   string `json:"language"`
 	Demo       bool   `json:"demo"`
 	Actions    []struct {
 		PlayerID string `json:"playerId"`
@@ -355,6 +356,9 @@ func (s *Server) handleDm(w http.ResponseWriter, r *http.Request) {
 		plan = s.Prompt.Plan(storyID, threadAlive)
 	}
 
+	if strings.EqualFold(strings.TrimSpace(req.Language), "en") {
+		prepared.Input.Language = "en"
+	}
 	turnBody := dm.BuildDMRequestV2(prepared.Input)
 	if memoryInline != "" && !prepared.Input.DeltaMode {
 		turnBody = "前情提要（由伺服器注入，只讀）：\n" + memoryInline + "\n\n" + turnBody

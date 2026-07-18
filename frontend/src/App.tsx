@@ -26,12 +26,14 @@ import { useNarrationAudio } from './hooks/useNarrationAudio';
 import { useSceneMedia } from './hooks/useSceneMedia';
 import { useCampaignSettings } from './hooks/useCampaignSettings';
 import { useCampaignLibrary } from './hooks/useCampaignLibrary';
+import { useI18n } from './i18n';
 import { CharactersPage } from './components/pages/CharactersPage';
 import { JournalPage } from './components/pages/JournalPage';
 import { SettingsPage } from './components/pages/SettingsPage';
 import { TablePage } from './components/pages/TablePage';
 
 export default function App() {
+  const { lang } = useI18n();
   const [campaign, setCampaignState] = useState<Campaign>(() => structuredClone(initialCampaign));
   const [campaigns, setCampaigns] = useState<CampaignSummary[]>([]);
   const [page, setPage] = useState<Page>('table');
@@ -451,6 +453,7 @@ export default function App() {
           model: settings.selectedModel || '',
           effort: settings.selectedEffort || '',
           dmProvider: activeDmProvider,
+          language: lang === 'en' ? 'en' : '',
           demo: demoMode,
           ...(input.checkRoll
             ? { checkRoll: { natural: input.checkRoll.natural } }

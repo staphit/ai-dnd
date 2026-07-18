@@ -9,6 +9,7 @@ import type {
 } from '../../types';
 import { CampaignManager } from '../CampaignManager';
 import { MagneticButton } from '../MagneticButton';
+import { useI18n, type Language } from '../../i18n';
 
 type DmProviderInfo = NonNullable<AiStatus['dmProviders']>[number];
 
@@ -57,55 +58,63 @@ export function SettingsPage({
   onDeleteCampaign,
   onResetCampaign,
 }: SettingsPageProps) {
+  const { lang, setLang, t } = useI18n();
   return (
     <motion.main key="settings" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="single-page settings-page">
       <div className="page-intro">
-        <p className="eyebrow">戰役設定</p>
-        <h2>地城主與戰役</h2>
-        <p>設定會即時保存在伺服器上的這個戰役；匯入預設不切換。</p>
+        <p className="eyebrow">{t('settings.eyebrow')}</p>
+        <h2>{t('settings.title')}</h2>
+        <p>{t('settings.intro')}</p>
       </div>
+      <section className="settings-row model-selector">
+        <div><strong>{t('settings.language')}</strong><span>{t('settings.languageDesc')}</span></div>
+        <select value={lang} onChange={(event) => setLang(event.target.value as Language)}>
+          <option value="zh">繁體中文</option>
+          <option value="en">English</option>
+        </select>
+      </section>
       <section className="settings-row">
-        <div><strong>示範 DM</strong><span>完全不呼叫模型。</span></div>
+        <div><strong>{t('settings.demo')}</strong><span>{t('settings.demoDesc')}</span></div>
         <button type="button" className={`switch ${demoMode ? 'switch-on' : ''}`} onClick={onToggleDemo}><i /></button>
       </section>
       <section className="settings-row model-selector">
-        <div><strong>DM 資料源</strong><span>Codex（ChatGPT 登入）或 Grok（`grok login`／XAI_API_KEY）。切換後請重新連線該故事。</span></div>
+        <div><strong>{t('settings.provider')}</strong><span>{t('settings.providerDesc')}</span></div>
         <select value={activeDmProvider} onChange={(event) => onProviderChange(event.target.value)}>
           {(status?.dmProviders?.length ? status.dmProviders : [{ id: 'codex', label: 'Codex CLI', connected: true }]).map((provider) => (
-            <option key={provider.id} value={provider.id}>{provider.label}{'connected' in provider && !provider.connected ? '（未就緒）' : ''}</option>
+            <option key={provider.id} value={provider.id}>{provider.label}{'connected' in provider && !provider.connected ? t('settings.notReady') : ''}</option>
           ))}
         </select>
       </section>
       <section className="settings-row model-selector">
-        <div><strong>模型</strong><span>只影響之後的新 DM 請求；目前進度與既有訊息不會改變。</span></div>
+        <div><strong>{t('settings.model')}</strong><span>{t('settings.modelDesc')}</span></div>
         <select value={settings.selectedModel || ''} onChange={(event) => onUpdateSettings({ selectedModel: event.target.value })}>
-          {(activeDmInfo?.models || status?.models || [{ id: '', label: '預設模型' }]).map((model) => <option key={model.id || 'default'} value={model.id}>{model.label}</option>)}
+          {(activeDmInfo?.models || status?.models || [{ id: '', label: t('settings.defaultModel') }]).map((model) => <option key={model.id || 'default'} value={model.id}>{model.label}</option>)}
         </select>
       </section>
       <section className="settings-row model-selector">
-        <div><strong>推理強度（effort）</strong><span>越高越深思但回應越慢；Grok 可能僅有預設。</span></div>
+        <div><strong>{t('settings.effort')}</strong><span>{t('settings.effortDesc')}</span></div>
         <select value={settings.selectedEffort || ''} onChange={(event) => onUpdateSettings({ selectedEffort: event.target.value })}>
-          {(activeDmInfo?.efforts || status?.efforts || [{ id: '', label: '預設推理強度' }]).map((effort) => <option key={effort.id || 'default'} value={effort.id}>{effort.label}</option>)}
+          {(activeDmInfo?.efforts || status?.efforts || [{ id: '', label: t('settings.defaultEffort') }]).map((effort) => <option key={effort.id || 'default'} value={effort.id}>{effort.label}</option>)}
         </select>
       </section>
       <section className="settings-row">
-        <div><strong>{dmLabel} 狀態</strong><span>{(activeDmInfo?.connected ?? status?.connected) ? `已就緒／${activeDmInfo?.model || status?.model || '—'}` : activeDmInfo?.message || status?.message || '正在檢查'}</span></div>
+        <div><strong>{dmLabel} {t('settings.status')}</strong><span>{(activeDmInfo?.connected ?? status?.connected) ? `${t('settings.ready')}${activeDmInfo?.model || status?.model || '—'}` : activeDmInfo?.message || status?.message || t('settings.checking')}</span></div>
         <ShieldWarning size={22} />
       </section>
       <section className="settings-row model-selector">
-        <div><strong>圖片生成引擎</strong><span>場景圖與角色肖像使用的後端；本地選項需先啟動 SD Forge（--api）。</span></div>
+        <div><strong>{t('settings.imageBackend')}</strong><span>{t('settings.imageBackendDesc')}</span></div>
         <select value={settings.imageBackend || status?.imageBackend || 'codex'} onChange={(event) => onUpdateSettings({ imageBackend: event.target.value })}>
           {(status?.imageBackends || [{ id: 'codex', label: status?.imageModel || 'Codex $imagegen' }]).map((backend) => <option key={backend.id} value={backend.id}>{backend.label}</option>)}
         </select>
       </section>
-      <ToggleRow label="每回合自動生成場景圖" description="開啟後，每次 DM 完成公開敘事便自動生成並加入圖庫。" checked={Boolean(settings.autoSceneImages)} onToggle={() => onUpdateSettings({ autoSceneImages: !settings.autoSceneImages })} />
-      <ToggleRow label="語音朗讀 DM 敘事" description="使用本地 GPT-SoVITS 朗讀每回合公開敘事；需先啟動 scripts/sovits.sh 並設定聲線。" checked={Boolean(settings.ttsEnabled)} onToggle={() => onUpdateSettings({ ttsEnabled: !settings.ttsEnabled })} />
-      <ToggleRow label="角色屬性懸浮說明" description="滑鼠停留或用鍵盤聚焦屬性時，顯示規則用途與計算方式。" checked={settings.showStatHints !== false} onToggle={() => onUpdateSettings({ showStatHints: settings.showStatHints === false })} />
+      <ToggleRow label={t('settings.autoScene')} description={t('settings.autoSceneDesc')} checked={Boolean(settings.autoSceneImages)} onToggle={() => onUpdateSettings({ autoSceneImages: !settings.autoSceneImages })} />
+      <ToggleRow label={t('settings.tts')} description={t('settings.ttsDesc')} checked={Boolean(settings.ttsEnabled)} onToggle={() => onUpdateSettings({ ttsEnabled: !settings.ttsEnabled })} />
+      <ToggleRow label={t('settings.statHints')} description={t('settings.statHintsDesc')} checked={settings.showStatHints !== false} onToggle={() => onUpdateSettings({ showStatHints: settings.showStatHints === false })} />
       <section className="settings-row">
-        <div><strong>介面字型大小</strong><span>{Math.round((settings.fontScale || 1) * 100)}%</span></div>
+        <div><strong>{t('settings.fontScale')}</strong><span>{Math.round((settings.fontScale || 1) * 100)}%</span></div>
         <div className="font-controls">
           <button type="button" onClick={() => onUpdateSettings({ fontScale: Math.max(.85, (settings.fontScale || 1) - .1) })}>A−</button>
-          <button type="button" onClick={() => onUpdateSettings({ fontScale: 1 })}>重設</button>
+          <button type="button" onClick={() => onUpdateSettings({ fontScale: 1 })}>{t('settings.fontReset')}</button>
           <button type="button" onClick={() => onUpdateSettings({ fontScale: Math.min(1.25, (settings.fontScale || 1) + .1) })}>A＋</button>
         </div>
       </section>
@@ -119,8 +128,8 @@ export function SettingsPage({
         onDelete={onDeleteCampaign}
       />
       <section className="settings-danger">
-        <div><strong>重設目前戰役</strong><span>刪除伺服器上這個戰役的所有進度並回到開團設定。</span></div>
-        <MagneticButton variant="quiet" onClick={onResetCampaign}>重設目前戰役</MagneticButton>
+        <div><strong>{t('settings.resetCampaign')}</strong><span>{t('settings.resetCampaignDesc')}</span></div>
+        <MagneticButton variant="quiet" onClick={onResetCampaign}>{t('settings.resetCampaign')}</MagneticButton>
       </section>
       {forgeDefaults && forgeSettings && (
         <>
