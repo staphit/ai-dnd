@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
 import type { Campaign } from './types';
-import { jsonResponse, makeCampaign, makePlayer } from './test/fixtures';
+import { jsonResponse, makeCampaign, makePlayer, makeScript } from './test/fixtures';
 
 interface Call {
   url: string;
@@ -57,6 +57,26 @@ describe('legacy vault import banner', () => {
     expect(importCall).toBeDefined();
     expect((importCall!.body as Campaign).title).toBe('正在玩的舊戰役');
     expect(localStorage.getItem('dnd-duet-active-id')).toBe('campaign-legacy-1');
+  });
+});
+
+describe('scripted campaign composer', () => {
+  it('hides the free-text action input and offers the scripted choices instead', async () => {
+    localStorage.setItem('dnd-duet-active-id', 'campaign-test-1');
+    const view = makeCampaign({ script: makeScript(), choices: [{ text: '走向沉鐘塔' }] });
+    stubFetchRouter({
+      ...baseRoutes,
+      'GET /api/campaign/campaign-test-1': () => jsonResponse(view),
+      'GET /api/campaigns': () => jsonResponse({ campaigns: [{ id: 'campaign-test-1', title: view.title, scene: view.scene, round: 1, updatedAt: view.updatedAt }] }),
+    });
+
+    render(<App />);
+    await screen.findByRole('heading', { name: view.title });
+
+    expect(screen.getByText('劇本模式：請從選項中選擇行動')).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText(/觀察石縫/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /鎖定行動/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /走向沉鐘塔/ })).toBeInTheDocument();
   });
 });
 

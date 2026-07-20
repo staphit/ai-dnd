@@ -13,7 +13,7 @@ func partyTestPlayers() []Character {
 	return []Character{
 		CreateLevel3Character("player1", "甲", "戰士"),
 		CreateLevel3Character("player2", "乙", "法師"),
-		CreateLevel3Character("player3", "丙", "盜賊"),
+		CreateLevel3Character("player3", "丙", "聖武士"),
 	}
 }
 

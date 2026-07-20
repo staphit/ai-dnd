@@ -58,13 +58,33 @@ type StoryRow struct {
 	CreatedAt int64
 }
 
-// SaveCampaign upserts a campaign row. CreatedAt is preserved on update.
-func (s *Store) SaveCampaign(c CampaignRow) error {
+// CampaignStateWrite is one atomic campaign mutation. Optional documents are
+// omitted when their pointer is nil. Replace deletes the previous campaign
+// documents inside the same transaction before inserting the prepared state.
+type CampaignStateWrite struct {
+	Campaign   CampaignRow
+	Characters []CharacterRow
+	Combat     *string
+	// CombatSnapshot is the retry baseline created with combat. ClearCombatSnapshot
+	// removes it in the same commit that concludes combat.
+	CombatSnapshot      *string
+	ClearCombatSnapshot bool
+	StoryArc            *string
+	ScriptState         *string
+	Story               []StoryRow
+	Replace             bool
+}
+
+type sqlExecer interface {
+	Exec(query string, args ...any) (sql.Result, error)
+}
+
+func saveCampaignWith(exec sqlExecer, c CampaignRow) error {
 	if c.ID == "" {
 		return errors.New("campaign id is required")
 	}
 	requiredCheck := sql.NullString{String: c.RequiredCheck, Valid: c.RequiredCheck != ""}
-	_, err := s.db.Exec(
+	_, err := exec.Exec(
 		`INSERT INTO campaigns (id, title, chapter, scene, round, objective, objective_context, stakes,
 			setup_complete, choices, required_check, pending, image_prompt, settings, doc_version, created_at, updated_at)
 		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -79,6 +99,123 @@ func (s *Store) SaveCampaign(c CampaignRow) error {
 		c.ImagePrompt, jsonOr(c.Settings, "{}"), c.DocVersion, c.CreatedAt, c.UpdatedAt,
 	)
 	return err
+}
+
+func saveCharacterWith(exec sqlExecer, c CharacterRow) error {
+	if c.CampaignID == "" || c.PlayerID == "" {
+		return errors.New("campaign id and player id are required")
+	}
+	_, err := exec.Exec(
+		`INSERT INTO characters (campaign_id, player_id, name, data, updated_at) VALUES (?, ?, ?, ?, ?)
+		 ON CONFLICT(campaign_id, player_id) DO UPDATE SET name = excluded.name, data = excluded.data, updated_at = excluded.updated_at`,
+		c.CampaignID, c.PlayerID, c.Name, c.Data, c.UpdatedAt,
+	)
+	return err
+}
+
+func deleteCampaignWith(exec sqlExecer, id string) error {
+	for _, stmt := range []string{
+		`DELETE FROM story_entries WHERE campaign_id = ?`,
+		`DELETE FROM scene_slots WHERE story_id = ?`,
+		`DELETE FROM combats WHERE campaign_id = ?`,
+		`DELETE FROM combat_snapshots WHERE campaign_id = ?`,
+		`DELETE FROM story_arcs WHERE campaign_id = ?`,
+		`DELETE FROM script_states WHERE campaign_id = ?`,
+		`DELETE FROM characters WHERE campaign_id = ?`,
+		`DELETE FROM campaigns WHERE id = ?`,
+	} {
+		if _, err := exec.Exec(stmt, id); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func appendStoryEntriesWith(tx *sql.Tx, campaignID string, entries []StoryRow) error {
+	if campaignID == "" || len(entries) == 0 {
+		return nil
+	}
+	var next int64
+	if err := tx.QueryRow(`SELECT COALESCE(MAX(seq), 0) FROM story_entries WHERE campaign_id = ?`, campaignID).Scan(&next); err != nil {
+		return err
+	}
+	for _, e := range entries {
+		next++
+		audience := e.Audience
+		if audience == "" {
+			audience = "public"
+		}
+		if _, err := tx.Exec(
+			`INSERT INTO story_entries (campaign_id, seq, speaker, audience, text, time_label, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+			campaignID, next, e.Speaker, audience, e.Text, e.TimeLabel, e.CreatedAt,
+		); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// SaveCampaignState commits all server-authoritative documents and journal
+// entries together, preventing a story line from landing without its mechanics.
+func (s *Store) SaveCampaignState(w CampaignStateWrite) error {
+	if w.Campaign.ID == "" {
+		return errors.New("campaign id is required")
+	}
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if w.Replace {
+		if err := deleteCampaignWith(tx, w.Campaign.ID); err != nil {
+			return err
+		}
+	}
+	if err := saveCampaignWith(tx, w.Campaign); err != nil {
+		return err
+	}
+	for _, c := range w.Characters {
+		if err := saveCharacterWith(tx, c); err != nil {
+			return err
+		}
+	}
+	for _, doc := range []struct {
+		data  *string
+		query string
+	}{
+		{w.Combat, `INSERT INTO combats (campaign_id, data, updated_at) VALUES (?, ?, ?) ON CONFLICT(campaign_id) DO UPDATE SET data=excluded.data, updated_at=excluded.updated_at`},
+		{w.StoryArc, `INSERT INTO story_arcs (campaign_id, data, updated_at) VALUES (?, ?, ?) ON CONFLICT(campaign_id) DO UPDATE SET data=excluded.data, updated_at=excluded.updated_at`},
+		{w.ScriptState, `INSERT INTO script_states (campaign_id, data, updated_at) VALUES (?, ?, ?) ON CONFLICT(campaign_id) DO UPDATE SET data=excluded.data, updated_at=excluded.updated_at`},
+	} {
+		if doc.data == nil {
+			continue
+		}
+		if _, err := tx.Exec(doc.query, w.Campaign.ID, *doc.data, w.Campaign.UpdatedAt); err != nil {
+			return err
+		}
+	}
+	if w.ClearCombatSnapshot {
+		if _, err := tx.Exec(`DELETE FROM combat_snapshots WHERE campaign_id = ?`, w.Campaign.ID); err != nil {
+			return err
+		}
+	} else if w.CombatSnapshot != nil {
+		if _, err := tx.Exec(
+			`INSERT INTO combat_snapshots (campaign_id, data, updated_at) VALUES (?, ?, ?)
+			 ON CONFLICT(campaign_id) DO UPDATE SET data=excluded.data, updated_at=excluded.updated_at`,
+			w.Campaign.ID, *w.CombatSnapshot, w.Campaign.UpdatedAt,
+		); err != nil {
+			return err
+		}
+	}
+	if err := appendStoryEntriesWith(tx, w.Campaign.ID, w.Story); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+// SaveCampaign upserts a campaign row. CreatedAt is preserved on update.
+func (s *Store) SaveCampaign(c CampaignRow) error {
+	return saveCampaignWith(s.db, c)
 }
 
 // GetCampaign returns the campaign row with the given id.
@@ -130,32 +267,15 @@ func (s *Store) DeleteCampaign(id string) error {
 		return err
 	}
 	defer tx.Rollback()
-	for _, stmt := range []string{
-		`DELETE FROM story_entries WHERE campaign_id = ?`,
-		`DELETE FROM combats WHERE campaign_id = ?`,
-		`DELETE FROM combat_snapshots WHERE campaign_id = ?`,
-		`DELETE FROM story_arcs WHERE campaign_id = ?`,
-		`DELETE FROM characters WHERE campaign_id = ?`,
-		`DELETE FROM campaigns WHERE id = ?`,
-	} {
-		if _, err := tx.Exec(stmt, id); err != nil {
-			return err
-		}
+	if err := deleteCampaignWith(tx, id); err != nil {
+		return err
 	}
 	return tx.Commit()
 }
 
 // SaveCharacter upserts one character document.
 func (s *Store) SaveCharacter(c CharacterRow) error {
-	if c.CampaignID == "" || c.PlayerID == "" {
-		return errors.New("campaign id and player id are required")
-	}
-	_, err := s.db.Exec(
-		`INSERT INTO characters (campaign_id, player_id, name, data, updated_at) VALUES (?, ?, ?, ?, ?)
-		 ON CONFLICT(campaign_id, player_id) DO UPDATE SET name = excluded.name, data = excluded.data, updated_at = excluded.updated_at`,
-		c.CampaignID, c.PlayerID, c.Name, c.Data, c.UpdatedAt,
-	)
-	return err
+	return saveCharacterWith(s.db, c)
 }
 
 // Characters returns all character rows for a campaign ordered by player id
@@ -218,19 +338,6 @@ func (s *Store) DeleteCombat(campaignID string) error {
 	return err
 }
 
-// SaveCombatSnapshot upserts the combat-start snapshot for a campaign.
-func (s *Store) SaveCombatSnapshot(campaignID, data string, updatedAt int64) error {
-	if campaignID == "" {
-		return errors.New("campaign id is required")
-	}
-	_, err := s.db.Exec(
-		`INSERT INTO combat_snapshots (campaign_id, data, updated_at) VALUES (?, ?, ?)
-		 ON CONFLICT(campaign_id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at`,
-		campaignID, data, updatedAt,
-	)
-	return err
-}
-
 // CombatSnapshot returns the combat-start snapshot; ok is false when none.
 func (s *Store) CombatSnapshot(campaignID string) (string, bool, error) {
 	row := s.db.QueryRow(`SELECT data FROM combat_snapshots WHERE campaign_id = ?`, campaignID)
@@ -243,12 +350,6 @@ func (s *Store) CombatSnapshot(campaignID string) (string, bool, error) {
 		return "", false, err
 	}
 	return data, true, nil
-}
-
-// DeleteCombatSnapshot clears the combat-start snapshot for a campaign.
-func (s *Store) DeleteCombatSnapshot(campaignID string) error {
-	_, err := s.db.Exec(`DELETE FROM combat_snapshots WHERE campaign_id = ?`, campaignID)
-	return err
 }
 
 // SaveStoryArc upserts the story-pacing arc for a campaign.
@@ -278,6 +379,33 @@ func (s *Store) StoryArc(campaignID string) (string, bool, error) {
 	return data, true, nil
 }
 
+// SaveScriptState upserts the scripted-module progress for a campaign.
+func (s *Store) SaveScriptState(campaignID, data string, updatedAt int64) error {
+	if campaignID == "" {
+		return errors.New("campaign id is required")
+	}
+	_, err := s.db.Exec(
+		`INSERT INTO script_states (campaign_id, data, updated_at) VALUES (?, ?, ?)
+		 ON CONFLICT(campaign_id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at`,
+		campaignID, data, updatedAt,
+	)
+	return err
+}
+
+// ScriptState returns the scripted-module progress; ok is false when none.
+func (s *Store) ScriptState(campaignID string) (string, bool, error) {
+	row := s.db.QueryRow(`SELECT data FROM script_states WHERE campaign_id = ?`, campaignID)
+	var data string
+	err := row.Scan(&data)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", false, nil
+	}
+	if err != nil {
+		return "", false, err
+	}
+	return data, true, nil
+}
+
 // AppendStoryEntries appends journal entries, assigning per-campaign
 // monotonically increasing seq numbers (same pattern as AppendMemoryEvents).
 func (s *Store) AppendStoryEntries(campaignID string, entries []StoryRow) error {
@@ -289,45 +417,57 @@ func (s *Store) AppendStoryEntries(campaignID string, entries []StoryRow) error 
 		return err
 	}
 	defer tx.Rollback()
-	var next int64
-	if err := tx.QueryRow(`SELECT COALESCE(MAX(seq), 0) FROM story_entries WHERE campaign_id = ?`, campaignID).Scan(&next); err != nil {
+	if err := appendStoryEntriesWith(tx, campaignID, entries); err != nil {
 		return err
-	}
-	for _, e := range entries {
-		next++
-		audience := e.Audience
-		if audience == "" {
-			audience = "public"
-		}
-		if _, err := tx.Exec(
-			`INSERT INTO story_entries (campaign_id, seq, speaker, audience, text, time_label, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-			campaignID, next, e.Speaker, audience, e.Text, e.TimeLabel, e.CreatedAt,
-		); err != nil {
-			return err
-		}
 	}
 	return tx.Commit()
 }
 
-// ReplaceLastPublicDMText rewrites the most recent public DM journal entry's text.
-// Used by story revision so mechanical state (round, HP, XP) is untouched.
-func (s *Store) ReplaceLastPublicDMText(campaignID, text string) error {
-	if campaignID == "" || strings.TrimSpace(text) == "" {
-		return errors.New("campaign id and text are required")
-	}
-	var seq int64
+// LastPublicDM returns the exact journal row a revision should target.
+func (s *Store) LastPublicDM(campaignID string) (StoryRow, bool, error) {
+	var row StoryRow
 	err := s.db.QueryRow(
-		`SELECT seq FROM story_entries
+		`SELECT seq, speaker, audience, text, time_label, created_at FROM story_entries
 		 WHERE campaign_id = ? AND speaker = 'dm' AND (audience = '' OR audience = 'public')
-		 ORDER BY seq DESC LIMIT 1`, campaignID).Scan(&seq)
+		 ORDER BY seq DESC LIMIT 1`, campaignID,
+	).Scan(&row.Seq, &row.Speaker, &row.Audience, &row.Text, &row.TimeLabel, &row.CreatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
-		return errors.New("no public DM entry to revise")
+		return StoryRow{}, false, nil
 	}
+	if err != nil {
+		return StoryRow{}, false, err
+	}
+	return row, true, nil
+}
+
+// RevisePublicDM atomically bumps the campaign document version and rewrites
+// the exact journal row captured before the provider call.
+func (s *Store) RevisePublicDM(c CampaignRow, seq int64, text string) error {
+	if c.ID == "" || seq < 1 || strings.TrimSpace(text) == "" {
+		return errors.New("campaign id, story seq and text are required")
+	}
+	tx, err := s.db.Begin()
 	if err != nil {
 		return err
 	}
-	_, err = s.db.Exec(`UPDATE story_entries SET text = ? WHERE campaign_id = ? AND seq = ?`, text, campaignID, seq)
-	return err
+	defer tx.Rollback()
+	if err := saveCampaignWith(tx, c); err != nil {
+		return err
+	}
+	result, err := tx.Exec(
+		`UPDATE story_entries SET text = ?
+		 WHERE campaign_id = ? AND seq = ? AND speaker = 'dm' AND (audience = '' OR audience = 'public')`,
+		text, c.ID, seq,
+	)
+	if err != nil {
+		return err
+	}
+	if changed, err := result.RowsAffected(); err != nil {
+		return err
+	} else if changed != 1 {
+		return errors.New("public DM entry changed before revision")
+	}
+	return tx.Commit()
 }
 
 // StoryTail returns the last limit journal entries, oldest first.

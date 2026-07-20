@@ -25,14 +25,16 @@ const validTurnJSON = `{"narration":"隊伍推進，燭火搖曳。","scene":"�
 // overrides the CLI-touching methods.
 type fakeCodex struct {
 	*codex.Client
-	status    provider.Status
-	turn      string
-	imagePath string
-	imgCalls  int
+	status          provider.Status
+	turn            string
+	imagePath       string
+	structuredCalls int
+	imgCalls        int
 }
 
 func (f *fakeCodex) Status(context.Context) provider.Status { return f.status }
 func (f *fakeCodex) RunStructured(context.Context, string, provider.StructuredOpts) (json.RawMessage, error) {
+	f.structuredCalls++
 	return json.RawMessage(f.turn), nil
 }
 func (f *fakeCodex) RunImageGeneration(context.Context, string, provider.ImageOpts) (string, error) {
@@ -129,6 +131,7 @@ func do(t *testing.T, srv *httpapi.Server, method, target, body string) *httptes
 		r = httptest.NewRequest(method, target, strings.NewReader(body))
 		r.Header.Set("content-type", "application/json")
 	}
+	r.Host = "127.0.0.1:4318"
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, r)
 	return w
@@ -265,6 +268,56 @@ func TestDmEndpointSuccess(t *testing.T) {
 	}
 	if resp["model"] != "test-model" {
 		t.Errorf("model = %v", resp["model"])
+	}
+}
+
+func TestDemoDmUsesBackendAndSkipsProvider(t *testing.T) {
+	fake := &fakeCodex{Client: &codex.Client{}, status: configured(), turn: validTurnJSON}
+	srv := newServer(t, fake)
+	id := seedCampaign(t, srv)
+	body := `{"campaignId":"` + id + `","demo":true,"actions":[{"playerId":"player1","text":"檢查符文"}]}`
+	w := do(t, srv, http.MethodPost, "/api/dm", body)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status %d body %s", w.Code, w.Body.String())
+	}
+	if fake.structuredCalls != 0 {
+		t.Fatalf("demo called provider %d times", fake.structuredCalls)
+	}
+	var resp map[string]any
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatal(err)
+	}
+	if resp["model"] != "示範 DM" {
+		t.Fatalf("model = %v", resp["model"])
+	}
+	view := resp["view"].(map[string]any)
+	if view["round"] != float64(2) {
+		t.Fatalf("demo round = %v", view["round"])
+	}
+	players := view["players"].([]any)
+	if players[0].(map[string]any)["experience"] == float64(0) {
+		t.Fatal("demo XP was not persisted")
+	}
+}
+
+func TestLocalRequestGuardRejectsRebindingAndForeignOrigin(t *testing.T) {
+	srv := newServer(t, &fakeCodex{Client: &codex.Client{}, status: configured()})
+
+	rebinding := httptest.NewRequest(http.MethodGet, "/api/status", nil)
+	rebinding.Host = "attacker.example"
+	w := httptest.NewRecorder()
+	srv.Router().ServeHTTP(w, rebinding)
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("foreign Host status = %d", w.Code)
+	}
+
+	foreign := httptest.NewRequest(http.MethodPost, "/api/campaigns", strings.NewReader(`{}`))
+	foreign.Host = "127.0.0.1:4318"
+	foreign.Header.Set("Origin", "https://attacker.example")
+	w = httptest.NewRecorder()
+	srv.Router().ServeHTTP(w, foreign)
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("foreign Origin status = %d", w.Code)
 	}
 }
 

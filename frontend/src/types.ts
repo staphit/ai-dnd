@@ -279,6 +279,7 @@ export interface Campaign {
   requiredCheck?: RequiredCheck | null;
   combat?: CombatState;
   storyArc?: StoryArc;
+  script?: ScriptProgress;
   settings?: Record<string, unknown>;
   xpProgress?: Partial<Record<PlayerId, XpProgress>>;
 }
@@ -297,6 +298,19 @@ export interface StoryArc {
   phases: ArcPhase[];
   current: number;
   ended?: boolean;
+}
+
+// Scripted-campaign progress mirrored from the server View (script.go).
+export interface ScriptProgress {
+  scriptId: string;
+  stage: string; // 前期 | 中期 | 後期 | 結局
+  nodeTitle: string;
+  nodeType: string;
+  alignment: number;
+  visitedCount: number;
+  totalNodes: number;
+  ended: boolean;
+  ending?: 'good' | 'bad' | 'neutral';
 }
 
 export interface CampaignSummary {

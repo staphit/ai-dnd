@@ -14,6 +14,19 @@ import (
 // lootDicePattern accepts weapon damage expressions on loot items (1d8, 2d6+1).
 var lootDicePattern = regexp.MustCompile(`^[0-9]+d[0-9]+([+-][0-9]+)?$`)
 
+// clampCheckDC keeps every required check winnable but never trivial: the
+// needed natural roll stays in [3, 15], i.e. a 30%–90% success chance for the
+// character actually rolling (natural + modifier >= DC).
+func clampCheckDC(dc, modifier int) int {
+	if low := modifier + 3; dc < low {
+		return low
+	}
+	if high := modifier + 15; dc > high {
+		return high
+	}
+	return dc
+}
+
 // CapabilityDigest renders one character as a single prompt line: enough for
 // the AI to tailor narration and choices, nothing it needs for validation
 // (the server owns legality). ~60-80 CJK tokens per player instead of the old
@@ -132,6 +145,14 @@ type PreparedDMTurn struct {
 	Actions        map[string]string
 	Round          int
 	IsContinuation bool
+	// TurnToken owns the single in-flight lease; ExpectedVersion is the campaign
+	// document version captured after prepare-time writes.
+	TurnToken       string
+	ExpectedVersion int
+	// InspirationPlayerID names the player whose queued 吟遊激勵 die was rolled
+	// into this check's modifier; the die is only consumed when the turn is
+	// applied, so a failed AI call doesn't burn it.
+	InspirationPlayerID string
 }
 
 func (s *Service) prepareBase(st *gameState) dm.TurnInputV2 {
@@ -139,6 +160,7 @@ func (s *Service) prepareBase(st *gameState) dm.TurnInputV2 {
 	if st.row.Choices != "" {
 		_ = jsonUnmarshal(st.row.Choices, &choices)
 	}
+	combatActive := st.combat != nil && st.combat.Active
 	return dm.TurnInputV2{
 		Title:            st.row.Title,
 		Scene:            st.row.Scene,
@@ -149,6 +171,7 @@ func (s *Service) prepareBase(st *gameState) dm.TurnInputV2 {
 		PrevChoices:      choiceTexts(choices),
 		CombatLine:       combatLine(st.combat),
 		ArcLines:         arcPromptLines(st.arc, st.row.Round),
+		ScriptLines:      scriptPromptLines(scriptModuleFor(st.script), st.script, combatActive),
 		Players:          sanitizedPlayers(st.players),
 	}
 }
@@ -159,6 +182,16 @@ func (s *Service) prepareBase(st *gameState) dm.TurnInputV2 {
 func (s *Service) PrepareActionsTurn(id string, actions map[string]string, intents map[string]Intent) (PreparedDMTurn, error) {
 	unlock := s.Lock(id)
 	defer unlock()
+	token, err := s.reserveDMTurn(id)
+	if err != nil {
+		return PreparedDMTurn{}, err
+	}
+	preparedOK := false
+	defer func() {
+		if !preparedOK {
+			s.AbortDMTurn(id, token)
+		}
+	}()
 	st, err := s.loadState(id)
 	if err != nil {
 		return PreparedDMTurn{}, err
@@ -196,7 +229,11 @@ func (s *Service) PrepareActionsTurn(id string, actions map[string]string, inten
 
 	input := s.prepareBase(st)
 	input.Actions = merged
-	return PreparedDMTurn{Input: input, Players: input.Players, Actions: merged, Round: st.row.Round}, nil
+	preparedOK = true
+	return PreparedDMTurn{
+		Input: input, Players: input.Players, Actions: merged, Round: st.row.Round,
+		TurnToken: token, ExpectedVersion: st.row.DocVersion,
+	}, nil
 }
 
 // PrepareCheckTurn turns a player's natural d20 roll into the resolution
@@ -206,6 +243,16 @@ func (s *Service) PrepareActionsTurn(id string, actions map[string]string, inten
 func (s *Service) PrepareCheckTurn(id string, natural int) (PreparedDMTurn, error) {
 	unlock := s.Lock(id)
 	defer unlock()
+	token, err := s.reserveDMTurn(id)
+	if err != nil {
+		return PreparedDMTurn{}, err
+	}
+	preparedOK := false
+	defer func() {
+		if !preparedOK {
+			s.AbortDMTurn(id, token)
+		}
+	}()
 	st, err := s.loadState(id)
 	if err != nil {
 		return PreparedDMTurn{}, err
@@ -245,13 +292,28 @@ func (s *Service) PrepareCheckTurn(id string, natural int) (PreparedDMTurn, erro
 			modifier = m
 		}
 	}
+	// 吟遊激勵 (bardic inspiration): a queued inspiration die from any party
+	// member adds a server-rolled d6 to this required check. Nothing is
+	// mutated here — the die is consumed in ApplyDMTurn so a failed AI call
+	// keeps it queued (a retry just rolls the d6 again).
+	skillLabel := st.check.Skill
+	inspirationPlayer := ""
+	for i := range st.players {
+		if st.players[i].PendingInspiration > 0 {
+			bonus := rules.Die(6, s.dice)
+			modifier += bonus
+			skillLabel = fmt.Sprintf("%s（含吟遊激勵+%d）", skillLabel, bonus)
+			inspirationPlayer = st.players[i].ID
+			break
+		}
+	}
 	total := natural + modifier
 
 	input := s.prepareBase(st)
 	input.Resolution = &dm.ResolutionV2{
 		Character: st.check.Character,
 		Ability:   st.check.Ability,
-		Skill:     st.check.Skill,
+		Skill:     skillLabel,
 		Reason:    st.check.Reason,
 		DC:        st.check.DC,
 		Natural:   natural,
@@ -259,7 +321,11 @@ func (s *Service) PrepareCheckTurn(id string, natural int) (PreparedDMTurn, erro
 		Total:     total,
 		Success:   total >= st.check.DC,
 	}
-	return PreparedDMTurn{Input: input, Players: input.Players, Round: st.row.Round, IsContinuation: true}, nil
+	preparedOK = true
+	return PreparedDMTurn{
+		Input: input, Players: input.Players, Round: st.row.Round, IsContinuation: true,
+		InspirationPlayerID: inspirationPlayer, TurnToken: token, ExpectedVersion: st.row.DocVersion,
+	}, nil
 }
 
 // PrepareConclusionTurn builds the post-combat narration turn from a
@@ -267,6 +333,16 @@ func (s *Service) PrepareCheckTurn(id string, natural int) (PreparedDMTurn, erro
 func (s *Service) PrepareConclusionTurn(id, outcome, summary string, final bool) (PreparedDMTurn, error) {
 	unlock := s.Lock(id)
 	defer unlock()
+	token, err := s.reserveDMTurn(id)
+	if err != nil {
+		return PreparedDMTurn{}, err
+	}
+	preparedOK := false
+	defer func() {
+		if !preparedOK {
+			s.AbortDMTurn(id, token)
+		}
+	}()
 	st, err := s.loadState(id)
 	if err != nil {
 		return PreparedDMTurn{}, err
@@ -276,13 +352,27 @@ func (s *Service) PrepareConclusionTurn(id, outcome, summary string, final bool)
 	}
 	input := s.prepareBase(st)
 	input.Conclusion = &dm.ConclusionV2{Outcome: outcome, Summary: clampStr(strings.TrimSpace(summary), 3000), Final: final}
-	return PreparedDMTurn{Input: input, Players: input.Players, Round: st.row.Round, IsContinuation: true}, nil
+	preparedOK = true
+	return PreparedDMTurn{
+		Input: input, Players: input.Players, Round: st.row.Round, IsContinuation: true,
+		TurnToken: token, ExpectedVersion: st.row.DocVersion,
+	}, nil
+}
+
+// StageClear announces a completed act: the scripted stage boundary just
+// crossed (or a freeform arc phase completed), for the frontend's success
+// popup.
+type StageClear struct {
+	Cleared string `json:"cleared"` // the act that just completed (前期/中期/後期)
+	Next    string `json:"next"`    // the act now entered (中期/後期/結局)
+	Title   string `json:"title"`   // node title or phase goal for context
 }
 
 // ApplyResult is the outcome of applying a DM turn.
 type ApplyResult struct {
-	View     View
-	Rejected []ActionIssue // non-empty when the AI vetoed actions narratively
+	View       View
+	Rejected   []ActionIssue // non-empty when the AI vetoed actions narratively
+	StageClear *StageClear   `json:"stageClear,omitempty"`
 }
 
 // ApplyDMTurn ports the App.tsx post-turn state update: narrative action
@@ -291,9 +381,16 @@ type ApplyResult struct {
 func (s *Service) ApplyDMTurn(id string, prepared PreparedDMTurn, turn *dm.Turn) (ApplyResult, error) {
 	unlock := s.Lock(id)
 	defer unlock()
+	defer s.AbortDMTurn(id, prepared.TurnToken)
+	if !s.dmTurnCurrent(id, prepared.TurnToken) {
+		return ApplyResult{}, apperr.New(409, "這個地城主回合已失效，請重新送出目前行動。")
+	}
 	st, err := s.loadState(id)
 	if err != nil {
 		return ApplyResult{}, err
+	}
+	if st.row.DocVersion != prepared.ExpectedVersion {
+		return ApplyResult{}, apperr.New(409, "戰役在地城主思考期間已更新；舊裁定未套用，請重新送出目前行動。")
 	}
 
 	// Narrative action rejection: unlock the vetoed players, log, stop.
@@ -315,10 +412,7 @@ func (s *Service) ApplyDMTurn(id string, prepared PreparedDMTurn, turn *dm.Turn)
 			details = append(details, name+"："+issue.Message)
 			rejected = append(rejected, ActionIssue{PlayerID: issue.PlayerID, Message: issue.Message})
 		}
-		if err := s.AppendStory(id, []store.StoryRow{{Speaker: "dm", Text: "【行動駁回】" + strings.Join(details, "；") + "。故事尚未推進；請依照理由修改後重新鎖定。"}}); err != nil {
-			return ApplyResult{}, err
-		}
-		view, err := s.persist(st, nil)
+		view, err := s.persistEntries(st, []store.StoryRow{{Speaker: "dm", Text: "【行動駁回】" + strings.Join(details, "；") + "。故事尚未推進；請依照理由修改後重新鎖定。"}})
 		if err != nil {
 			return ApplyResult{}, err
 		}
@@ -333,6 +427,18 @@ func (s *Service) ApplyDMTurn(id string, prepared PreparedDMTurn, turn *dm.Turn)
 				text = "本回合不行動，保持警戒。"
 			}
 			entries = append(entries, store.StoryRow{Speaker: p.ID, Text: text})
+		}
+	}
+
+	// The 吟遊激勵 die rolled into this check's modifier is consumed only now
+	// that the turn actually applied.
+	if prepared.InspirationPlayerID != "" {
+		for i := range st.players {
+			if st.players[i].ID == prepared.InspirationPlayerID && st.players[i].PendingInspiration > 0 {
+				st.players[i].PendingInspiration = 0
+				entries = append(entries, store.StoryRow{Speaker: "system", Text: st.players[i].Name + "的「吟遊激勵」已用於這次檢定。"})
+				break
+			}
 		}
 	}
 	entries = append(entries, store.StoryRow{Speaker: "dm", Text: turn.Narration})
@@ -429,6 +535,7 @@ func (s *Service) ApplyDMTurn(id string, prepared PreparedDMTurn, turn *dm.Turn)
 
 	// Story-arc phase completion: the server stamps the round, pays the timed
 	// reward, and advances the campaign to its next act.
+	var stageClear *StageClear
 	if turn.Arc.PhaseComplete && st.arc != nil {
 		if p := st.arc.phase(); p != nil {
 			p.CompletedRound = st.row.Round
@@ -442,6 +549,11 @@ func (s *Service) ApplyDMTurn(id string, prepared PreparedDMTurn, turn *dm.Turn)
 				entries = append(entries, store.StoryRow{Speaker: "system", Text: fmt.Sprintf("階段達成：%s目標「%s」完成，但已超過期限（第 %d 回合／期限第 %d 回合），沒有限時獎勵。", p.Stage, p.Goal, st.row.Round, p.DeadlineRound)})
 			}
 			st.arc.Current++
+			nextStage := "結局"
+			if next := st.arc.phase(); next != nil {
+				nextStage = next.Stage
+			}
+			stageClear = &StageClear{Cleared: p.Stage, Next: nextStage, Title: p.Goal}
 			if next := st.arc.phase(); next != nil {
 				goal := strings.TrimSpace(turn.Arc.NextGoal)
 				if goal == "" {
@@ -453,6 +565,57 @@ func (s *Service) ApplyDMTurn(id string, prepared PreparedDMTurn, turn *dm.Turn)
 				st.arc.Ended = true
 				entries = append(entries, store.StoryRow{Speaker: "system", Text: "劇本三階段目標全部完成！故事進入尾聲。"})
 			}
+		}
+	}
+
+	// Scripted-module advancement: the server owns the node graph. The DM's
+	// script.chosenOption signal (or a verbatim scripted-choice declaration)
+	// picks the branch; entering the next node settles its treasure, scripted
+	// combat and endings authoritatively.
+	var scriptNode *ScriptNode
+	scriptFirstEntry := false
+	scriptWasRunning := scriptModuleFor(st.script) != nil && !st.script.Ended
+	// Advancement is settled-outcomes only: never mid-combat (stale signals),
+	// never on conclusion narration (players haven't chosen yet), and never on
+	// a turn that opens a new required check (the branch outcome is pending).
+	scriptMayAdvance := (st.combat == nil || !st.combat.Active) &&
+		prepared.Input.Conclusion == nil &&
+		!(turn.RequiresCheck && turn.Check != nil)
+	if mod := scriptModuleFor(st.script); mod != nil && !st.script.Ended && scriptMayAdvance {
+		// Actions in party order so two players clicking different scripted
+		// choices resolve deterministically (front of the marching order wins).
+		ordered := make([]string, 0, len(st.players))
+		for _, p := range st.players {
+			ordered = append(ordered, prepared.Actions[p.ID])
+		}
+		fromNode := mod.node(st.script.NodeID)
+		choice := matchScriptChoice(fromNode, turn.Script.ChosenOption, ordered)
+		var logs []string
+		if scriptNode, logs = advanceScript(mod, st.script, choice); scriptNode != nil {
+			// Crossing an act boundary is announced by popup, not journal.
+			if fromNode != nil && fromNode.Stage != scriptNode.Stage {
+				stageClear = &StageClear{Cleared: fromNode.Stage, Next: scriptNode.Stage, Title: scriptNode.Title}
+			}
+			// Visited already holds every node the party has left, so a node
+			// present there is a revisit: loot and ambushes fire only once.
+			scriptFirstEntry = !containsStr(st.script.Visited[:len(st.script.Visited)-1], scriptNode.ID)
+			for _, l := range logs {
+				entries = append(entries, store.StoryRow{Speaker: "system", Text: l})
+			}
+			if scriptFirstEntry {
+				entries = append(entries, applyScriptTreasure(st, scriptNode.Treasure)...)
+			}
+			if scriptNode.Type == "ending" && st.arc != nil && !st.arc.Ended {
+				st.arc.Ended = true
+			}
+		}
+	}
+
+	// Scripted combat fires the moment the party first enters a combat/boss
+	// node, scaled to party size; it outranks any DM-declared encounter.
+	if scriptNode != nil && scriptFirstEntry && scriptNode.Combat != nil && (scriptNode.Type == "combat" || scriptNode.Type == "boss") && (st.combat == nil || !st.combat.Active) {
+		if err := s.startCombatLocked(st, scriptNode.Combat.scaledEnemies(len(st.players)), "initiative"); err == nil {
+			entries = append(entries, store.StoryRow{Speaker: "system", Text: "戰鬥開始。先攻順序：" + initiativeOrder(*st.combat)})
 		}
 	}
 
@@ -474,8 +637,10 @@ func (s *Service) ApplyDMTurn(id string, prepared PreparedDMTurn, turn *dm.Turn)
 		}
 	}
 
-	// DM-declared combat start.
-	if turn.Combat.Starts && (st.combat == nil || !st.combat.Active) && len(turn.Combat.Enemies) > 0 {
+	// DM-declared combat start. Running scripted campaigns keep encounters on
+	// script (the node graph owns every fight); after the scripted ending the
+	// DM may improvise again.
+	if turn.Combat.Starts && !scriptWasRunning && (st.combat == nil || !st.combat.Active) && len(turn.Combat.Enemies) > 0 {
 		enemies := make([]EnemySpec, 0, len(turn.Combat.Enemies))
 		for _, e := range turn.Combat.Enemies {
 			enemies = append(enemies, EnemySpec{
@@ -505,10 +670,28 @@ func (s *Service) ApplyDMTurn(id string, prepared PreparedDMTurn, turn *dm.Turn)
 	st.pending = map[string]string{}
 
 	choices := make([]rules.Choice, 0, len(turn.Choices))
-	for i, c := range turn.Choices {
-		if i >= 8 {
+	// Scripted campaigns pin the node's options to the front of the choice
+	// list (out of combat), so the main line is always one click away; the
+	// DM's own suggestions fill the remaining slots.
+	if mod := scriptModuleFor(st.script); mod != nil && !st.script.Ended && (st.combat == nil || !st.combat.Active) {
+		if node := mod.node(st.script.NodeID); node != nil {
+			for _, c := range node.Choices {
+				choices = append(choices, rules.Choice{Text: c.Text})
+			}
+		}
+	}
+	seen := make(map[string]bool, len(choices))
+	for _, c := range choices {
+		seen[strings.TrimSpace(c.Text)] = true
+	}
+	for _, c := range turn.Choices {
+		if len(choices) >= 8 {
 			break
 		}
+		if seen[strings.TrimSpace(c.Text)] {
+			continue
+		}
+		seen[strings.TrimSpace(c.Text)] = true
 		choices = append(choices, rules.Choice{Text: c.Text, PlayerID: c.PlayerID})
 	}
 	if data, err := jsonMarshal(choices); err == nil {
@@ -550,15 +733,78 @@ func (s *Service) ApplyDMTurn(id string, prepared PreparedDMTurn, turn *dm.Turn)
 				check.Modifier = rules.GetCheckBonus(*actor, check.Ability)
 			}
 		}
+		check.DC = clampCheckDC(check.DC, check.Modifier)
 		st.check = check
 	}
 
-	if err := s.AppendStory(id, entries); err != nil {
-		return ApplyResult{}, err
-	}
-	view, err := s.persist(st, nil)
+	view, err := s.persistEntries(st, entries)
 	if err != nil {
 		return ApplyResult{}, err
 	}
-	return ApplyResult{View: view}, nil
+	return ApplyResult{View: view, StageClear: stageClear}, nil
+}
+
+// applyScriptTreasure settles a scripted treasure node: gold splits evenly
+// (remainder to the front of the marching order), items land on the lead
+// character, and weapon-statted items become usable attacks — the same rules
+// as DM-awarded loot.
+func applyScriptTreasure(st *gameState, t *ScriptTreasure) []store.StoryRow {
+	if t == nil || len(st.players) == 0 {
+		return nil
+	}
+	var entries []store.StoryRow
+	if t.Gold > 0 {
+		share := t.Gold / len(st.players)
+		extra := t.Gold % len(st.players)
+		for i := range st.players {
+			gain := share
+			if i < extra {
+				gain++
+			}
+			st.players[i].Gold += gain
+		}
+		entries = append(entries, store.StoryRow{Speaker: "system", Text: fmt.Sprintf("拾獲 %d 金幣，已平分給隊伍。", t.Gold)})
+	}
+	lead := &st.players[0]
+	for _, item := range t.Items {
+		owned := false
+		for _, e := range lead.Equipment {
+			if e == item.Name {
+				owned = true
+				break
+			}
+		}
+		if !owned {
+			lead.Equipment = append(lead.Equipment, item.Name)
+			entries = append(entries, store.StoryRow{Speaker: "system", Text: fmt.Sprintf("%s獲得物品：%s。", lead.Name, item.Name)})
+		}
+		if lootDicePattern.MatchString(item.Damage) {
+			hasAttack := false
+			for _, a := range lead.Attacks {
+				if a.Name == item.Name {
+					hasAttack = true
+					break
+				}
+			}
+			if !hasAttack {
+				damageType := item.DamageType
+				if damageType == "" {
+					damageType = "揮砍"
+				}
+				var props []string
+				for _, p := range strings.FieldsFunc(item.Properties, func(r rune) bool { return r == '、' || r == ',' }) {
+					if p = strings.TrimSpace(p); p != "" {
+						props = append(props, p)
+					}
+				}
+				lead.Attacks = append(lead.Attacks, rules.Attack{
+					ID: "loot-" + item.Name, Name: item.Name,
+					Damage: item.Damage, DamageType: damageType, Properties: props,
+				})
+				*lead = rules.Recalculate(*lead)
+				entries = append(entries, store.StoryRow{Speaker: "system", Text: fmt.Sprintf("「%s」帶有武器數值（%s %s），已加入%s的攻擊選項。", item.Name, item.Damage, damageType, lead.Name)})
+			}
+		}
+	}
+	return entries
 }

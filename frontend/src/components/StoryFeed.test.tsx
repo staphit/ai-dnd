@@ -37,3 +37,19 @@ describe('StoryFeed privacy', () => {
     await waitFor(() => expect(screen.getByText('舊場景。')).toBeVisible());
   });
 });
+
+describe('StoryFeed scripted choice chip', () => {
+  it('lifts the 【選擇】 lead line into a chip inside one grid cell', () => {
+    const { container } = render(<StoryFeed story={[
+      { id: 'chip', speaker: 'dm', text: '【選擇】沿著泥痕走向祭壇\n祭壇前的泥痕突然中斷。', time: '10:02', audience: 'public' },
+    ]} players={players} loading={false} viewer="public" />);
+    expect(screen.getByText('▸ 選擇：沿著泥痕走向祭壇')).toBeVisible();
+    expect(screen.getByText('祭壇前的泥痕突然中斷。')).toBeVisible();
+    // Chip and prose share one wrapper so the two-column entry grid keeps
+    // meta | body alignment (regression: prose squeezed into the meta column).
+    const body = container.querySelector('.story-body');
+    expect(body).not.toBeNull();
+    expect(body!.querySelector('.story-choice-chip')).not.toBeNull();
+    expect(body!.querySelector('.story-prose')).not.toBeNull();
+  });
+});

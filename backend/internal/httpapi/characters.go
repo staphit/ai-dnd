@@ -216,9 +216,10 @@ var rulesCatalog = func() []byte {
 		}
 	}
 	data, err := json.Marshal(map[string]any{
-		"classNames":    rules.ClassNames,
-		"abilityLabels": rules.AbilityLabels,
-		"spells":        spells,
+		"classNames":       rules.ClassNames,
+		"abilityLabels":    rules.AbilityLabels,
+		"spells":           spells,
+		"scriptedStoryIds": game.ScriptedStoryIDs(),
 	})
 	if err != nil {
 		return []byte(`{}`)

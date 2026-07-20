@@ -1,6 +1,6 @@
-﻿// Package store persists narrative memory text in SQLite and generated images
+// Package store persists narrative memory text in SQLite and generated images
 // on disk. Image files live under a dedicated directory (default:
-// <repo>/generated-images/) and are kept until the user deletes them ??SQLite
+// <repo>/generated-images/) and are kept until the user deletes them; SQLite
 // never holds image bytes. The public URL contract (/generated/<filename>) is
 // unchanged.
 package store
@@ -120,6 +120,12 @@ CREATE TABLE IF NOT EXISTS combat_snapshots (
 );
 -- Story pacing arc: three phases with round deadlines and timed rewards.
 CREATE TABLE IF NOT EXISTS story_arcs (
+	campaign_id TEXT PRIMARY KEY,
+	data        TEXT NOT NULL,
+	updated_at  INTEGER NOT NULL
+);
+-- Scripted-module progress: current node, alignment and ending per campaign.
+CREATE TABLE IF NOT EXISTS script_states (
 	campaign_id TEXT PRIMARY KEY,
 	data        TEXT NOT NULL,
 	updated_at  INTEGER NOT NULL

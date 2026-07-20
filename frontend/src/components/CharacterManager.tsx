@@ -35,11 +35,9 @@ function characterClasses(player: PlayerCharacter) {
 function CharacterEditor({ player, xp, catalog, showStatHints, onLevelUp, onSpendAbilityPoint, onSetPreparedSpells, onSaveProfile, onGeneratePortrait }: CharacterEditorProps) {
   const [species, setSpecies] = useState(player.species);
   const [background, setBackground] = useState(player.background);
-  const [nextClass, setNextClass] = useState(characterClasses(player)[0]?.className || '戰士');
   const [appearance, setAppearance] = useState(player.appearance || '');
   const [portraitLoading, setPortraitLoading] = useState(false);
   const experience: XpProgress = xp ?? { current: player.experience, required: player.experience, remaining: 0, ready: false, progress: 0 };
-  const classNames = catalog?.classNames || [];
   useEffect(() => { setSpecies(player.species); setBackground(player.background); setAppearance(player.appearance || ''); }, [player]);
 
   function toggleSpell(id: string) {
@@ -64,15 +62,14 @@ function CharacterEditor({ player, xp, catalog, showStatHints, onLevelUp, onSpen
       <section className="experience-panel"><div><StatHint hint="experience" enabled={showStatHints}><strong>{player.experience.toLocaleString()} XP</strong></StatHint><span>{player.level >= 20 ? '已達最高等級' : experience.ready ? `已達 ${player.level + 1} 級門檻` : `距離 ${player.level + 1} 級還差 ${experience.remaining.toLocaleString()} XP`}</span></div><div className="experience-track"><span style={{ transform: `scaleX(${experience.progress})` }} /></div></section>
       <div className="ability-editor ability-allocation">
         {(Object.keys(abilityLabels) as AbilityKey[]).map((key) => (
-          <div key={key}><StatHint hint={key} enabled={showStatHints}><span>{abilityLabels[key]}</span></StatHint><strong>{player.abilities[key]}</strong><button type="button" aria-label={`提升${abilityLabels[key]}`} disabled={(player.abilityPoints || 0) < 1 || player.abilities[key] >= 20} onClick={() => onSpendAbilityPoint(player.id, key)}>＋</button></div>
+          <div key={key}><StatHint hint={key} enabled={showStatHints}><span>{abilityLabels[key]}</span></StatHint><strong>{player.abilities[key]}</strong><button type="button" aria-label={`提升${abilityLabels[key]}`} disabled={(player.abilityPoints || 0) < 1} onClick={() => onSpendAbilityPoint(player.id, key)}>＋</button></div>
         ))}
       </div>
       <p className="ability-points">可分配能力值點數：<strong>{player.abilityPoints || 0}</strong>（總等級 4、8、12、16、19 時各獲得 2 點）</p>
       <button type="button" onClick={() => onSaveProfile(player.id, { species: species.trim(), background: background.trim(), appearance: appearance.trim() })}><FloppyDisk />儲存角色配置</button>
       <section className="level-up-panel">
-        <div><strong>升級／多職業</strong><span>{player.level >= 20 ? '已達最高等級。' : experience.ready ? 'XP 已足夠；升級後會解鎖生命、熟練、職業與法術進展。' : `需要 ${experience.required.toLocaleString()} XP；目前 ${player.experience.toLocaleString()} XP。`}</span></div>
-        <select value={nextClass} onChange={(event) => setNextClass(event.target.value)}>{(classNames.length > 0 ? classNames : [nextClass]).map((name) => <option key={name}>{name}</option>)}</select>
-        <button type="button" onClick={() => onLevelUp(player.id, nextClass)} disabled={player.level >= 20 || !experience.ready}><ArrowUp />升級</button>
+        <div><strong>升級（{player.className}）</strong><span>{player.level >= 20 ? '已達最高等級。' : experience.ready ? 'XP 已足夠；升級後會解鎖生命、熟練、職業與法術進展。' : `需要 ${experience.required.toLocaleString()} XP；目前 ${player.experience.toLocaleString()} XP。`}</span></div>
+        <button type="button" onClick={() => onLevelUp(player.id, player.className)} disabled={player.level >= 20 || !experience.ready}><ArrowUp />升級</button>
       </section>
       {player.spellcasting && (
         <details className="spell-config">

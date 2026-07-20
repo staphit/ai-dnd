@@ -3,6 +3,7 @@ package game
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"dndduet/internal/apperr"
 	"dndduet/internal/rules"
@@ -11,12 +12,15 @@ import (
 
 // gameState is the loaded mutable state for one campaign action.
 type gameState struct {
-	row     store.CampaignRow
-	players []rules.Character
-	combat  *rules.CombatState
-	pending map[string]string
-	check   *rules.RequiredCheck
-	arc     *StoryArc
+	row           store.CampaignRow
+	players       []rules.Character
+	combat        *rules.CombatState
+	pending       map[string]string
+	check         *rules.RequiredCheck
+	arc           *StoryArc
+	script        *ScriptState
+	snapshot      *string
+	clearSnapshot bool
 }
 
 func (s *Service) loadState(id string) (*gameState, error) {
@@ -54,41 +58,72 @@ func (s *Service) loadState(id string) (*gameState, error) {
 			st.arc = nil
 		}
 	}
+	if data, ok, err := s.store.ScriptState(id); err != nil {
+		return nil, err
+	} else if ok {
+		st.script = &ScriptState{}
+		if err := json.Unmarshal([]byte(data), st.script); err != nil {
+			st.script = nil
+		}
+	}
 	// Campaigns without an arc (including pre-feature ones) get a fresh clock
 	// starting at the current round; it persists on the next state write.
 	if st.arc == nil {
 		st.arc = defaultStoryArc(row.Round, row.Objective)
 	}
+	// Scripted campaigns keep the arc pinned to the module: goals, deadlines
+	// and the current phase all derive from the node graph.
+	if mod := scriptModuleFor(st.script); mod != nil {
+		syncScriptArc(st.arc, mod, st.script, row.Round)
+	}
 	// Weapons bought before shop weapons granted attacks: backfill the attack
 	// entries so carried catalog weapons are usable (persists on next write).
 	for i := range st.players {
 		ensureShopWeaponAttacks(&st.players[i])
+		rules.EnsureDerivedDefaults(&st.players[i])
 	}
 	return st, nil
 }
 
-// persist writes back the mutated parts of the state and returns the fresh view.
+// persist writes back the mutated state and journal as one SQLite transaction.
 func (s *Service) persist(st *gameState, logs []string) (View, error) {
-	if err := s.saveCharacters(st.row.ID, st.players); err != nil {
+	entries := make([]store.StoryRow, 0, len(logs))
+	for _, text := range logs {
+		entries = append(entries, store.StoryRow{Speaker: "system", Text: text})
+	}
+	return s.persistEntries(st, entries)
+}
+
+func (s *Service) persistEntries(st *gameState, entries []store.StoryRow) (View, error) {
+	nowMs := s.now().UnixMilli()
+	characterRows, err := s.characterRows(st.row.ID, st.players, nowMs)
+	if err != nil {
 		return View{}, err
 	}
+	var combatData, arcData, scriptData *string
 	if st.combat != nil {
 		data, err := json.Marshal(st.combat)
 		if err != nil {
 			return View{}, err
 		}
-		if err := s.store.SaveCombat(st.row.ID, string(data), s.now().UnixMilli()); err != nil {
-			return View{}, err
-		}
+		encoded := string(data)
+		combatData = &encoded
 	}
 	if st.arc != nil {
 		data, err := json.Marshal(st.arc)
 		if err != nil {
 			return View{}, err
 		}
-		if err := s.store.SaveStoryArc(st.row.ID, string(data), s.now().UnixMilli()); err != nil {
+		encoded := string(data)
+		arcData = &encoded
+	}
+	if st.script != nil {
+		data, err := json.Marshal(st.script)
+		if err != nil {
 			return View{}, err
 		}
+		encoded := string(data)
+		scriptData = &encoded
 	}
 	pending, err := json.Marshal(st.pending)
 	if err != nil {
@@ -104,17 +139,22 @@ func (s *Service) persist(st *gameState, logs []string) (View, error) {
 	} else {
 		st.row.RequiredCheck = ""
 	}
-	if st.row, err = s.touch(st.row); err != nil {
-		return View{}, err
+	st.row = s.stamp(st.row)
+	label := timeLabel(s.now())
+	for i := range entries {
+		if entries[i].CreatedAt == 0 {
+			entries[i].CreatedAt = nowMs
+		}
+		if entries[i].TimeLabel == "" {
+			entries[i].TimeLabel = label
+		}
 	}
-	if len(logs) > 0 {
-		entries := make([]store.StoryRow, 0, len(logs))
-		for _, text := range logs {
-			entries = append(entries, store.StoryRow{Speaker: "system", Text: text})
-		}
-		if err := s.AppendStory(st.row.ID, entries); err != nil {
-			return View{}, err
-		}
+	if err := s.store.SaveCampaignState(store.CampaignStateWrite{
+		Campaign: st.row, Characters: characterRows, Combat: combatData,
+		CombatSnapshot: st.snapshot, ClearCombatSnapshot: st.clearSnapshot,
+		StoryArc: arcData, ScriptState: scriptData, Story: entries,
+	}); err != nil {
+		return View{}, err
 	}
 	return s.assembleView(st.row)
 }
@@ -275,6 +315,7 @@ func (s *Service) CastSpell(id, playerID string, p CastParams) (CastResult, erro
 	}
 
 	detail := ""
+	var combatLogs []string
 	if spell.Effect != nil {
 		var forced *rules.ForcedRolls
 		if p.AttackTotal != nil {
@@ -286,7 +327,13 @@ func (s *Service) CastSpell(id, playerID string, p CastParams) (CastResult, erro
 		}
 		st.players = result.Players
 		if result.Combat != nil {
-			st.combat = result.Combat
+			if st.combat != nil && st.combat.Active {
+				// Route through applyCombatChange so a spell dropping the last
+				// enemy pays victory XP exactly like a weapon kill.
+				combatLogs = append(combatLogs, s.applyCombatChange(st, *result.Combat)...)
+			} else {
+				st.combat = result.Combat
+			}
 		}
 		detail = " " + result.Text
 	}
@@ -303,7 +350,7 @@ func (s *Service) CastSpell(id, playerID string, p CastParams) (CastResult, erro
 		st.pending[playerID] = fmt.Sprintf("對%s施放「%s」", st.combatantName(p.TargetID), spell.Name)
 	}
 
-	view, err := s.persist(st, []string{fmt.Sprintf("%s%s「%s」。%s", player.Name, mode, spell.Name, detail)})
+	view, err := s.persist(st, append([]string{fmt.Sprintf("%s%s「%s」。%s", player.Name, mode, spell.Name, detail)}, combatLogs...))
 	if err != nil {
 		return CastResult{}, err
 	}
@@ -412,7 +459,9 @@ func (s *Service) SetPrepared(id, playerID string, spellIDs []string) (View, err
 // ChangeResourceAction adjusts a class resource by delta (clamped in rules).
 // Spending (delta < 0) also applies the mechanical effect of resources the
 // server understands: 動作如潮 restores the current turn's action, 回氣 heals
-// 1d10 + level as a bonus action.
+// 1d10 + level as a bonus action, 聖療 heals the most injured party member,
+// 奧術回復 and 魔法巧思 restore expended spell slots, 引導神力 (牧師) runs
+// 保存生機, and 吟遊激勵 queues a d6 for the next required check.
 func (s *Service) ChangeResourceAction(id, playerID, resourceID string, delta int) (View, error) {
 	unlock := s.Lock(id)
 	defer unlock()
@@ -450,11 +499,33 @@ func (s *Service) ChangeResourceAction(id, playerID, resourceID string, delta in
 			return View{}, apperr.New(400, "現在不是"+player.Name+"的回合，無法發動動作如潮。")
 		}
 	}
+	if spending && resourceID == "second_wind" && player.HP == 0 {
+		return View{}, apperr.New(400, player.Name+"已倒地失去意識，無法使用回氣；請隊友先救援。")
+	}
 	if spending && resourceID == "second_wind" && combatActive {
 		// Bonus action cost; dry-run so an illegal use fails before the spend.
 		if _, err := rules.SpendCombatResource(*st.combat, playerID, "bonusAction"); err != nil {
 			return View{}, apperr.New(400, err.Error())
 		}
+	}
+	if spending && resourceID == "arcane_recovery" {
+		if combatActive {
+			return View{}, apperr.New(400, "奧術回復需要在戰鬥外進行。")
+		}
+		if len(restorableSlotLevels(*player, 2)) == 0 {
+			return View{}, apperr.New(400, player.Name+"沒有可用奧術回復恢復的已消耗法術位。")
+		}
+	}
+	if spending && resourceID == "channel_divinity" && rules.HasClass(*player, "牧師") && preserveLifeTargetIndex(st.players) < 0 {
+		return View{}, apperr.New(400, "隊伍中沒有生命低於一半上限的成員，保存生機無法分配治療。")
+	}
+	if spending && resourceID == "lay_on_hands" {
+		if idx := mostInjuredIndex(st.players); idx < 0 || st.players[idx].HP >= st.players[idx].MaxHP {
+			return View{}, apperr.New(400, "隊伍成員都是滿血狀態，不需要聖療。")
+		}
+	}
+	if spending && resourceID == "bardic_inspiration" && player.PendingInspiration > 0 {
+		return View{}, apperr.New(400, "已有一顆吟遊激勵骰待用，會在下一次必要檢定自動加入。")
 	}
 
 	*player = rules.ChangeResource(*player, resourceID, delta)
@@ -498,11 +569,171 @@ func (s *Service) ChangeResourceAction(id, playerID, resourceID string, delta in
 				suffix = "（已使用附贈動作）"
 			}
 			logs = append(logs, fmt.Sprintf("%s使用「回氣」恢復 %d 生命，現在 HP %d/%d%s。", player.Name, healed, player.HP, player.MaxHP, suffix))
+		case "arcane_recovery":
+			restored := restoreStandardSlots(player, 2)
+			logs = append(logs, fmt.Sprintf("%s使用「奧術回復」：恢復%s。", player.Name, describeSlotLevels(restored)))
+		case "channel_divinity":
+			if !rules.HasClass(*player, "牧師") {
+				// Legacy non-cleric holders just track the charge.
+				logs = append(logs, fmt.Sprintf("%s使用「%s」（剩 %d/%d）。", player.Name, name, next, resourceMax(*player, resourceID)))
+				break
+			}
+			pool := 5 * classLevelOf(*player, "牧師")
+			details := preserveLife(st, pool)
+			syncCombatFromPlayers(st)
+			logs = append(logs, fmt.Sprintf("%s引導神力發動「保存生機」（治療池 %d）：%s。", player.Name, pool, strings.Join(details, "、")))
+		case "lay_on_hands":
+			points := prev - next
+			idx := mostInjuredIndex(st.players)
+			target := &st.players[idx]
+			before := target.HP
+			*target = rules.ApplyHealing(*target, points)
+			syncCombatFromPlayers(st)
+			logs = append(logs, fmt.Sprintf("%s以「聖療」治療%s %d 點生命（HP %d/%d，治療池剩 %d/%d）。",
+				player.Name, target.Name, target.HP-before, target.HP, target.MaxHP, next, resourceMax(*player, resourceID)))
+		case "bardic_inspiration":
+			player.PendingInspiration = 1
+			logs = append(logs, fmt.Sprintf("%s奏響「吟遊激勵」：下一次任何隊員的必要檢定將額外加骰 1d6。", player.Name))
 		default:
 			logs = append(logs, fmt.Sprintf("%s使用「%s」（剩 %d/%d）。", player.Name, name, next, resourceMax(*player, resourceID)))
 		}
 	}
 	return s.persist(st, logs)
+}
+
+// restorableSlotLevels reports which standard (non-pact) expended slot levels
+// could be restored within the given total-slot-level budget, lowest first.
+func restorableSlotLevels(c rules.Character, budget int) []int {
+	if c.Spellcasting == nil || c.Spellcasting.Mode == "pact" {
+		return nil
+	}
+	var restorable []int
+	for _, slot := range c.Spellcasting.Slots { // stored in ascending level order
+		for missing := slot.Max - slot.Current; missing > 0 && budget >= slot.Level; missing-- {
+			restorable = append(restorable, slot.Level)
+			budget -= slot.Level
+		}
+	}
+	return restorable
+}
+
+// restoreStandardSlots applies 奧術回復: it restores expended standard spell
+// slots, lowest level first, until the slot-level budget runs out, returning
+// the restored slot levels.
+func restoreStandardSlots(c *rules.Character, budget int) []int {
+	restored := restorableSlotLevels(*c, budget)
+	if len(restored) == 0 {
+		return nil
+	}
+	casting := *c.Spellcasting
+	slots := make([]rules.SlotPool, len(casting.Slots))
+	copy(slots, casting.Slots)
+	for _, level := range restored {
+		for i := range slots {
+			if slots[i].Level == level && slots[i].Current < slots[i].Max {
+				slots[i].Current++
+				break
+			}
+		}
+	}
+	casting.Slots = slots
+	c.Spellcasting = &casting
+	return restored
+}
+
+// describeSlotLevels renders restored slot levels like "1 環法術位 ×2".
+func describeSlotLevels(levels []int) string {
+	counts := map[int]int{}
+	var order []int
+	for _, level := range levels {
+		if counts[level] == 0 {
+			order = append(order, level)
+		}
+		counts[level]++
+	}
+	parts := make([]string, 0, len(order))
+	for _, level := range order {
+		parts = append(parts, fmt.Sprintf("%d 環法術位 ×%d", level, counts[level]))
+	}
+	return strings.Join(parts, "、")
+}
+
+// preserveLifeTargetIndex finds the most injured party member still below
+// half max HP (-1 when nobody qualifies).
+func preserveLifeTargetIndex(players []rules.Character) int {
+	idx := -1
+	for i := range players {
+		if players[i].HP >= players[i].MaxHP/2 {
+			continue
+		}
+		if idx < 0 || players[i].HP < players[idx].HP {
+			idx = i
+		}
+	}
+	return idx
+}
+
+// preserveLife distributes the 保存生機 healing pool: the most injured
+// eligible member is topped up first, and nobody is healed above half their
+// max HP. Returns per-member healing details for the log.
+func preserveLife(st *gameState, pool int) []string {
+	var details []string
+	for pool > 0 {
+		idx := preserveLifeTargetIndex(st.players)
+		if idx < 0 {
+			break
+		}
+		target := &st.players[idx]
+		heal := min(pool, target.MaxHP/2-target.HP)
+		*target = rules.ApplyHealing(*target, heal)
+		pool -= heal
+		details = append(details, fmt.Sprintf("%s +%d HP", target.Name, heal))
+	}
+	return details
+}
+
+// mostInjuredIndex finds the party member with the lowest current HP.
+func mostInjuredIndex(players []rules.Character) int {
+	idx := -1
+	for i := range players {
+		if idx < 0 || players[i].HP < players[idx].HP {
+			idx = i
+		}
+	}
+	return idx
+}
+
+// classLevelOf reads the character's level in one class (falling back to the
+// total level for pre-multiclass documents).
+func classLevelOf(c rules.Character, className string) int {
+	for _, entry := range rules.GetCharacterClasses(c) {
+		if entry.ClassName == className {
+			return entry.Level
+		}
+	}
+	return c.Level
+}
+
+// syncCombatFromPlayers pushes updated player HP / temporary HP back onto
+// their party combatants (the inverse of rules.SyncPlayersFromCombat).
+func syncCombatFromPlayers(st *gameState) {
+	if st.combat == nil {
+		return
+	}
+	for i := range st.combat.Combatants {
+		combatant := &st.combat.Combatants[i]
+		if combatant.PlayerID == "" {
+			continue
+		}
+		for _, p := range st.players {
+			if p.ID == combatant.PlayerID {
+				combatant.HP = p.HP
+				combatant.TemporaryHP = p.TemporaryHP
+				combatant.Defeated = p.HP == 0
+				break
+			}
+		}
+	}
 }
 
 func resourceMax(c rules.Character, resourceID string) int {

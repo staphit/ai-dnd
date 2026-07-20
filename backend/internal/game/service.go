@@ -29,6 +29,9 @@ type Service struct {
 
 	mu    sync.Mutex
 	locks map[string]*sync.Mutex
+	// activeTurns fences the prepare -> provider -> apply gap. Only one DM turn
+	// may be in flight for a campaign; the token is checked again before apply.
+	activeTurns map[string]string
 }
 
 // New creates a Service backed by st. now is injectable for tests; nil means
@@ -37,7 +40,10 @@ func New(st *store.Store, now func() time.Time) *Service {
 	if now == nil {
 		now = time.Now
 	}
-	return &Service{store: st, now: now, dice: rules.DefaultRandom, locks: map[string]*sync.Mutex{}}
+	return &Service{
+		store: st, now: now, dice: rules.DefaultRandom,
+		locks: map[string]*sync.Mutex{}, activeTurns: map[string]string{},
+	}
 }
 
 // WithDice overrides the random source (tests).
@@ -61,6 +67,36 @@ func (s *Service) Lock(id string) func() {
 	return l.Unlock
 }
 
+// reserveDMTurn starts one prepare/provider/apply lease. Campaign mutations may
+// still proceed while the provider is running, but ApplyDMTurn will reject the
+// stale result through ExpectedVersion instead of applying it to newer state.
+func (s *Service) reserveDMTurn(id string) (string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.activeTurns[id] != "" {
+		return "", apperr.New(409, "這個戰役已有一個地城主回合正在裁定，請稍候。")
+	}
+	token := randomID()
+	s.activeTurns[id] = token
+	return token, nil
+}
+
+func (s *Service) dmTurnCurrent(id, token string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return token != "" && s.activeTurns[id] == token
+}
+
+// AbortDMTurn releases a lease after provider/validation failure. It is safe to
+// call after ApplyDMTurn, which releases the same token itself.
+func (s *Service) AbortDMTurn(id, token string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if token != "" && s.activeTurns[id] == token {
+		delete(s.activeTurns, id)
+	}
+}
+
 // View is the full campaign state the frontend renders. Field names match the
 // frontend Campaign type so the client can setCampaign(view) wholesale.
 type View struct {
@@ -80,6 +116,7 @@ type View struct {
 	RequiredCheck    *rules.RequiredCheck        `json:"requiredCheck"`
 	Combat           *rules.CombatState          `json:"combat,omitempty"`
 	StoryArc         *StoryArc                   `json:"storyArc,omitempty"`
+	Script           *ScriptProgress             `json:"script,omitempty"`
 	ImagePrompt      string                      `json:"imagePrompt,omitempty"`
 	Settings         json.RawMessage             `json:"settings"`
 	XPProgress       map[string]rules.XPProgress `json:"xpProgress"`
@@ -149,6 +186,7 @@ func (s *Service) assembleView(row store.CampaignRow) (View, error) {
 	// it persists on the next state-mutating call.
 	for i := range players {
 		ensureShopWeaponAttacks(&players[i])
+		rules.EnsureDerivedDefaults(&players[i])
 	}
 
 	var combat *rules.CombatState
@@ -168,6 +206,21 @@ func (s *Service) assembleView(row store.CampaignRow) (View, error) {
 		arc = &StoryArc{}
 		if err := json.Unmarshal([]byte(data), arc); err != nil {
 			arc = nil
+		}
+	}
+
+	var script *ScriptProgress
+	if data, ok, err := s.store.ScriptState(row.ID); err != nil {
+		return View{}, err
+	} else if ok {
+		state := &ScriptState{}
+		if err := json.Unmarshal([]byte(data), state); err == nil {
+			script = scriptProgress(state)
+			// The read path shows the same module-pinned arc as the write
+			// path (loadState); it persists on the next mutating call.
+			if mod := scriptModuleFor(state); mod != nil && arc != nil {
+				syncScriptArc(arc, mod, state, row.Round)
+			}
 		}
 	}
 
@@ -241,6 +294,7 @@ func (s *Service) assembleView(row store.CampaignRow) (View, error) {
 		RequiredCheck:    check,
 		Combat:           combat,
 		StoryArc:         arc,
+		Script:           script,
 		ImagePrompt:      row.ImagePrompt,
 		Settings:         settings,
 		XPProgress:       xp,
@@ -265,29 +319,40 @@ func (s *Service) loadCharacters(campaignID string) ([]rules.Character, error) {
 	return players, nil
 }
 
-// saveCharacters persists the full party.
-func (s *Service) saveCharacters(campaignID string, players []rules.Character) error {
-	nowMs := s.now().UnixMilli()
+func (s *Service) characterRows(campaignID string, players []rules.Character, updatedAt int64) ([]store.CharacterRow, error) {
+	rows := make([]store.CharacterRow, 0, len(players))
 	for _, p := range players {
 		data, err := json.Marshal(p)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		if err := s.store.SaveCharacter(store.CharacterRow{
-			CampaignID: campaignID, PlayerID: p.ID, Name: p.Name, Data: string(data), UpdatedAt: nowMs,
-		}); err != nil {
-			return err
-		}
+		rows = append(rows, store.CharacterRow{
+			CampaignID: campaignID, PlayerID: p.ID, Name: p.Name, Data: string(data), UpdatedAt: updatedAt,
+		})
 	}
-	return nil
+	return rows, nil
 }
 
-// touch persists row with a fresh updated_at.
-func (s *Service) touch(row store.CampaignRow) (store.CampaignRow, error) {
+func (s *Service) stamp(row store.CampaignRow) store.CampaignRow {
 	row.UpdatedAt = s.now().UnixMilli()
 	if row.CreatedAt == 0 {
 		row.CreatedAt = row.UpdatedAt
+		if row.DocVersion < 1 {
+			row.DocVersion = 1
+		}
+	} else {
+		if row.DocVersion < 1 {
+			row.DocVersion = 1
+		} else {
+			row.DocVersion++
+		}
 	}
+	return row
+}
+
+// touch persists row with a fresh updated_at and monotonic document version.
+func (s *Service) touch(row store.CampaignRow) (store.CampaignRow, error) {
+	row = s.stamp(row)
 	return row, s.store.SaveCampaign(row)
 }
 
@@ -341,6 +406,7 @@ type PlayerSeed struct {
 type CreateParams struct {
 	ID               string          `json:"id"`
 	StoryID          string          `json:"storyId"`
+	StoryMode        string          `json:"storyMode"` // scripted | freeform ("" = scripted when a module exists)
 	Title            string          `json:"title"`
 	Chapter          string          `json:"chapter"`
 	Scene            string          `json:"scene"`
@@ -404,6 +470,26 @@ func (s *Service) Create(p CreateParams) (View, error) {
 		return View{}, apperr.New(400, "settings 格式錯誤。")
 	}
 
+	// Scripted mode starts at the module's entry node; its choices must be in
+	// the campaign row from round one, because the scripted UI has no free-text
+	// input — without seeded choices no player could ever lock an action.
+	var scriptState *ScriptState
+	choices := "[]"
+	if state := newScriptState(p.StoryID); state != nil && p.StoryMode != "freeform" {
+		scriptState = state
+		if mod := scriptModuleFor(state); mod != nil {
+			if node := mod.node(state.NodeID); node != nil {
+				seeded := make([]rules.Choice, 0, len(node.Choices))
+				for _, c := range node.Choices {
+					seeded = append(seeded, rules.Choice{Text: c.Text})
+				}
+				if data, err := json.Marshal(seeded); err == nil {
+					choices = string(data)
+				}
+			}
+		}
+	}
+
 	row := store.CampaignRow{
 		ID:               id,
 		Title:            clampStr(p.Title, 180),
@@ -414,16 +500,25 @@ func (s *Service) Create(p CreateParams) (View, error) {
 		ObjectiveContext: clampStr(p.ObjectiveContext, 600),
 		Stakes:           clampStr(p.Stakes, 300),
 		SetupComplete:    true,
-		Choices:          "[]",
+		Choices:          choices,
 		Pending:          "{}",
 		Settings:         settings,
 		DocVersion:       1,
 	}
-	if row, err = s.touch(row); err != nil {
+	row = s.stamp(row)
+	characterRows, err := s.characterRows(id, players, row.UpdatedAt)
+	if err != nil {
 		return View{}, err
 	}
-	if err := s.saveCharacters(id, players); err != nil {
-		return View{}, err
+
+	var scriptData *string
+	if scriptState != nil {
+		data, err := json.Marshal(scriptState)
+		if err != nil {
+			return View{}, err
+		}
+		encoded := string(data)
+		scriptData = &encoded
 	}
 
 	nowMs := s.now().UnixMilli()
@@ -438,7 +533,9 @@ func (s *Service) Create(p CreateParams) (View, error) {
 		TimeLabel: label,
 		CreatedAt: nowMs,
 	})
-	if err := s.store.AppendStoryEntries(id, entries); err != nil {
+	if err := s.store.SaveCampaignState(store.CampaignStateWrite{
+		Campaign: row, Characters: characterRows, ScriptState: scriptData, Story: entries,
+	}); err != nil {
 		return View{}, err
 	}
 
@@ -492,29 +589,72 @@ func (s *Service) UpdateSettings(id string, patch json.RawMessage) (View, error)
 	return s.assembleView(row)
 }
 
-// AppendStory adds journal entries (used by DM turns and system logs) with
-// fresh timestamps.
-func (s *Service) AppendStory(id string, entries []store.StoryRow) error {
-	nowMs := s.now().UnixMilli()
-	label := timeLabel(s.now())
-	for i := range entries {
-		if entries[i].CreatedAt == 0 {
-			entries[i].CreatedAt = nowMs
-		}
-		if entries[i].TimeLabel == "" {
-			entries[i].TimeLabel = label
-		}
-	}
-	return s.store.AppendStoryEntries(id, entries)
+// PreparedStoryRevision fences a provider-backed rewrite to the exact campaign
+// version and journal row the player saw when they requested it.
+type PreparedStoryRevision struct {
+	View            View
+	OriginalText    string
+	StorySeq        int64
+	TurnToken       string
+	ExpectedVersion int
 }
 
-// ReplaceLastPublicDM rewrites the most recent public DM narration without
-// advancing the round or changing mechanical state.
-func (s *Service) ReplaceLastPublicDM(id, text string) error {
+func (s *Service) PrepareStoryRevision(id string) (PreparedStoryRevision, error) {
 	unlock := s.Lock(id)
 	defer unlock()
-	if _, err := s.mustCampaign(id); err != nil {
-		return err
+	token, err := s.reserveDMTurn(id)
+	if err != nil {
+		return PreparedStoryRevision{}, err
 	}
-	return s.store.ReplaceLastPublicDMText(id, text)
+	preparedOK := false
+	defer func() {
+		if !preparedOK {
+			s.AbortDMTurn(id, token)
+		}
+	}()
+	row, err := s.mustCampaign(id)
+	if err != nil {
+		return PreparedStoryRevision{}, err
+	}
+	entry, ok, err := s.store.LastPublicDM(id)
+	if err != nil {
+		return PreparedStoryRevision{}, err
+	}
+	if !ok {
+		return PreparedStoryRevision{}, apperr.New(400, "尚無可重寫的 DM 敘事。")
+	}
+	view, err := s.assembleView(row)
+	if err != nil {
+		return PreparedStoryRevision{}, err
+	}
+	preparedOK = true
+	return PreparedStoryRevision{
+		View: view, OriginalText: entry.Text, StorySeq: entry.Seq,
+		TurnToken: token, ExpectedVersion: row.DocVersion,
+	}, nil
+}
+
+func (s *Service) ApplyStoryRevision(id string, prepared PreparedStoryRevision, text string) (View, error) {
+	unlock := s.Lock(id)
+	defer unlock()
+	defer s.AbortDMTurn(id, prepared.TurnToken)
+	if !s.dmTurnCurrent(id, prepared.TurnToken) {
+		return View{}, apperr.New(409, "這個敘事修正已失效，請重新提交修正說明。")
+	}
+	row, err := s.mustCampaign(id)
+	if err != nil {
+		return View{}, err
+	}
+	if row.DocVersion != prepared.ExpectedVersion {
+		return View{}, apperr.New(409, "戰役在修正期間已更新；舊修正未套用，請重新提交。")
+	}
+	text = clampStr(text, 12000)
+	if text == "" {
+		return View{}, apperr.New(400, "修正後的敘事不可為空。")
+	}
+	row = s.stamp(row)
+	if err := s.store.RevisePublicDM(row, prepared.StorySeq, text); err != nil {
+		return View{}, err
+	}
+	return s.assembleView(row)
 }

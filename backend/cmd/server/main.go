@@ -259,7 +259,13 @@ func main() {
 	log.Printf("語音朗讀：GPT-SoVITS %s（未啟動時 /api/tts 會回報連線錯誤）", srv.TTS.BaseURL)
 
 	addr := net.JoinHostPort("127.0.0.1", port)
-	httpServer := &http.Server{Addr: addr, Handler: srv.Router()}
+	httpServer := &http.Server{
+		Addr:              addr,
+		Handler:           srv.Router(),
+		ReadHeaderTimeout: 5 * time.Second,
+		IdleTimeout:       2 * time.Minute,
+		MaxHeaderBytes:    1 << 20,
+	}
 
 	log.Printf("D&D local table: http://127.0.0.1:%s", port)
 	status := client.Status(context.Background())

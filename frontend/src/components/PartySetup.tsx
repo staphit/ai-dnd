@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import type { AbilityKey, AbilityScores, Campaign } from '../types';
 import { storyPresets, type StoryPreset } from '../data';
 import { MagneticButton } from './MagneticButton';
+import { StoryModeModal } from './StoryModeModal';
 import { abilityLabels } from '../labels';
 import { createCampaign, getCatalog, type PlayerSeed } from '../api';
 
@@ -12,7 +13,7 @@ import { createCampaign, getCatalog, type PlayerSeed } from '../api';
 type DraftPlayer = { name: string; className: string; level: number; species: string; background: string; abilities?: AbilityScores };
 
 const fallbackNames = ['冒險者一號', '冒險者二號', '冒險者三號', '冒險者四號'];
-const fallbackClasses = ['戰士', '牧師', '遊俠', '法師'];
+const fallbackClasses = ['戰士', '牧師', '法師', '聖武士'];
 const customAbilityBase: AbilityScores = { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 };
 
 function makeDraft(index: number): DraftPlayer {
@@ -36,14 +37,21 @@ export function PartySetup({ onComplete, onCancel }: PartySetupProps) {
   const [partySize, setPartySize] = useState(2);
   const [players, setPlayers] = useState<DraftPlayer[]>(() => Array.from({ length: 4 }, (_, index) => makeDraft(index)));
   const [classNames, setClassNames] = useState<string[]>(fallbackClasses);
+  const [scriptedStoryIds, setScriptedStoryIds] = useState<string[]>([]);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  // Validated submission waiting for the story-mode choice (scripted presets).
+  const [pendingCreate, setPendingCreate] = useState<{ preset: StoryPreset; campaignTitle: string; seeds: PlayerSeed[] } | null>(null);
   const activePlayers = useMemo(() => players.slice(0, partySize), [partySize, players]);
 
   useEffect(() => {
     let mounted = true;
     getCatalog()
-      .then((catalog) => { if (mounted && catalog.classNames.length > 0) setClassNames(catalog.classNames); })
+      .then((catalog) => {
+        if (!mounted) return;
+        if (catalog.classNames.length > 0) setClassNames(catalog.classNames);
+        setScriptedStoryIds(catalog.scriptedStoryIds || []);
+      })
       .catch(() => { /* keep the fallback list; the server normalizes classes anyway */ });
     return () => { mounted = false; };
   }, []);
@@ -61,7 +69,32 @@ export function PartySetup({ onComplete, onCancel }: PartySetupProps) {
     setTitle(story.title);
   }
 
-  async function submit(event: FormEvent) {
+  async function create(preset: StoryPreset, campaignTitle: string, seeds: PlayerSeed[], storyMode?: 'scripted' | 'freeform') {
+    if (submitting) return;
+    setSubmitting(true);
+    setError('');
+    try {
+      const view = await createCampaign({
+        storyId: preset.id,
+        title: campaignTitle,
+        chapter: preset.chapter,
+        scene: preset.scene,
+        objective: preset.objective,
+        objectiveContext: preset.objectiveContext,
+        stakes: preset.stakes,
+        opening: preset.opening,
+        players: seeds,
+        storyMode,
+      });
+      onComplete(view);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : String(caught));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  function submit(event: FormEvent) {
     event.preventDefault();
     if (submitting) return;
     const campaignTitle = title.trim();
@@ -78,26 +111,17 @@ export function PartySetup({ onComplete, onCancel }: PartySetupProps) {
       abilities: player.abilities,
     }));
     const preset = storyPresets.find((story) => story.id === selectedStoryId) || storyPresets[0];
-    setSubmitting(true);
     setError('');
-    try {
-      const view = await createCampaign({
-        storyId: preset.id,
-        title: campaignTitle,
-        chapter: preset.chapter,
-        scene: preset.scene,
-        objective: preset.objective,
-        objectiveContext: preset.objectiveContext,
-        stakes: preset.stakes,
-        opening: preset.opening,
-        players: seeds,
-      });
-      onComplete(view);
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : String(caught));
-    } finally {
-      setSubmitting(false);
+    // Presets with a hand-written script module first ask how to play; the
+    // modal choice then triggers the actual creation. When the catalog is
+    // unknown (fetch failed) the mode is omitted so the server default
+    // (scripted whenever a module exists) still applies — an explicit
+    // 'freeform' opt-out only ever comes from the modal.
+    if (scriptedStoryIds.includes(preset.id)) {
+      setPendingCreate({ preset, campaignTitle, seeds });
+      return;
     }
+    void create(preset, campaignTitle, seeds);
   }
 
   const selectedStory = storyPresets.find((story) => story.id === selectedStoryId) || storyPresets[0];
@@ -142,6 +166,17 @@ export function PartySetup({ onComplete, onCancel }: PartySetupProps) {
         {error && <p className='setup-error' role='alert'>{error}</p>}
         <div className='setup-submit'><span>{selectedStory.genre}／{partySize} 位冒險者</span><MagneticButton type='submit' disabled={submitting}><span>{submitting ? '建立中…' : '開始冒險'}</span><ArrowRight size={17} /></MagneticButton></div>
       </motion.form>
+      {pendingCreate && (
+        <StoryModeModal
+          busy={submitting}
+          onClose={() => setPendingCreate(null)}
+          onPick={(mode) => {
+            const args = pendingCreate;
+            setPendingCreate(null);
+            if (args) void create(args.preset, args.campaignTitle, args.seeds, mode);
+          }}
+        />
+      )}
     </main>
   );
 }

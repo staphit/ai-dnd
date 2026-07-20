@@ -35,10 +35,10 @@ func mustSpendSpellSlot(t *testing.T, c Character, spell Spell, asRitual bool) C
 	return next
 }
 
-// it('builds all 12 classes with a complete common character sheet')
-func TestBuildsAll12ClassesWithCompleteCommonSheet(t *testing.T) {
-	if len(ClassNames) != 12 {
-		t.Fatalf("expected 12 class names, got %d", len(ClassNames))
+// it('builds all 6 classes with a complete common character sheet')
+func TestBuildsAll6ClassesWithCompleteCommonSheet(t *testing.T) {
+	if len(ClassNames) != 6 {
+		t.Fatalf("expected 6 class names, got %d", len(ClassNames))
 	}
 	for index, className := range ClassNames {
 		character := CreateLevel3Character(fmt.Sprintf("player%d", index+1), "測試"+className, className)
@@ -87,9 +87,9 @@ func TestBuildsAll12ClassesWithCompleteCommonSheet(t *testing.T) {
 	}
 }
 
-// it.each(['吟遊詩人', '牧師', '德魯伊', '術士', '法師'])('%s has 4 first-level and 2 second-level slots')
+// it.each(['吟遊詩人', '牧師', '法師'])('%s has 4 first-level and 2 second-level slots')
 func TestFullCastersHaveFourFirstAndTwoSecondLevelSlots(t *testing.T) {
-	for _, className := range []string{"吟遊詩人", "牧師", "德魯伊", "術士", "法師"} {
+	for _, className := range []string{"吟遊詩人", "牧師", "法師"} {
 		t.Run(className, func(t *testing.T) {
 			character := CreateLevel3Character("player1", "施法者", className)
 			if character.Spellcasting == nil {
@@ -108,7 +108,7 @@ func TestFullCastersHaveFourFirstAndTwoSecondLevelSlots(t *testing.T) {
 
 // it('models half casters and Pact Magic separately')
 func TestModelsHalfCastersAndPactMagicSeparately(t *testing.T) {
-	for _, className := range []string{"聖武士", "遊俠"} {
+	for _, className := range []string{"聖武士"} {
 		character := CreateLevel3Character("player1", "半施法者", className)
 		if character.Spellcasting == nil {
 			t.Fatalf("expected %s to have spellcasting", className)
@@ -120,20 +120,6 @@ func TestModelsHalfCastersAndPactMagicSeparately(t *testing.T) {
 		if character.Spellcasting.Mode != "standard" {
 			t.Errorf("%s: mode = %q, want standard", className, character.Spellcasting.Mode)
 		}
-	}
-	warlock := CreateLevel3Character("player1", "契約者", "魔契師")
-	if warlock.Spellcasting == nil {
-		t.Fatal("expected 魔契師 to have spellcasting")
-	}
-	if warlock.Spellcasting.Mode != "pact" {
-		t.Errorf("mode = %q, want pact", warlock.Spellcasting.Mode)
-	}
-	if warlock.Spellcasting.PactSlotLevel != 2 {
-		t.Errorf("pactSlotLevel = %d, want 2", warlock.Spellcasting.PactSlotLevel)
-	}
-	want := []SlotPool{{Level: 2, Current: 2, Max: 2}}
-	if !reflect.DeepEqual(warlock.Spellcasting.Slots, want) {
-		t.Errorf("slots = %+v, want %+v", warlock.Spellcasting.Slots, want)
 	}
 }
 
@@ -158,8 +144,8 @@ func TestEvokerCantripsSpellbookPreparedAndArcaneRecovery(t *testing.T) {
 			prepared++
 		}
 	}
-	if cantrips != 3 {
-		t.Errorf("cantrip count = %d, want 3", cantrips)
+	if cantrips != 4 {
+		t.Errorf("cantrip count = %d, want 4", cantrips)
 	}
 	if inSpellbook != 12 {
 		t.Errorf("spellbook count = %d, want 12", inSpellbook)
@@ -184,11 +170,10 @@ func TestEvokerCantripsSpellbookPreparedAndArcaneRecovery(t *testing.T) {
 
 // it('preserves spell attack and target rules on character spells')
 func TestPreservesSpellAttackAndTargetRules(t *testing.T) {
-	warlock := CreateLevel3Character("player1", "契約者", "魔契師")
-	blast := findCharacterSpell(t, warlock, "eldritch_blast")
-	// expect(blast?.effect).toMatchObject({ target: 'creature', attackRoll: true, dice: '1d10' })
+	wizard := CreateLevel3Character("player1", "梅林", "法師")
+	blast := findCharacterSpell(t, wizard, "ray_of_frost")
 	if blast.Effect == nil {
-		t.Fatal("eldritch_blast has no effect")
+		t.Fatal("ray_of_frost has no effect")
 	}
 	if blast.Effect.Target != "creature" {
 		t.Errorf("effect.target = %q, want creature", blast.Effect.Target)
@@ -196,8 +181,8 @@ func TestPreservesSpellAttackAndTargetRules(t *testing.T) {
 	if !blast.Effect.AttackRoll {
 		t.Error("effect.attackRoll = false, want true")
 	}
-	if blast.Effect.Dice != "1d10" {
-		t.Errorf("effect.dice = %q, want 1d10", blast.Effect.Dice)
+	if blast.Effect.Dice != "1d8" {
+		t.Errorf("effect.dice = %q, want 1d8", blast.Effect.Dice)
 	}
 }
 
@@ -250,16 +235,16 @@ func TestSpendsSlotTracksConcentrationNoNegativeSlots(t *testing.T) {
 	}
 }
 
-// it('recovers Pact Magic on a short rest and all resources on a long rest')
+// it('keeps standard slots on a short rest and restores everything on a long rest')
 func TestRecoversPactMagicOnShortRestAndAllOnLongRest(t *testing.T) {
-	warlock := CreateLevel3Character("player1", "契約者", "魔契師")
-	hex := findCharacterSpell(t, warlock, "hex")
-	spent := mustSpendSpellSlot(t, warlock, hex, false)
-	if got := spent.Spellcasting.Slots[0].Current; got != 1 {
-		t.Errorf("slots[0].current after hex = %d, want 1", got)
+	wizard := CreateLevel3Character("player1", "梅林", "法師")
+	sleep := findCharacterSpell(t, wizard, "sleep")
+	spent := mustSpendSpellSlot(t, wizard, sleep, false)
+	if got := spent.Spellcasting.Slots[0].Current; got != 3 {
+		t.Errorf("slots[0].current after sleep = %d, want 3", got)
 	}
-	if got := RestCharacter(spent, "short").Spellcasting.Slots[0].Current; got != 2 {
-		t.Errorf("slots[0].current after short rest = %d, want 2", got)
+	if got := RestCharacter(spent, "short").Spellcasting.Slots[0].Current; got != 3 {
+		t.Errorf("standard slots must not recover on short rest: got %d, want 3", got)
 	}
 
 	wounded := spent

@@ -17,10 +17,12 @@ export function Topbar({ campaign, status, demoMode }: TopbarProps) {
         <p className="eyebrow">{campaign.chapter}</p>
         <h1>{campaign.title}</h1>
       </div>
-      <div className={`connection ${connected ? 'connection-online' : ''}`}>
-        <span className="connection-pulse" aria-hidden="true" />
-        {connected ? <WifiHigh size={16} /> : <WifiSlash size={16} />}
-        <span>{label}</span>
+      <div className="topbar-tools">
+        <div className={`connection ${connected ? 'connection-online' : ''}`}>
+          <span className="connection-pulse" aria-hidden="true" />
+          {connected ? <WifiHigh size={16} /> : <WifiSlash size={16} />}
+          <span>{label}</span>
+        </div>
       </div>
     </header>
   );

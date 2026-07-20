@@ -76,6 +76,58 @@ func TestCampaignCRUD(t *testing.T) {
 	}
 }
 
+func TestSaveCampaignStateIsAtomicAndReplaceClearsDocuments(t *testing.T) {
+	s := openTestStore(t)
+	row := CampaignRow{ID: "atomic-1", Title: "原始", Round: 1, CreatedAt: 1, UpdatedAt: 1}
+
+	// The invalid character fails after the campaign insert; the transaction
+	// must roll that insert back as well.
+	err := s.SaveCampaignState(CampaignStateWrite{
+		Campaign:   row,
+		Characters: []CharacterRow{{CampaignID: row.ID, Name: "缺少 ID", Data: `{}`, UpdatedAt: 1}},
+	})
+	if err == nil {
+		t.Fatal("expected invalid character to fail")
+	}
+	if _, ok, getErr := s.GetCampaign(row.ID); getErr != nil || ok {
+		t.Fatalf("partial campaign survived rollback: ok=%v err=%v", ok, getErr)
+	}
+
+	combat, arc, script := `{"active":true}`, `{"current":0}`, `{"scriptId":"demo"}`
+	if err := s.SaveCampaignState(CampaignStateWrite{
+		Campaign:   row,
+		Characters: []CharacterRow{{CampaignID: row.ID, PlayerID: "player1", Name: "艾拉", Data: `{}`, UpdatedAt: 1}},
+		Combat:     &combat, StoryArc: &arc, ScriptState: &script,
+		Story: []StoryRow{{Speaker: "dm", Text: "舊故事", CreatedAt: 1}},
+	}); err != nil {
+		t.Fatalf("save full state: %v", err)
+	}
+
+	row.Title, row.UpdatedAt = "覆蓋後", 2
+	if err := s.SaveCampaignState(CampaignStateWrite{
+		Campaign: row, Replace: true,
+		Story: []StoryRow{{Speaker: "dm", Text: "新故事", CreatedAt: 2}},
+	}); err != nil {
+		t.Fatalf("replace: %v", err)
+	}
+	if chars, _ := s.Characters(row.ID); len(chars) != 0 {
+		t.Fatalf("replace retained characters: %+v", chars)
+	}
+	if _, ok, _ := s.Combat(row.ID); ok {
+		t.Fatal("replace retained combat")
+	}
+	if _, ok, _ := s.StoryArc(row.ID); ok {
+		t.Fatal("replace retained story arc")
+	}
+	if _, ok, _ := s.ScriptState(row.ID); ok {
+		t.Fatal("replace retained script state")
+	}
+	story, err := s.StoryTail(row.ID, 10)
+	if err != nil || len(story) != 1 || story[0].Text != "新故事" || story[0].Seq != 1 {
+		t.Fatalf("replace story mismatch: %+v err=%v", story, err)
+	}
+}
+
 func TestCharacterAndCombatCRUD(t *testing.T) {
 	s := openTestStore(t)
 

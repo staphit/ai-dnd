@@ -1,6 +1,6 @@
 // Shared test fixtures mirroring the server View shapes. The rules engine
 // lives in Go, so tests build plain data instead of computing sheets.
-import type { Campaign, CombatState, Combatant, PlayerCharacter, PlayerId } from '../types';
+import type { Campaign, CombatState, Combatant, PlayerCharacter, PlayerId, ScriptProgress } from '../types';
 
 export function makePlayer(id: PlayerId, name: string, overrides: Partial<PlayerCharacter> = {}): PlayerCharacter {
   return {
@@ -82,6 +82,20 @@ export function makeCampaign(overrides: Partial<Campaign> = {}): Campaign {
     requiredCheck: null,
     settings: {},
     xpProgress: { player1: { current: 900, required: 2700, remaining: 1800, ready: false, progress: 0.2 } },
+    ...overrides,
+  };
+}
+
+export function makeScript(overrides: Partial<ScriptProgress> = {}): ScriptProgress {
+  return {
+    scriptId: 'ashen-crown',
+    stage: '前期',
+    nodeTitle: '沉鐘塔的低語',
+    nodeType: 'scene',
+    alignment: 0,
+    visitedCount: 1,
+    totalNodes: 12,
+    ended: false,
     ...overrides,
   };
 }

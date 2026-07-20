@@ -52,6 +52,101 @@ func TestPrepareActionsTurnValidates(t *testing.T) {
 	}
 }
 
+func TestDMTurnLeaseRejectsConcurrentAndStaleApply(t *testing.T) {
+	s := newTestService(t)
+	view := createSample(t, s)
+	prepared := preparedActions(t, s, view.ID)
+
+	if _, err := s.PrepareActionsTurn(view.ID, prepared.Actions, nil); apperr.StatusOf(err, 0) != 409 {
+		t.Fatalf("concurrent prepare should be 409, got %v", err)
+	}
+	if _, err := s.UpdateSettings(view.ID, []byte(`{"fontScale":1.1}`)); err != nil {
+		t.Fatalf("mutate while provider is running: %v", err)
+	}
+
+	turn := BuildDemoTurn(prepared)
+	if _, err := s.ApplyDMTurn(view.ID, prepared, turn); apperr.StatusOf(err, 0) != 409 {
+		t.Fatalf("stale apply should be 409, got %v", err)
+	}
+	current, err := s.View(view.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if current.Round != view.Round {
+		t.Fatalf("stale turn advanced round: got %d want %d", current.Round, view.Round)
+	}
+
+	// ApplyDMTurn releases the lease even on rejection, so the user can retry.
+	retry, err := s.PrepareActionsTurn(view.ID, prepared.Actions, nil)
+	if err != nil {
+		t.Fatalf("retry prepare: %v", err)
+	}
+	s.AbortDMTurn(view.ID, retry.TurnToken)
+}
+
+func TestDemoTurnPersistsServerAuthoritativeState(t *testing.T) {
+	s := newTestService(t)
+	view, err := s.Create(CreateParams{
+		StoryID: "custom", StoryMode: "freeform", Title: "示範冒險", Scene: "舊塔",
+		Objective: "找出鐘聲來源", Players: []PlayerSeed{{Name: "艾拉", ClassName: "遊俠"}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	prepared, err := s.PrepareActionsTurn(view.ID, map[string]string{"player1": "檢查塔門。"}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	applied, err := s.ApplyDMTurn(view.ID, prepared, BuildDemoTurn(prepared))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if applied.View.Round != 2 || applied.View.Players[0].Experience != view.Players[0].Experience+75 {
+		t.Fatalf("demo mechanics not applied: round=%d xp=%d", applied.View.Round, applied.View.Players[0].Experience)
+	}
+
+	reloaded, err := s.View(view.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reloaded.Round != applied.View.Round || reloaded.Players[0].Experience != applied.View.Players[0].Experience {
+		t.Fatalf("reloaded demo state diverged: %+v", reloaded)
+	}
+	if len(reloaded.Story) < 3 || !strings.Contains(reloaded.Story[len(reloaded.Story)-2].Text, "隊伍的宣告") {
+		t.Fatalf("demo narration was not persisted: %+v", reloaded.Story)
+	}
+}
+
+func TestStoryRevisionTargetsExactVersionAndEntry(t *testing.T) {
+	s := newTestService(t)
+	view := createSample(t, s)
+	prepared, err := s.PrepareStoryRevision(view.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.PrepareActionsTurn(view.ID, map[string]string{"player1": "前進", "player2": "警戒"}, nil); apperr.StatusOf(err, 0) != 409 {
+		t.Fatalf("DM turn should be blocked by revision lease: %v", err)
+	}
+	if _, err := s.UpdateSettings(view.ID, []byte(`{"fontScale":1.2}`)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.ApplyStoryRevision(view.ID, prepared, "不應寫入"); apperr.StatusOf(err, 0) != 409 {
+		t.Fatalf("stale revision should be 409: %v", err)
+	}
+
+	retry, err := s.PrepareStoryRevision(view.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	updated, err := s.ApplyStoryRevision(view.ID, retry, "門後傳來清楚的鐘聲。")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := updated.Story[len(updated.Story)-2].Text; got != "門後傳來清楚的鐘聲。" {
+		t.Fatalf("revised text = %q", got)
+	}
+}
+
 func asActionIssues(err error, target **ActionIssuesError) bool {
 	if e, ok := err.(*ActionIssuesError); ok {
 		*target = e
@@ -93,8 +188,14 @@ func TestStoryArcPhaseCompletion(t *testing.T) {
 	if first.CompletedRound == 0 || !first.RewardGranted {
 		t.Fatalf("phase 1 not stamped/rewarded: %+v", first)
 	}
-	if v.StoryArc.Phases[1].Goal != "查明燈塔熄滅的幕後黑手" {
-		t.Fatalf("next goal not set: %+v", v.StoryArc.Phases[1])
+	// Scripted campaigns pin phase goals and deadlines to the module: the
+	// AI-suggested nextGoal is overridden by stageObjectives, and deadlines
+	// derive from stage size instead of the generic 20/40/60.
+	if !strings.Contains(v.StoryArc.Phases[1].Goal, "下城區") {
+		t.Fatalf("phase 2 goal should come from the module: %+v", v.StoryArc.Phases[1])
+	}
+	if v.StoryArc.Phases[0].DeadlineRound == 20 {
+		t.Fatalf("deadline should be module-derived, not the generic 20: %+v", v.StoryArc.Phases[0])
 	}
 	if v.Players[0].Experience != xpBefore+first.RewardXP {
 		t.Fatalf("timed reward XP missing: before %d after %d want +%d", xpBefore, v.Players[0].Experience, first.RewardXP)
@@ -230,8 +331,19 @@ func TestApplyDMTurnFullFlow(t *testing.T) {
 }
 
 func TestApplyDMTurnCombatStartAndRejection(t *testing.T) {
+	// Freeform campaign (no scripted module): the DM may start combat itself.
 	s := newTestService(t)
-	view := createSample(t, s)
+	view, err := s.Create(CreateParams{
+		StoryID: "custom", Title: "自由冒險", Chapter: "第一章", Scene: "禮拜堂",
+		Objective: "找到伊薩克", ObjectiveContext: "背景", Stakes: "風險", Opening: "門闔上了。",
+		Players: []PlayerSeed{
+			{Name: "賽勒恩", ClassName: "戰士"},
+			{Name: "米芮", ClassName: "牧師", Level: 5},
+		},
+	})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
 	prepared := preparedActions(t, s, view.ID)
 
 	s.WithDice(seq(0.9, 0.5, 0.1))
@@ -273,5 +385,25 @@ func TestApplyDMTurnCombatStartAndRejection(t *testing.T) {
 	last := applied2.View.Story[len(applied2.View.Story)-1]
 	if !strings.Contains(last.Text, "【行動駁回】") {
 		t.Fatalf("missing rejection entry: %q", last.Text)
+	}
+}
+
+func TestClampCheckDCKeepsSuccessBetween30And90Percent(t *testing.T) {
+	cases := []struct{ dc, modifier, want int }{
+		{30, 2, 17},  // impossible DC pulled down to 30% success (needs 15)
+		{25, 5, 20},  // high DC clamped to modifier+15
+		{5, 6, 9},    // trivial DC raised to 90% success (needs 3)
+		{12, 3, 12},  // in-range DC untouched
+		{10, -1, 10}, // negative modifier, in range (needs 11)
+		{20, 0, 15},  // no modifier: DC capped at 15
+	}
+	for _, c := range cases {
+		if got := clampCheckDC(c.dc, c.modifier); got != c.want {
+			t.Fatalf("clampCheckDC(%d, %d) = %d, want %d", c.dc, c.modifier, got, c.want)
+		}
+		needed := clampCheckDC(c.dc, c.modifier) - c.modifier
+		if needed < 3 || needed > 15 {
+			t.Fatalf("clampCheckDC(%d, %d): needed natural %d outside [3,15]", c.dc, c.modifier, needed)
+		}
 	}
 }

@@ -31,6 +31,7 @@ type importedCampaign struct {
 	Choices          []json.RawMessage    `json:"choices"`
 	RequiredCheck    *rules.RequiredCheck `json:"requiredCheck"`
 	Combat           *rules.CombatState   `json:"combat"`
+	ScriptState      *ScriptState         `json:"scriptState"`
 	ImagePrompt      string               `json:"imagePrompt"`
 	UpdatedAt        string               `json:"updatedAt"`
 
@@ -126,21 +127,28 @@ func (s *Service) Import(raw []byte, overwrite bool) (View, error) {
 	}
 	row.Settings = buildImportSettings(imp)
 
-	// Replace any prior documents wholesale.
-	if err := s.store.DeleteCampaign(id); err != nil {
-		return View{}, err
-	}
-	if row, err = s.touch(row); err != nil {
-		return View{}, err
-	}
-	if err := s.saveCharacters(id, players); err != nil {
+	row = s.stamp(row)
+	characterRows, err := s.characterRows(id, players, row.UpdatedAt)
+	if err != nil {
 		return View{}, err
 	}
 
+	var combatData *string
 	if imp.Combat != nil && imp.Combat.Active {
 		if data, err := json.Marshal(imp.Combat); err == nil {
-			if err := s.store.SaveCombat(id, string(data), s.now().UnixMilli()); err != nil {
-				return View{}, err
+			encoded := string(data)
+			combatData = &encoded
+		}
+	}
+
+	// Scripted-module progress round-trips when the module still exists and
+	// the saved node is valid; otherwise the campaign continues freeform.
+	var scriptData *string
+	if state := imp.ScriptState; state != nil {
+		if mod := scriptModules[state.ScriptID]; mod != nil && mod.node(state.NodeID) != nil {
+			if data, err := json.Marshal(state); err == nil {
+				encoded := string(data)
+				scriptData = &encoded
 			}
 		}
 	}
@@ -160,7 +168,10 @@ func (s *Service) Import(raw []byte, overwrite bool) (View, error) {
 			CreatedAt: nowMs + int64(i), // preserve ordering; display uses TimeLabel
 		})
 	}
-	if err := s.store.AppendStoryEntries(id, entries); err != nil {
+	if err := s.store.SaveCampaignState(store.CampaignStateWrite{
+		Campaign: row, Characters: characterRows, Combat: combatData,
+		ScriptState: scriptData, Story: entries, Replace: true,
+	}); err != nil {
 		return View{}, err
 	}
 
@@ -376,6 +387,15 @@ func (s *Service) Export(id string) ([]byte, error) {
 	}
 	delete(campaign, "settings")
 	delete(campaign, "xpProgress")
+	// View.script is the spoiler-safe progress slice; the export carries the
+	// full engine state instead so a scripted campaign round-trips intact.
+	delete(campaign, "script")
+	if data, ok, err := s.store.ScriptState(id); err == nil && ok {
+		var state ScriptState
+		if json.Unmarshal([]byte(data), &state) == nil {
+			campaign["scriptState"] = state
+		}
+	}
 	campaign["schemaVersion"] = 3
 
 	return json.MarshalIndent(map[string]any{

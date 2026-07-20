@@ -24,6 +24,8 @@ interface CharacterPanelProps {
   partySize: number;
   choices?: Choice[];
   resourceSummary?: string;
+  /** Scripted campaign: the composer offers choices only, no free text. */
+  scripted?: boolean;
   onSubmitAction: (player: PlayerId, text: string) => void;
   onUnlockAction: (player: PlayerId) => void;
 }
@@ -50,7 +52,7 @@ function equipmentKindClass(name: string): string {
   return 'equip-gear';
 }
 
-export function CharacterPanel({ player, xp, showStatHints = true, combatActive = false, spellTargets, onResourceChange, onCastSpell, onRest, onGeneratePortrait, pending, actionDisabled, partySize, choices, resourceSummary, onSubmitAction, onUnlockAction }: CharacterPanelProps) {
+export function CharacterPanel({ player, xp, showStatHints = true, combatActive = false, spellTargets, onResourceChange, onCastSpell, onRest, onGeneratePortrait, pending, actionDisabled, partySize, choices, resourceSummary, scripted = false, onSubmitAction, onUnlockAction }: CharacterPanelProps) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [tab, setTab] = useState<QuickTab>('action');
   const [appearance, setAppearance] = useState(player.appearance || '');
@@ -75,7 +77,7 @@ export function CharacterPanel({ player, xp, showStatHints = true, combatActive 
       </div>
 
       <div className="quick-tab-content" role="tabpanel">
-        {tab === 'action' && <ActionComposer player={player.id} name={player.name} className={player.className} pending={pending} disabled={actionDisabled} partySize={partySize} choices={choices} resourceSummary={resourceSummary} onSubmit={onSubmitAction} onUnlock={onUnlockAction} />}
+        {tab === 'action' && <ActionComposer player={player.id} name={player.name} className={player.className} pending={pending} disabled={actionDisabled} partySize={partySize} choices={choices} resourceSummary={resourceSummary} scripted={scripted} combatActive={combatActive} onSubmit={onSubmitAction} onUnlock={onUnlockAction} />}
         {tab === 'basic' && <>
           <section className="quick-portrait">
             {player.portraitUrl ? <img src={player.portraitUrl} alt={`${player.name}的角色肖像`} /> : <div className="quick-portrait-placeholder">尚未生成<br />角色圖</div>}

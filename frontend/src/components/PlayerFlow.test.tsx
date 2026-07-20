@@ -12,6 +12,16 @@ describe('player action flow', () => {
     expect(onSubmit).toHaveBeenCalledWith('player1', '本回合不行動，保持警戒。');
   });
 
+  it('hides the free-text input in scripted mode and locks a clicked choice directly', () => {
+    const onSubmit = vi.fn();
+    render(<ActionComposer player="player1" name="艾拉" className="遊俠" disabled={false} partySize={2} scripted choices={[{ text: '追上黑斗篷身影' }, { text: '先搜索祭壇' }]} onSubmit={onSubmit} onUnlock={vi.fn()} />);
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /鎖定行動/ })).not.toBeInTheDocument();
+    expect(screen.getByText('劇本模式：請從選項中選擇行動')).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: /追上黑斗篷身影/ }));
+    expect(onSubmit).toHaveBeenCalledWith('player1', '追上黑斗篷身影');
+  });
+
   it('allows a locked action to be unlocked before the party advances', () => {
     const onUnlock = vi.fn();
     render(<ActionComposer player="player1" name="艾拉" className="遊俠" pending="檢查門鎖" disabled={false} partySize={2} onSubmit={vi.fn()} onUnlock={onUnlock} />);

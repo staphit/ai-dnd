@@ -1,0 +1,77 @@
+/* Hallmark · macrostructure: Workbench · tone: atmospheric · custom: Candlelit Vellum
+ * genre: atmospheric · design-system: design.md · designed-as-app
+ * theme: custom (vibe: "candlelit vellum campaign binder" · paper oklch(16% 0.022 55)
+ *         · accent oklch(74% 0.13 72) brass · Cinzel + Source Serif 4 + JetBrains Mono)
+ * axes: dark / classical-serif / warm
+ * Hallmark · pre-emit critique: P5 H4 E4 S5 R4 V4
+ */
+
+:root {
+  /* Colour */
+  --color-paper: oklch(16% 0.022 55);
+  --color-paper-2: oklch(20% 0.024 52);
+  --color-paper-3: oklch(24% 0.026 50);
+  --color-ink: oklch(91% 0.02 85);
+  --color-ink-2: oklch(68% 0.02 75);
+  --color-rule: oklch(34% 0.028 55);
+  --color-rule-soft: oklch(27% 0.02 55);
+  --color-accent: oklch(74% 0.13 72);
+  --color-accent-soft: oklch(58% 0.09 68);
+  --color-accent-ink: oklch(18% 0.03 55);
+  --color-danger: oklch(55% 0.145 28);
+  --color-danger-soft: oklch(42% 0.1 28);
+  --color-focus: oklch(78% 0.12 72);
+  --color-parchment: oklch(22% 0.028 70);
+  --color-void: oklch(12% 0.018 55);
+
+  /* Type */
+  --font-display: "Cinzel", "Palatino Linotype", "Book Antiqua", Palatino, serif;
+  --font-body: "Source Serif 4 Variable", "Source Serif 4", Georgia, "Times New Roman", serif;
+  --font-mono: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, "Cascadia Code", monospace;
+
+  /* Space — 4pt scale */
+  --space-3xs: 0.25rem;
+  --space-2xs: 0.5rem;
+  --space-xs: 0.75rem;
+  --space-sm: 1rem;
+  --space-md: 1.5rem;
+  --space-lg: 2rem;
+  --space-xl: 3rem;
+  --space-2xl: 4.5rem;
+  --space-3xl: 7rem;
+
+  /* Type scale */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-md: 1.0625rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.625rem;
+  --text-2xl: 2.25rem;
+  --text-display: clamp(2.25rem, 5vw, 3.75rem);
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-short: 180ms;
+  --dur-med: 280ms;
+
+  /* Radius — tabletop chrome is square-edged */
+  --radius-card: 0;
+  --radius-pill: 0;
+  --radius-input: 0;
+
+  /* Legacy aliases used throughout the existing stylesheet */
+  --bg: var(--color-paper);
+  --surface: var(--color-paper-2);
+  --surface-raised: var(--color-paper-3);
+  --line: var(--color-rule);
+  --line-soft: var(--color-rule-soft);
+  --muted: var(--color-ink-2);
+  --accent: var(--color-accent);
+  --accent-soft: var(--color-accent-soft);
+  --danger: var(--color-danger);
+  --text: var(--color-ink);
+  --panel: var(--color-paper-2);
+  --mono: var(--font-mono);
+}

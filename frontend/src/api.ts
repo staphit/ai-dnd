@@ -72,6 +72,10 @@ export interface CreateCampaignParams {
   stakes: string;
   opening: string;
   players: PlayerSeed[];
+  /** How to run a preset that has a hand-written script module: follow the
+   * script ('scripted') or let the AI DM improvise ('freeform'). Empty means
+   * the server default (scripted when the preset has a module). */
+  storyMode?: 'scripted' | 'freeform';
   settings?: Record<string, unknown>;
 }
 
@@ -112,6 +116,8 @@ export interface RulesCatalog {
   classNames: string[];
   abilityLabels: Record<AbilityKey, string>;
   spells: CharacterSpell[];
+  /** Story-preset ids that ship a hand-written script module. */
+  scriptedStoryIds?: string[];
 }
 
 let catalogPromise: Promise<RulesCatalog> | null = null;
@@ -300,6 +306,7 @@ export interface DmTurnRequest {
   model?: string;
   effort?: string;
   dmProvider?: string;
+  demo?: boolean;
   actions?: Array<{ playerId: PlayerId; text: string }>;
   intents?: Partial<Record<PlayerId, DmIntent>>;
   checkRoll?: { natural: number };
@@ -348,6 +355,7 @@ export interface DmTurnResponse {
   choices: Choice[];
   requiresCheck: boolean;
   check: DmCheck | null;
+  stageClear?: { cleared: string; next: string; title: string };
   privateMessages: Array<{ playerId: PlayerId; text: string }>;
   actionIssues: ActionIssue[];
   model: string;
