@@ -1,4 +1,4 @@
-# D&D  AI
+# AI Dungeon Master
 
 本機 D&D 遊戲桌：React 前端 + Go 後端，AI 地城主走本機 Codex CLI（ChatGPT 登入）或 Grok CLI，不需要 API key。1–4 名玩家、SRD 5.2.1 的 6 個職業、完整戰鬥與法術結算、劇本／自由兩種模式、場景插圖。
 
