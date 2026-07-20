@@ -21,7 +21,6 @@ import (
 	"dndduet/internal/applog"
 	"dndduet/internal/codex"
 	"dndduet/internal/dm"
-	"dndduet/internal/forge"
 	"dndduet/internal/game"
 	"dndduet/internal/grok"
 	"dndduet/internal/httpapi"
@@ -120,8 +119,7 @@ func main() {
 	}
 	providers["codex"] = codexClient
 
-	// --- Grok (CLI login preferred; HTTP if key present) ---
-	grokHTTP := grok.NewClientFromEnv()
+	// --- Grok (CLI login preferred; HTTP if key present) — DM only, not image ---
 	if gp := grok.NewProviderFromEnv(); gp != nil {
 		providers["grok"] = gp
 		st := gp.Status(context.Background())
@@ -192,50 +190,13 @@ func main() {
 		}
 	}
 
-	// IMAGE_BACKEND: codex | grok | local (frontend can override per request)
-	forgeClient := forge.NewClientFromEnv()
-	forgeClient2 := forge.NewClientFromEnvVariant("2")
-	defaultImageBackend := strings.ToLower(envOr("IMAGE_BACKEND", ""))
-	if defaultImageBackend == "" {
-		defaultImageBackend = "codex"
-		if defaultDM == "grok" {
-			if grokHTTP != nil {
-				defaultImageBackend = "grok"
-			} else {
-				defaultImageBackend = "local"
-			}
-		}
-	}
-	switch defaultImageBackend {
-	case "codex":
-	case "grok", "xai":
-		defaultImageBackend = "grok"
-	case "local", "forge", "sd":
-		defaultImageBackend = "local"
-	default:
-		log.Fatalf("unknown IMAGE_BACKEND %q (use \"codex\", \"grok\", or \"local\")", envOr("IMAGE_BACKEND", "codex"))
-	}
-	if defaultImageBackend == "grok" && grokHTTP == nil {
-		log.Printf("警告：IMAGE_BACKEND=grok 但沒有 XAI_API_KEY；圖片生成會失敗。可改 local/codex，或補上 API key。")
-	}
-	log.Printf("圖片後端：預設 %s（本地 SD Forge：%s）", defaultImageBackend, forgeClient.BaseURL)
-
-	promptTranslator := &images.PromptTranslator{
-		API: client, CWD: codexCWD, SchemaPath: imagePromptSchemaPath, Effort: "low",
-	}
-	imageRenderers := map[string]images.Renderer{
-		"local": images.NewForgeRenderer(forgeClient, promptTranslator),
-	}
+	// Image generation is GPT-only via Codex CLI $imagegen / image_gen.
+	imageRenderers := map[string]images.Renderer{}
 	if c, ok := providers["codex"]; ok && c != nil {
 		imageRenderers["codex"] = images.NewCodexRenderer(c, codexCWD)
-	}
-	if grokHTTP != nil {
-		imageRenderers["grok"] = images.NewGrokRenderer(grokHTTP)
-		log.Printf("圖片後端：已啟用 grok HTTP（%s）", grokHTTP.ImageModel())
-	}
-	if forgeClient2 != nil {
-		imageRenderers["local2"] = images.NewForgeRenderer(forgeClient2, promptTranslator)
-		log.Printf("圖片後端：額外本地選項 local2（%s）", forgeClient2.Checkpoint)
+		log.Printf("圖片後端：codex（GPT / Codex $imagegen）")
+	} else {
+		log.Printf("警告：未註冊 codex，場景／角色圖生成不可用")
 	}
 
 	srv := &httpapi.Server{
@@ -247,7 +208,7 @@ func main() {
 		SchemaPath:          schemaPath,
 		ProviderCWD:         codexCWD,
 		ImageRenderers:      imageRenderers,
-		DefaultImageBackend: defaultImageBackend,
+		DefaultImageBackend: "codex",
 		Memory:              mem,
 		Game:                game.New(db, nil),
 		TacticsSchemaPath:   tacticsSchemaPath,

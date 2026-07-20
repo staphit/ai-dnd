@@ -1,7 +1,6 @@
 import type {
   Campaign,
   CampaignSettings,
-  ForgeSettings,
   PlayerCharacter,
   PlayerId,
   StoryEntry,
@@ -38,22 +37,6 @@ export function errorMessage(caught: unknown) {
 
 export function settingsOf(campaign: Campaign): CampaignSettings {
   return (campaign.settings || {}) as CampaignSettings;
-}
-
-export function forgeRequest(settings?: ForgeSettings) {
-  if (!settings?.Enabled) return undefined;
-  return {
-    enabled: true,
-    positivePrompt: settings.PositivePrompt,
-    negativePrompt: settings.NegativePrompt,
-    steps: settings.Steps,
-    cfgScale: settings.CFGScale,
-    sampler: settings.Sampler,
-    scheduler: settings.Scheduler,
-    seed: settings.Seed,
-    width: settings.Width,
-    height: settings.Height,
-  };
 }
 
 export function areAllActionsReady(view: Campaign) {

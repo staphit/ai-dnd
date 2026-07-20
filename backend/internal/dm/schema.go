@@ -16,6 +16,9 @@ type Check struct {
 	Skill     string `json:"skill"`
 	DC        int    `json:"dc"`
 	Reason    string `json:"reason"`
+	// ScriptChoiceID is set only by the local scripted resolver: the module
+	// choice this check gates. The AI never produces it (parseTurn ignores it).
+	ScriptChoiceID string `json:"-"`
 }
 
 // Effect is a narrative sheet change. Severity is model-facing; Amount is

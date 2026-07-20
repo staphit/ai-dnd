@@ -3,7 +3,6 @@ import * as api from '../api';
 import type { SceneSlotInfo } from '../api';
 import {
   errorMessage,
-  forgeRequest,
   settingsOf,
   timeLabel,
 } from '../app/app-utils';
@@ -11,7 +10,6 @@ import type {
   AiStatus,
   Campaign,
   CampaignSettings,
-  ForgeSettings,
   PlayerCharacter,
   SceneImage,
 } from '../types';
@@ -20,7 +18,6 @@ interface UseSceneMediaOptions {
   campaign: Campaign;
   settings: CampaignSettings;
   status: AiStatus | null;
-  forgeDefaults?: Omit<ForgeSettings, 'Enabled'>;
   latestNarration?: string;
   updateSettings: (patch: CampaignSettings, options?: { debounce?: boolean }) => void;
   onCampaign: (view: Campaign) => void;
@@ -32,7 +29,6 @@ export function useSceneMedia({
   campaign,
   settings,
   status,
-  forgeDefaults,
   latestNarration,
   updateSettings,
   onCampaign,
@@ -51,10 +47,9 @@ export function useSceneMedia({
     campaignRef.current = campaign;
   }, [campaign]);
 
-  const localImages = (settings.imageBackend || status?.imageBackend || '').startsWith('local');
+  // Scene/portrait art is GPT-only via Codex $imagegen.
   const canGenerateImages = Boolean(status?.imageBackends?.length)
-    || Boolean(status?.connected)
-    || localImages;
+    || Boolean(status?.connected);
 
   async function refreshSceneSlots(id: string) {
     try {
@@ -110,13 +105,12 @@ export function useSceneMedia({
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           async: true,
-          imageBackend: settings.imageBackend || '',
+          imageBackend: 'codex',
           campaignId: campaign.id || '',
           campaign: { title: campaign.title, scene: sceneOverride || campaign.scene },
           narration: narration || '',
           imagePrompt: imagePromptOverride ?? campaign.imagePrompt ?? '',
           sceneSlotId: slotId || undefined,
-          forge: forgeDefaults ? forgeRequest(settings.forgeSettings) : undefined,
         }),
       });
       const data = await response.json().catch(() => (
@@ -171,7 +165,7 @@ export function useSceneMedia({
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          imageBackend: settings.imageBackend || '',
+          imageBackend: 'codex',
           name: player.name,
           species: player.species,
           className: player.className,

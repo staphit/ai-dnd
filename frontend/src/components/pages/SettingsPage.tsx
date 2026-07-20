@@ -5,7 +5,6 @@ import type {
   Campaign,
   CampaignSettings,
   CampaignSummary,
-  ForgeSettings,
 } from '../../types';
 import { CampaignManager } from '../CampaignManager';
 import { MagneticButton } from '../MagneticButton';
@@ -22,12 +21,9 @@ interface SettingsPageProps {
   activeDmProvider: string;
   activeDmInfo?: DmProviderInfo;
   dmLabel: string;
-  forgeDefaults?: Omit<ForgeSettings, 'Enabled'>;
-  forgeSettings?: ForgeSettings;
   onToggleDemo: () => void;
   onProviderChange: (provider: string) => void;
   onUpdateSettings: (patch: CampaignSettings, options?: { debounce?: boolean }) => void;
-  onUpdateForgeSettings: (patch: Partial<ForgeSettings>) => void;
   onSwitchCampaign: (id: string) => void;
   onNewCampaign: () => void;
   onDuplicateCampaign: () => void;
@@ -45,12 +41,9 @@ export function SettingsPage({
   activeDmProvider,
   activeDmInfo,
   dmLabel,
-  forgeDefaults,
-  forgeSettings,
   onToggleDemo,
   onProviderChange,
   onUpdateSettings,
-  onUpdateForgeSettings,
   onSwitchCampaign,
   onNewCampaign,
   onDuplicateCampaign,
@@ -101,11 +94,9 @@ export function SettingsPage({
         <div><strong>{dmLabel} {t('settings.status')}</strong><span>{(activeDmInfo?.connected ?? status?.connected) ? `${t('settings.ready')}${activeDmInfo?.model || status?.model || '—'}` : activeDmInfo?.message || status?.message || t('settings.checking')}</span></div>
         <ShieldWarning size={22} />
       </section>
-      <section className="settings-row model-selector">
+      <section className="settings-row">
         <div><strong>{t('settings.imageBackend')}</strong><span>{t('settings.imageBackendDesc')}</span></div>
-        <select value={settings.imageBackend || status?.imageBackend || 'codex'} onChange={(event) => onUpdateSettings({ imageBackend: event.target.value })}>
-          {(status?.imageBackends || [{ id: 'codex', label: status?.imageModel || 'Codex $imagegen' }]).map((backend) => <option key={backend.id} value={backend.id}>{backend.label}</option>)}
-        </select>
+        <span className="settings-value">{status?.imageModel || status?.imageBackends?.[0]?.label || 'Codex $imagegen（GPT）'}</span>
       </section>
       <ToggleRow label={t('settings.autoScene')} description={t('settings.autoSceneDesc')} checked={Boolean(settings.autoSceneImages)} onToggle={() => onUpdateSettings({ autoSceneImages: !settings.autoSceneImages })} />
       <ToggleRow label={t('settings.statHints')} description={t('settings.statHintsDesc')} checked={settings.showStatHints !== false} onToggle={() => onUpdateSettings({ showStatHints: settings.showStatHints === false })} />
@@ -130,12 +121,6 @@ export function SettingsPage({
         <div><strong>{t('settings.resetCampaign')}</strong><span>{t('settings.resetCampaignDesc')}</span></div>
         <MagneticButton variant="quiet" onClick={onResetCampaign}>{t('settings.resetCampaign')}</MagneticButton>
       </section>
-      {forgeDefaults && forgeSettings && (
-        <>
-          <ToggleRow label="自訂 Forge 場景圖參數" description="僅本地 Forge 使用；關閉時完全沿用伺服器 preset。開啟後 negative prompt 會強制使用 CFG > 1。" checked={forgeSettings.Enabled} onToggle={() => onUpdateForgeSettings({ Enabled: !forgeSettings.Enabled })} />
-          {forgeSettings.Enabled && <ForgeSettingsForm settings={forgeSettings} onChange={onUpdateForgeSettings} />}
-        </>
-      )}
     </motion.main>
   );
 }
@@ -147,27 +132,4 @@ function ToggleRow({ label, description, checked, onToggle }: { label: string; d
       <button type="button" role="switch" aria-checked={checked} aria-label={label} className={`switch ${checked ? 'switch-on' : ''}`} onClick={onToggle}><i /></button>
     </section>
   );
-}
-
-function ForgeSettingsForm({ settings, onChange }: { settings: ForgeSettings; onChange: (patch: Partial<ForgeSettings>) => void }) {
-  return (
-    <section className="forge-settings" aria-label="Forge 場景圖參數">
-      <label className="forge-prompt"><span>Positive prompt</span><textarea rows={4} value={settings.PositivePrompt} placeholder="留空時使用 DM 產生的場景提示詞與寫實場景前後綴" onChange={(event) => onChange({ PositivePrompt: event.target.value })} /></label>
-      <label className="forge-prompt"><span>Negative prompt</span><textarea rows={4} value={settings.NegativePrompt} onChange={(event) => onChange({ NegativePrompt: event.target.value })} /></label>
-      <div className="forge-grid">
-        <NumberField label="Steps" min={1} max={150} step={1} value={settings.Steps} onChange={(Steps) => onChange({ Steps })} />
-        <NumberField label="CFG scale" min={1.1} max={30} step={0.1} value={settings.CFGScale} onChange={(CFGScale) => onChange({ CFGScale })} />
-        <NumberField label="Seed" min={-1} max={2147483647} step={1} value={settings.Seed} onChange={(Seed) => onChange({ Seed })} />
-        <label><span>Sampler</span><input type="text" value={settings.Sampler} onChange={(event) => onChange({ Sampler: event.target.value })} /></label>
-        <label><span>Scheduler</span><input type="text" value={settings.Scheduler} onChange={(event) => onChange({ Scheduler: event.target.value })} /></label>
-        <NumberField label="寬度" min={256} max={2048} step={8} value={settings.Width} onChange={(Width) => onChange({ Width })} />
-        <NumberField label="高度" min={256} max={2048} step={8} value={settings.Height} onChange={(Height) => onChange({ Height })} />
-      </div>
-      <p>Seed 設為 -1 會每次隨機；固定 seed 才能與 Forge WebUI 重現相同構圖。Positive 留空時，系統仍使用本回合 DM prompt。</p>
-    </section>
-  );
-}
-
-function NumberField({ label, min, max, step, value, onChange }: { label: string; min: number; max: number; step: number; value: number; onChange: (value: number) => void }) {
-  return <label><span>{label}</span><input type="number" min={min} max={max} step={step} value={value} onChange={(event) => onChange(Number(event.target.value))} /></label>;
 }

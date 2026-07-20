@@ -9,8 +9,8 @@
 | Go 後端 | 必要 | Go 1.24+ | 2 個直接模組（+12 間接），`go build` 自動下載 |
 | React 前端 | 必要 | Node.js 20+、npm | 10 個 runtime + 14 個 dev 套件，`npm ci` 安裝 |
 | AI DM | 必要（擇一） | Codex CLI（`codex login`）或 Grok CLI／`XAI_API_KEY`；都沒有可用示範 DM | — |
-| VS Code 擴充套件 | 選用 | Node.js 20+、VS Code 1.95+ | 4 個 dev 套件（repo 根目錄 `npm ci`） |
-| 本地圖片（SD Forge） | 選用 | git、curl、Python（Forge 首次啟動自建 venv） | Forge 自身相依 + checkpoint 數 GB |
+| 場景／角色圖 | 選用 | Codex CLI（`codex login`，GPT `$imagegen`） | — |
+| VS Code 擴充套件 | 選用 | Node.js 20+、VS Code 1.95+ | 4 個 dev 套件（`vscode-extension/` 內執行 `npm ci`） |
 
 Windows 另需 **git-bash**（所有 `scripts/*.sh` 都是 bash）。
 
@@ -43,19 +43,17 @@ Windows 另需 **git-bash**（所有 `scripts/*.sh` 都是 bash）。
 
 ## 選用組件
 
-### VS Code 擴充套件（repo 根目錄）
+### VS Code 擴充套件（`vscode-extension/`）
 
 - Node.js 20+、VS Code **1.95+**（需 Language Model API 與已設定的 Chat 模型）
 - `npm ci`：4 個 dev 套件（`typescript`、`@vscode/vsce`、`@types/node`、`@types/vscode`）
-- `npm run compile` 後 F5 啟動
+- `npm run dev:extension` 會編譯並啟動 Extension Development Host
 
-### 本地圖片生成 — Stable Diffusion WebUI Forge（`IMAGE_BACKEND=local`）
+### 場景／角色圖（GPT only）
 
-- 安裝：`scripts/forge-setup.sh [--model juggernaut|turbo|hyper]`（clone 進 `vendor/` + 下載 checkpoint 5–7 GB）
-- 系統：git、curl；Forge 首次啟動自建 Python venv 並安裝 torch（慢一次）
-- 硬體：建議 NVIDIA GPU（SDXL quality 需較多 VRAM；`turbo`／`hyper` 為低 VRAM 選項）
-- 啟動：`scripts/forge.sh`（macOS／Linux）；**Windows 改用** `vendor/stable-diffusion-webui-forge/webui-user.bat`（先加 `set COMMANDLINE_ARGS=--api`）
-- 不裝也能用 Codex（`codex login`）或 Grok（`XAI_API_KEY`）生圖
+- 固定使用 Codex CLI 內建 `$imagegen`／`image_gen`（GPT）
+- 需 `codex login`；與 DM 是否用 Grok 無關
+- 已移除 Grok Imagine 與本地 SD Forge 後端
 
 ## 安裝指令速查
 
@@ -63,11 +61,10 @@ Windows 另需 **git-bash**（所有 `scripts/*.sh` 都是 bash）。
 # 必要
 cd backend && go build ./cmd/server     # Go 模組自動下載
 cd frontend && npm ci                   # 前端套件
-codex login                             # AI DM（或 grok login／示範 DM）
+codex login                             # AI DM + 生圖（或 grok login／示範 DM 僅故事）
 
 # 選用
-npm ci && npm run compile               # VS Code 擴充（repo 根目錄）
-./scripts/forge-setup.sh --model turbo  # 本地圖片
+cd vscode-extension && npm ci && npm run compile  # 選用的 VS Code 擴充
 ```
 
-磁碟空間粗估：核心 < 1 GB（node_modules + Go cache）；+Forge 約 10–15 GB。
+磁碟空間粗估：核心 < 1 GB（node_modules + Go cache）。

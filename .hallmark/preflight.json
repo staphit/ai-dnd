@@ -1,9 +1,0 @@
-{
-  "scanned": "2026-07-16",
-  "framework": "Vite + React 19",
-  "fonts_before": "Geist Variable + Geist Mono",
-  "fonts_after": "Cinzel + Source Serif 4 Variable + JetBrains Mono Variable",
-  "palette": "custom OKLCH Candlelit Vellum in tokens.css",
-  "motion": "framer-motion installed; restrained pulse only",
-  "entry_css": "frontend/src/styles.css"
-}

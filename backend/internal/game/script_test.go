@@ -23,6 +23,7 @@ func registerTestModule(t *testing.T) *ScriptModule {
 				Choices: []ScriptChoice{
 					{ID: "A", Text: "搜索祭壇後的暗格", Next: "loot", Alignment: 1},
 					{ID: "B", Text: "直接砸開祭壇", Next: "end_bad", Alignment: -2},
+					{ID: "C", Text: "撬開祭壇底座的暗鎖", Next: "loot", Alignment: 1, CheckHint: "巧手:三簧暗鎖又硬又脆"},
 				},
 			},
 			{
@@ -271,7 +272,7 @@ func TestScriptCreateSeedsEntryChoices(t *testing.T) {
 	view := createScripted(t, s)
 	// The scripted UI has no free-text input, so round one must already carry
 	// the entry node's options or no player could ever lock an action.
-	if len(view.Choices) != 2 || view.Choices[0].Text != "搜索祭壇後的暗格" || view.Choices[1].Text != "直接砸開祭壇" {
+	if len(view.Choices) != 3 || view.Choices[0].Text != "搜索祭壇後的暗格" || view.Choices[1].Text != "直接砸開祭壇" {
 		t.Fatalf("entry choices not seeded at create: %+v", view.Choices)
 	}
 }
@@ -391,6 +392,152 @@ func TestBuildScriptTurnResolvesLocally(t *testing.T) {
 	}
 	if _, scripted, err := s.BuildScriptTurn(free.ID, preparedFree); err != nil || scripted {
 		t.Fatalf("freeform must not resolve locally: scripted=%v err=%v", scripted, err)
+	}
+}
+
+func TestParseCheckHint(t *testing.T) {
+	tests := []struct {
+		hint             string
+		ability, skill   string
+		reason           string
+		ok               bool
+	}{
+		{"調查:翻找刻文與名冊", "智力", "調查", "翻找刻文與名冊", true},
+		{"力量/運動:推移沉重石壇", "力量", "運動", "推移沉重石壇", true},
+		{"感知檢定", "感知", "感知", "", true},
+		{"調查或巧手檢定", "智力", "調查", "", true},
+		{"洞察檢定", "感知", "洞悉", "", true},
+		{"生存:辨認藤蔓匯流的主脈", "感知", "求生", "辨認藤蔓匯流的主脈", true},
+		{"意志:承受十年孤獨的重量", "感知", "感知", "承受十年孤獨的重量", true},
+		{"自述交出哪段記憶,由DM裁定其份量", "", "", "", false},
+		{"持血名冊者優勢", "", "", "", false},
+		{"", "", "", "", false},
+	}
+	for _, test := range tests {
+		ability, skill, reason, ok := parseCheckHint(test.hint)
+		if ability != test.ability || skill != test.skill || reason != test.reason || ok != test.ok {
+			t.Errorf("parseCheckHint(%q) = (%q, %q, %q, %v), want (%q, %q, %q, %v)",
+				test.hint, ability, skill, reason, ok, test.ability, test.skill, test.reason, test.ok)
+		}
+	}
+}
+
+func TestScriptCheckHintRollsDiceBeforeAdvance(t *testing.T) {
+	registerTestModule(t)
+	s := newTestService(t)
+	view := createScripted(t, s)
+
+	prepare := func() PreparedDMTurn {
+		t.Helper()
+		prepared, err := s.PrepareActionsTurn(view.ID, map[string]string{
+			"player1": "撬開祭壇底座的暗鎖",
+			"player2": "警戒四周。",
+		}, nil)
+		if err != nil {
+			t.Fatalf("prepare: %v", err)
+		}
+		return prepared
+	}
+
+	// Declaring the check-hinted choice opens a required check, no advance.
+	prepared := prepare()
+	turn, scripted, err := s.BuildScriptTurn(view.ID, prepared)
+	if err != nil || !scripted {
+		t.Fatalf("build: scripted=%v err=%v", scripted, err)
+	}
+	if !turn.RequiresCheck || turn.Check == nil {
+		t.Fatalf("check-hinted choice must open a required check: %+v", turn)
+	}
+	if turn.Check.Skill != "巧手" || turn.Check.Ability != "敏捷" || turn.Check.PlayerID != "player1" || turn.Check.ScriptChoiceID != "C" {
+		t.Fatalf("check wrong: %+v", turn.Check)
+	}
+	if turn.Script.ChosenOption != "" {
+		t.Fatalf("must not advance before the roll: %+v", turn.Script)
+	}
+	applied, err := s.ApplyDMTurn(view.ID, prepared, turn)
+	if err != nil {
+		t.Fatalf("apply check turn: %v", err)
+	}
+	if applied.View.RequiredCheck == nil || applied.View.RequiredCheck.ScriptChoiceID != "C" {
+		t.Fatalf("required check not stored: %+v", applied.View.RequiredCheck)
+	}
+	if applied.View.Script.NodeTitle != "入口" {
+		t.Fatalf("must stay on node while check pending: %+v", applied.View.Script)
+	}
+
+	// A failed roll keeps the party on the node.
+	preparedCheck, err := s.PrepareCheckTurn(view.ID, 1)
+	if err != nil {
+		t.Fatalf("prepare failed check: %v", err)
+	}
+	turn, scripted, err = s.BuildScriptTurn(view.ID, preparedCheck)
+	if err != nil || !scripted {
+		t.Fatalf("build resolution: scripted=%v err=%v", scripted, err)
+	}
+	if turn.Script.ChosenOption != "" {
+		t.Fatalf("failed check must not advance: %+v", turn.Script)
+	}
+	if applied, err = s.ApplyDMTurn(view.ID, preparedCheck, turn); err != nil {
+		t.Fatalf("apply failed resolution: %v", err)
+	}
+	if applied.View.Script.NodeTitle != "入口" || applied.View.RequiredCheck != nil {
+		t.Fatalf("failure should stay put and clear the check: %+v %+v", applied.View.Script, applied.View.RequiredCheck)
+	}
+
+	// Retry: same declaration opens the check again; a passed roll advances.
+	prepared = prepare()
+	turn, _, err = s.BuildScriptTurn(view.ID, prepared)
+	if err != nil || !turn.RequiresCheck {
+		t.Fatalf("retry should reopen the check: err=%v turn=%+v", err, turn)
+	}
+	if _, err = s.ApplyDMTurn(view.ID, prepared, turn); err != nil {
+		t.Fatalf("apply retry check turn: %v", err)
+	}
+	preparedCheck, err = s.PrepareCheckTurn(view.ID, 20)
+	if err != nil {
+		t.Fatalf("prepare passed check: %v", err)
+	}
+	turn, _, err = s.BuildScriptTurn(view.ID, preparedCheck)
+	if err != nil {
+		t.Fatalf("build passed resolution: %v", err)
+	}
+	if turn.Script.ChosenOption != "C" || turn.Scene != "暗格寶藏" {
+		t.Fatalf("passed check must advance the branch: %+v", turn)
+	}
+	if !strings.Contains(turn.Narration, "檢定成功") || !strings.Contains(turn.Narration, "【選擇】") {
+		t.Fatalf("narration should carry the roll result and the choice chip: %q", turn.Narration)
+	}
+	if len(turn.ExperienceAwards) != 2 || turn.ExperienceAwards[0].Amount != scriptAdvanceXP {
+		t.Fatalf("advance XP missing: %+v", turn.ExperienceAwards)
+	}
+	if applied, err = s.ApplyDMTurn(view.ID, preparedCheck, turn); err != nil {
+		t.Fatalf("apply passed resolution: %v", err)
+	}
+	if applied.View.Script.NodeTitle != "暗格寶藏" || applied.View.RequiredCheck != nil {
+		t.Fatalf("advance not applied: %+v %+v", applied.View.Script, applied.View.RequiredCheck)
+	}
+
+	// The settled branch is now trodden ground: revisiting it rolls no dice.
+	prepared, err = s.PrepareActionsTurn(view.ID, map[string]string{
+		"player1": "返回入口", "player2": "跟上。",
+	}, nil)
+	if err != nil {
+		t.Fatalf("prepare return: %v", err)
+	}
+	turn, _, err = s.BuildScriptTurn(view.ID, prepared)
+	if err != nil {
+		t.Fatalf("build return: %v", err)
+	}
+	if _, err = s.ApplyDMTurn(view.ID, prepared, turn); err != nil {
+		t.Fatalf("apply return: %v", err)
+	}
+	prepared = prepare()
+	turn, _, err = s.BuildScriptTurn(view.ID, prepared)
+	if err != nil {
+		t.Fatalf("build revisit: %v", err)
+	}
+	if turn.RequiresCheck || turn.Script.ChosenOption != "C" {
+		t.Fatalf("taken branch should advance without a roll: %+v", turn)
 	}
 }
 

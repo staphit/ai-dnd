@@ -10,6 +10,6 @@ echo "==> Frontend (typecheck + vitest)"
 ( cd "$ROOT/frontend" && if [ ! -d node_modules ]; then npm ci; fi && npm run check && npm test )
 
 echo "==> VS Code extension (typecheck)"
-( cd "$ROOT" && if [ ! -d node_modules ]; then npm ci; fi && npm run check )
+( cd "$ROOT/vscode-extension" && if [ ! -d node_modules ]; then npm ci; fi && npm run check )
 
 echo "All tests passed."

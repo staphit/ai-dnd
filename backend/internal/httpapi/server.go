@@ -52,9 +52,9 @@ type Server struct {
 	// disables /api/campaign/{id}/export-novel.
 	NovelSchemaPath string
 
-	// ImageRenderers maps a backend id ("codex", "local", "grok") to its renderer.
+	// ImageRenderers maps a backend id to its renderer. Only "codex" (GPT) is supported.
 	ImageRenderers map[string]images.Renderer
-	// DefaultImageBackend is used when a request omits imageBackend (IMAGE_BACKEND).
+	// DefaultImageBackend is used when a request omits imageBackend (always "codex").
 	DefaultImageBackend string
 
 	// imgGate serialises image generation: at most one at a time, with a
@@ -198,13 +198,11 @@ func (j *imageJobs) finish(id string, apply func(*imageJob)) {
 	}
 }
 
-// imageBackendOrder fixes the /api/status listing order.
-var imageBackendOrder = []string{"codex", "grok", "local", "local2"}
-
 // imageBackendOptions lists the configured image backends for /api/status.
 func (s *Server) imageBackendOptions() []provider.ModelOption {
 	var opts []provider.ModelOption
-	for _, id := range imageBackendOrder {
+	// GPT / Codex only — preserve stable ordering if extra keys ever appear.
+	for _, id := range []string{"codex"} {
 		if r, ok := s.ImageRenderers[id]; ok {
 			opts = append(opts, provider.ModelOption{ID: id, Label: r.Model()})
 		}
@@ -212,19 +210,8 @@ func (s *Server) imageBackendOptions() []provider.ModelOption {
 	return opts
 }
 
-// forgeDefaults exposes presets only for local renderers. External image
-// providers never receive or advertise these parameters.
-func (s *Server) forgeDefaults() map[string]images.ForgeOptions {
-	defaults := make(map[string]images.ForgeOptions)
-	for id, renderer := range s.ImageRenderers {
-		if configurable, ok := renderer.(interface{ SceneDefaults() images.ForgeOptions }); ok {
-			defaults[id] = configurable.SceneDefaults()
-		}
-	}
-	return defaults
-}
-
-// imageRenderer resolves the requested backend id, falling back to the default.
+// imageRenderer resolves the image backend. Only Codex (GPT) is supported;
+// unknown or legacy ids (grok/local) fall back to codex when available.
 func (s *Server) imageRenderer(requested string) (images.Renderer, error) {
 	id := strings.TrimSpace(requested)
 	if id == "" {
@@ -233,10 +220,14 @@ func (s *Server) imageRenderer(requested string) (images.Renderer, error) {
 	if id == "" {
 		id = "codex"
 	}
+	// Legacy campaign settings may still store grok/local — always use GPT.
+	if id != "codex" {
+		id = "codex"
+	}
 	if r, ok := s.ImageRenderers[id]; ok {
 		return r, nil
 	}
-	return nil, errors.New("不支援的圖片後端選項")
+	return nil, errors.New("圖片生成僅支援 Codex（GPT）；請確認已 codex login")
 }
 
 // Router wires the routes, falling through to the SPA for anything unmatched so

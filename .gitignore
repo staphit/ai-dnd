@@ -5,6 +5,11 @@ vendor/
 *.vsix
 campaign-data/
 web-dist/
+
+# Local editor and design-tool state
+.vscode/
+.hallmark/
+
 # Generated scene/portrait art (persisted locally; kept out of git)
 generated-images/*
 !generated-images/.gitkeep

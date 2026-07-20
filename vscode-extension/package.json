@@ -1,7 +1,7 @@
 {
   "name": "dnd-duet-ai",
   "displayName": "D&D Duet AI",
-  "description": "A local two-player D&D VS Code extension with an AI Dungeon Master. The browser table lives in frontend/ (React) and backend/ (Go).",
+  "description": "An optional compact D&D duet experience powered by the VS Code Language Model API.",
   "version": "0.1.0",
   "publisher": "local",
   "license": "MIT",
@@ -79,6 +79,7 @@
   },
   "scripts": {
     "compile": "tsc -p ./",
+    "dev:extension": "npm run compile && code --new-window --extensionDevelopmentPath=.",
     "watch": "tsc -watch -p ./",
     "check": "tsc -p ./ --noEmit",
     "package": "vsce package --no-dependencies --allow-missing-repository"

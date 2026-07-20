@@ -705,12 +705,13 @@ func (s *Service) ApplyDMTurn(id string, prepared PreparedDMTurn, turn *dm.Turn)
 	st.check = nil
 	if turn.RequiresCheck && turn.Check != nil {
 		check := &rules.RequiredCheck{
-			Character: turn.Check.Character,
-			Ability:   turn.Check.Ability,
-			Skill:     turn.Check.Skill,
-			DC:        turn.Check.DC,
-			Reason:    turn.Check.Reason,
-			PlayerID:  turn.Check.PlayerID,
+			Character:      turn.Check.Character,
+			Ability:        turn.Check.Ability,
+			Skill:          turn.Check.Skill,
+			DC:             turn.Check.DC,
+			Reason:         turn.Check.Reason,
+			PlayerID:       turn.Check.PlayerID,
+			ScriptChoiceID: turn.Check.ScriptChoiceID,
 		}
 		var actor *rules.Character
 		if check.PlayerID != "" {

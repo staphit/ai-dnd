@@ -122,6 +122,8 @@ export interface RequiredCheck {
   reason: string;
   modifier?: number;
   playerId?: string;
+  // Server bookkeeping: the scripted-module choice this check gates.
+  scriptChoiceId?: string;
 }
 
 // A DM-suggested next action. playerId ties it to the character it suits;
@@ -198,19 +200,6 @@ export interface CombatState {
   turnEconomy?: Record<string, { actionUsed: boolean; bonusActionUsed: boolean; reactionUsed: boolean }>;
 }
 
-export interface ForgeSettings {
-  Enabled: boolean;
-  PositivePrompt: string;
-  NegativePrompt: string;
-  Steps: number;
-  CFGScale: number;
-  Sampler: string;
-  Scheduler: string;
-  Seed: number;
-  Width: number;
-  Height: number;
-}
-
 // Per-player experience progress, computed server-side (view.xpProgress).
 export interface XpProgress {
   current: number;
@@ -235,8 +224,8 @@ export interface CampaignSettings {
   selectedEffort?: string;
   /** Storyteller backend: "codex" | "grok" (server DM_PROVIDER default when empty). */
   dmProvider?: string;
+  /** @deprecated Image gen is GPT/Codex only; ignored by server. */
   imageBackend?: string;
-  forgeSettings?: ForgeSettings;
   fontScale?: number;
   showStatHints?: boolean;
   autoSceneImages?: boolean;
@@ -321,7 +310,6 @@ export interface CampaignSummary {
 }
 
 export interface AiStatus {
-  ForgeDefaults?: Record<string, Omit<ForgeSettings, 'Enabled'>>;
   connected: boolean;
   provider: string;
   model: string | null;

@@ -302,6 +302,9 @@ type RequiredCheck struct {
 	Reason    string `json:"reason"`
 	Modifier  int    `json:"modifier,omitempty"`
 	PlayerID  string `json:"playerId,omitempty"`
+	// ScriptChoiceID ties a scripted-module check to the choice it gates so the
+	// resolution turn knows which branch to settle; empty for AI-declared checks.
+	ScriptChoiceID string `json:"scriptChoiceId,omitempty"`
 }
 
 // Choice mirrors types.ts Choice.

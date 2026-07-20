@@ -41,30 +41,7 @@ func (f *fakeCodex) RunImageGeneration(context.Context, string, provider.ImageOp
 	return f.imagePath, nil
 }
 
-// fakeRenderer is a stub local image backend.
-type fakeRenderer struct {
-	label      string
-	calls      int
-	sceneInput images.SceneInput
-}
-
-func (f *fakeRenderer) Model() string { return f.label }
-func (f *fakeRenderer) RenderScene(_ context.Context, input images.SceneInput) (images.Rendered, error) {
-	f.calls++
-	f.sceneInput = input
-	return images.Rendered{Data: []byte{1}, Ext: ".png", Prompt: "p", Model: f.label}, nil
-}
-func (f *fakeRenderer) RenderCharacter(context.Context, images.CharacterInput) (images.Rendered, error) {
-	f.calls++
-	return images.Rendered{Data: []byte{1}, Ext: ".png", Prompt: "p", Model: f.label}, nil
-}
-
-func (f *fakeRenderer) SceneDefaults() images.ForgeOptions {
-	seed := int64(-1)
-	return images.ForgeOptions{NegativePrompt: `default negative`, Steps: 8, CFGScale: 2, Sampler: `DDIM`, Scheduler: `Karras`, Seed: &seed, Width: 768, Height: 512}
-}
-
-func newServerWithLocal(t *testing.T, fake *fakeCodex) (*httpapi.Server, *fakeRenderer) {
+func newTestServer(t *testing.T, fake *fakeCodex) *httpapi.Server {
 	t.Helper()
 	dir := t.TempDir()
 	webDist := filepath.Join(dir, "web-dist")
@@ -79,7 +56,6 @@ func newServerWithLocal(t *testing.T, fake *fakeCodex) (*httpapi.Server, *fakeRe
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { st.Close() })
-	local := &fakeRenderer{label: "SD Forge（test）"}
 	return &httpapi.Server{
 		Provider:    fake,
 		Store:       st,
@@ -88,11 +64,10 @@ func newServerWithLocal(t *testing.T, fake *fakeCodex) (*httpapi.Server, *fakeRe
 		ProviderCWD: dir,
 		ImageRenderers: map[string]images.Renderer{
 			"codex": images.NewCodexRenderer(fake, dir),
-			"local": local,
 		},
 		DefaultImageBackend: "codex",
 		Game:                game.New(st, nil),
-	}, local
+	}
 }
 
 // seedCampaign creates a server-side campaign and returns its id.
@@ -113,8 +88,7 @@ func seedCampaign(t *testing.T, srv *httpapi.Server, players ...game.PlayerSeed)
 
 func newServer(t *testing.T, fake *fakeCodex) *httpapi.Server {
 	t.Helper()
-	srv, _ := newServerWithLocal(t, fake)
-	return srv
+	return newTestServer(t, fake)
 }
 
 func configured() provider.Status {
@@ -159,8 +133,8 @@ func TestStatusEndpoint(t *testing.T) {
 		t.Errorf("efforts length = %d", len(efforts))
 	}
 	backends, _ := resp["imageBackends"].([]any)
-	if len(backends) != 2 {
-		t.Errorf("imageBackends length = %d, want 2", len(backends))
+	if len(backends) != 1 {
+		t.Errorf("imageBackends length = %d, want 1", len(backends))
 	}
 	if resp["imageBackend"] != "codex" {
 		t.Errorf("imageBackend = %v", resp["imageBackend"])
@@ -170,51 +144,47 @@ func TestStatusEndpoint(t *testing.T) {
 	}
 }
 
-func TestSceneImageUsesLocalBackend(t *testing.T) {
-	fake := &fakeCodex{Client: &codex.Client{}, status: configured()}
-	srv, local := newServerWithLocal(t, fake)
+func TestSceneImageUsesCodexBackend(t *testing.T) {
+	dir := t.TempDir()
+	png := []byte{0x89, 0x50, 0x4e, 0x47}
+	imgPath := filepath.Join(dir, "out.png")
+	if err := os.WriteFile(imgPath, png, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	fake := &fakeCodex{Client: &codex.Client{}, status: configured(), imagePath: imgPath}
+	srv := newServer(t, fake)
 
-	body := `{"imageBackend":"local","campaign":{"title":"灰燼王冠","scene":"禮拜堂"},"narration":"燭火搖曳","players":[]}`
+	body := `{"imageBackend":"codex","campaign":{"title":"灰燼王冠","scene":"禮拜堂"},"narration":"燭火搖曳","players":[]}`
 	w := do(t, srv, http.MethodPost, "/api/scene-image", body)
 	if w.Code != 200 {
 		t.Fatalf("status %d body %s", w.Code, w.Body.String())
 	}
-	if local.calls != 1 {
-		t.Errorf("local renderer calls = %d, want 1", local.calls)
-	}
-	if fake.imgCalls != 0 {
-		t.Errorf("codex image calls = %d, want 0", fake.imgCalls)
+	if fake.imgCalls != 1 {
+		t.Errorf("codex image calls = %d, want 1", fake.imgCalls)
 	}
 	var resp map[string]any
 	json.Unmarshal(w.Body.Bytes(), &resp)
-	if resp["model"] != "SD Forge（test）" {
-		t.Errorf("model = %v", resp["model"])
+	if resp["model"] != codex.ImageModel {
+		t.Errorf("model = %v, want %s", resp["model"], codex.ImageModel)
 	}
 }
 
-func TestSceneImagePassesEnabledForgeOptions(t *testing.T) {
-	srv, local := newServerWithLocal(t, &fakeCodex{Client: &codex.Client{}, status: configured()})
-	payload, _ := json.Marshal(map[string]any{
-		`imageBackend`: `local`,
-		`campaign`:     map[string]any{`title`: `t`, `scene`: `s`},
-		`narration`:    `n`,
-		`forge`:        map[string]any{`enabled`: true, `positivePrompt`: `exact`, `negativePrompt`: `no dragons`, `steps`: 4, `cfgScale`: 2.5, `sampler`: `Euler`, `scheduler`: `Automatic`, `seed`: 7, `width`: 640, `height`: 512},
-	})
-	w := do(t, srv, http.MethodPost, `/api/scene-image`, string(payload))
-	if w.Code != http.StatusOK {
-		t.Fatalf(`status %d: %s`, w.Code, w.Body.String())
+func TestSceneImageLegacyBackendFallsBackToCodex(t *testing.T) {
+	dir := t.TempDir()
+	imgPath := filepath.Join(dir, "out.png")
+	if err := os.WriteFile(imgPath, []byte{1, 2, 3}, 0o644); err != nil {
+		t.Fatal(err)
 	}
-	got := local.sceneInput.Forge
-	if got == nil || got.PositivePrompt != `exact` || got.NegativePrompt != `no dragons` || got.CFGScale != 2.5 || got.Seed == nil || *got.Seed != 7 {
-		t.Fatalf(`forge options = %#v`, got)
+	fake := &fakeCodex{Client: &codex.Client{}, status: configured(), imagePath: imgPath}
+	srv := newServer(t, fake)
+	// Old settings may still send local/grok; server maps them to codex.
+	body := `{"imageBackend":"local","campaign":{"title":"t","scene":"s"},"narration":"n"}`
+	w := do(t, srv, http.MethodPost, "/api/scene-image", body)
+	if w.Code != 200 {
+		t.Fatalf("status %d body %s", w.Code, w.Body.String())
 	}
-}
-
-func TestSceneImageRejectsUnknownBackend(t *testing.T) {
-	srv := newServer(t, &fakeCodex{Client: &codex.Client{}, status: configured()})
-	body := `{"imageBackend":"nope","campaign":{"title":"t","scene":"s"},"narration":"n"}`
-	if w := do(t, srv, http.MethodPost, "/api/scene-image", body); w.Code != 400 {
-		t.Errorf("status = %d, want 400", w.Code)
+	if fake.imgCalls != 1 {
+		t.Errorf("codex image calls = %d, want 1", fake.imgCalls)
 	}
 }
 

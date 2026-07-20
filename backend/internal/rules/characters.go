@@ -671,3 +671,24 @@ func GetCheckBonus(c Character, check string) int {
 	}
 	return 0
 }
+
+// SkillGoverningAbility maps a skill name (運動…說服) to the label of the
+// ability that governs it; ok is false for names that are not skills.
+func SkillGoverningAbility(skill string) (string, bool) {
+	for _, sa := range skillAbilities {
+		if sa.name == skill {
+			return AbilityLabels[sa.ability], true
+		}
+	}
+	return "", false
+}
+
+// IsAbilityLabel reports whether name is one of the six ability labels.
+func IsAbilityLabel(name string) bool {
+	for _, key := range AbilityKeys {
+		if AbilityLabels[key] == name {
+			return true
+		}
+	}
+	return false
+}

@@ -119,6 +119,48 @@ describe('PartySetup', () => {
     expect(create!.body).toMatchObject({ storyId: 'ashen-crown', storyMode: 'freeform' });
   });
 
+  it('creates a custom freeform campaign from the user-written premise', async () => {
+    const calls = stubFetch();
+    const user = userEvent.setup();
+    const onComplete = vi.fn();
+    render(<PartySetup onComplete={onComplete} />);
+
+    await user.click(screen.getByRole('button', { name: /自訂劇本/ }));
+    expect(screen.getByRole('region', { name: '自訂劇本內容' })).toBeInTheDocument();
+    await user.type(screen.getByLabelText('自訂劇本構想'), '港城每逢滿月就有人失去影子，隊伍必須調查封鎖的燈塔。');
+    await user.type(screen.getByLabelText('自訂劇本類型'), '哥德懸疑');
+    await user.type(screen.getByLabelText('自訂劇本起始場景'), '封鎖的舊燈塔');
+    await user.type(screen.getByLabelText('自訂劇本目標'), '在月升前找出偷走影子的儀式');
+    await user.type(screen.getByLabelText('自訂劇本風險'), '下一次月升時，全城居民都會失去影子。');
+    await user.click(screen.getByRole('button', { name: /開始冒險/ }));
+
+    await waitFor(() => expect(onComplete).toHaveBeenCalledOnce());
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    const create = calls.find((entry) => entry.method === 'POST' && entry.url === '/api/campaigns');
+    expect(create!.body).toMatchObject({
+      storyId: 'custom',
+      storyMode: 'freeform',
+      title: '自訂冒險',
+      scene: '封鎖的舊燈塔',
+      objective: '在月升前找出偷走影子的儀式',
+      stakes: '下一次月升時，全城居民都會失去影子。',
+    });
+    expect((create!.body as { objectiveContext: string }).objectiveContext).toContain('港城每逢滿月');
+    expect((create!.body as { opening: string }).opening).toContain('港城每逢滿月');
+  });
+
+  it('requires an adventure premise before creating a custom campaign', async () => {
+    const calls = stubFetch();
+    const user = userEvent.setup();
+    render(<PartySetup onComplete={vi.fn()} />);
+
+    await user.click(screen.getByRole('button', { name: /自訂劇本/ }));
+    await user.click(screen.getByRole('button', { name: /開始冒險/ }));
+
+    expect(screen.getByRole('alert')).toHaveTextContent('請先寫下自訂劇本的冒險構想');
+    expect(calls.some((entry) => entry.method === 'POST' && entry.url === '/api/campaigns')).toBe(false);
+  });
+
   it('rejects duplicate character names without calling the server', async () => {
     const calls = stubFetch();
     const user = userEvent.setup();

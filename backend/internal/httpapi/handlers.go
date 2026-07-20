@@ -125,18 +125,17 @@ type dmProviderStatus struct {
 }
 
 type statusResponse struct {
-	ForgeDefaults map[string]images.ForgeOptions `json:"ForgeDefaults,omitempty"`
-	Connected     bool                           `json:"connected"`
-	Provider      string                         `json:"provider"`
-	Model         string                         `json:"model"`
-	Models        []provider.ModelOption         `json:"models"`
-	Efforts       []provider.ModelOption         `json:"efforts"`
-	ImageModel    string                         `json:"imageModel"`
-	ImageBackends []provider.ModelOption         `json:"imageBackends"`
-	ImageBackend  string                         `json:"imageBackend"`
-	Message       string                         `json:"message,omitempty"`
-	DmProvider    string                         `json:"dmProvider"`
-	DmProviders   []dmProviderStatus             `json:"dmProviders"`
+	Connected     bool                   `json:"connected"`
+	Provider      string                 `json:"provider"`
+	Model         string                 `json:"model"`
+	Models        []provider.ModelOption `json:"models"`
+	Efforts       []provider.ModelOption `json:"efforts"`
+	ImageModel    string                 `json:"imageModel"`
+	ImageBackends []provider.ModelOption `json:"imageBackends"`
+	ImageBackend  string                 `json:"imageBackend"`
+	Message       string                 `json:"message,omitempty"`
+	DmProvider    string                 `json:"dmProvider"`
+	DmProviders   []dmProviderStatus     `json:"dmProviders"`
 }
 
 func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
@@ -187,7 +186,6 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, statusResponse{
-		ForgeDefaults: s.forgeDefaults(),
 		Connected:     status.Configured,
 		Provider:      status.Provider,
 		Model:         status.Model,
@@ -606,61 +604,6 @@ func FormatDialogueBreaks(s string) string {
 	return strings.TrimSpace(s)
 }
 
-func parseForgeOptions(body map[string]any, renderer images.Renderer) (*images.ForgeOptions, error) {
-	raw := jsutil.AsMap(body[`forge`])
-	enabled, _ := raw[`enabled`].(bool)
-	if !enabled {
-		return nil, nil
-	}
-	configurable, ok := renderer.(interface{ SceneDefaults() images.ForgeOptions })
-	if !ok {
-		return nil, nil
-	}
-	opts := configurable.SceneDefaults()
-	if value, ok := raw[`positivePrompt`].(string); ok {
-		opts.PositivePrompt = strings.TrimSpace(value)
-	}
-	if value, ok := raw[`negativePrompt`].(string); ok {
-		opts.NegativePrompt = strings.TrimSpace(value)
-	}
-	if value, ok := raw[`sampler`].(string); ok && len(strings.TrimSpace(value)) > 0 {
-		opts.Sampler = jsutil.JSSlice(strings.TrimSpace(value), 80)
-	}
-	if value, ok := raw[`scheduler`].(string); ok && len(strings.TrimSpace(value)) > 0 {
-		opts.Scheduler = jsutil.JSSlice(strings.TrimSpace(value), 80)
-	}
-	number := func(key string, fallback float64) float64 {
-		if value, ok := raw[key].(float64); ok {
-			return value
-		}
-		return fallback
-	}
-	steps := number(`steps`, float64(opts.Steps))
-	cfg := number(`cfgScale`, opts.CFGScale)
-	width := number(`width`, float64(opts.Width))
-	height := number(`height`, float64(opts.Height))
-	seed := number(`seed`, -1)
-	if steps < 1 || steps > 150 || steps != float64(int(steps)) {
-		return nil, fmt.Errorf(`Forge steps 必須是 1–150 的整數`)
-	}
-	if cfg <= 1 || cfg > 30 {
-		return nil, fmt.Errorf(`Forge CFG 必須大於 1 且不超過 30，negative prompt 才會生效`)
-	}
-	if width < 256 || width > 2048 || width != float64(int(width)) || int(width)%8 != 0 {
-		return nil, fmt.Errorf(`Forge 寬度必須是 256–2048 間且可被 8 整除`)
-	}
-	if height < 256 || height > 2048 || height != float64(int(height)) || int(height)%8 != 0 {
-		return nil, fmt.Errorf(`Forge 高度必須是 256–2048 間且可被 8 整除`)
-	}
-	if seed < -1 || seed > 2147483647 || seed != float64(int64(seed)) {
-		return nil, fmt.Errorf(`Forge seed 必須是 -1 或 0–2147483647 的整數`)
-	}
-	seedValue := int64(seed)
-	opts.Steps, opts.CFGScale = int(steps), cfg
-	opts.Width, opts.Height, opts.Seed = int(width), int(height), &seedValue
-	return &opts, nil
-}
-
 // recordMemory writes this turn's player actions and DM narration into the
 // story's memory log. Continuation turns (check resolution / combat conclusion)
 // carry no new player declaration, so only the narration is recorded.
@@ -768,18 +711,12 @@ func (s *Server) handleSceneImage(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, err, http.StatusBadRequest)
 		return
 	}
-	forgeOptions, err := parseForgeOptions(body, renderer)
-	if err != nil {
-		writeErr(w, err, http.StatusBadRequest)
-		return
-	}
 	input := images.SceneInput{
 		Title:        title,
 		Scene:        scene,
 		Narration:    narration,
 		ImagePrompt:  imagePrompt,
 		Players:      players,
-		Forge:        forgeOptions,
 		CampaignID:   campaignID,
 		SourceSlotID: slotID,
 	}

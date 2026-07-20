@@ -296,9 +296,9 @@ func (c *CLIClient) RunStructured(ctx context.Context, prompt string, opts provi
 	return raw, nil
 }
 
-// RunImageGeneration is not supported on CLI-only auth (use XAI_API_KEY + HTTP for images).
+// RunImageGeneration is not used: scene/portrait art is GPT-only via Codex.
 func (c *CLIClient) RunImageGeneration(ctx context.Context, prompt string, opts provider.ImageOpts) (string, error) {
-	return "", errors.New("Grok CLI 模式不支援圖片生成；請設定 XAI_API_KEY 並選 IMAGE_BACKEND=grok，或改用 local/codex 圖片後端")
+	return "", errors.New("圖片生成僅支援 Codex（GPT $imagegen）；請用 codex login，Grok 僅可作為 DM")
 }
 
 func extractCLIStructuredJSON(stdout string) json.RawMessage {

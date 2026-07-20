@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { AnimatePresence } from 'framer-motion';
 import { CloudArrowUp, Lightbulb, XCircle } from '@phosphor-icons/react';
 import { initialCampaign } from './data';
-import type { AiStatus, Campaign, CampaignSummary, CharacterSpell, ForgeSettings, MessageAudience, Page, PlayerCharacter, PlayerId, RequiredCheck, RestType } from './types';
+import type { AiStatus, Campaign, CampaignSummary, CharacterSpell, MessageAudience, Page, PlayerCharacter, PlayerId, RequiredCheck, RestType } from './types';
 import { Sidebar } from './components/Sidebar';
 import { Topbar } from './components/Topbar';
 import { MagneticButton } from './components/MagneticButton';
@@ -161,9 +161,6 @@ export default function App() {
     const party = campaign.combat.combatants.filter((entry) => entry.side === 'party');
     return party.length > 0 && party.every((entry) => entry.defeated);
   }, [campaign.combat]);
-  const selectedImageBackend = settings.imageBackend || status?.imageBackend || 'codex';
-  const forgeDefaults = status?.ForgeDefaults?.[selectedImageBackend];
-  const forgeSettings = settings.forgeSettings || (forgeDefaults ? { ...forgeDefaults, Enabled: false } : undefined);
   const {
     adoptSceneMedia,
     canGenerateImages,
@@ -183,7 +180,6 @@ export default function App() {
     campaign,
     settings,
     status,
-    forgeDefaults,
     latestNarration: latestDm?.text,
     updateSettings,
     onCampaign: setCampaign,
@@ -225,12 +221,6 @@ export default function App() {
 
   function dismissTip(id: string) {
     updateSettings({ dismissedTips: [...new Set([...(settings.dismissedTips || []), id])] });
-  }
-
-  function updateForgeSettings(patch: Partial<ForgeSettings>) {
-    const base = forgeSettings;
-    if (!base) return;
-    updateSettings({ forgeSettings: { ...base, ...patch } }, { debounce: true });
   }
 
   // ---------------------------------------------------------------------------
@@ -640,12 +630,9 @@ export default function App() {
             activeDmProvider={activeDmProvider}
             activeDmInfo={activeDmInfo}
             dmLabel={dmLabel}
-            forgeDefaults={forgeDefaults}
-            forgeSettings={forgeSettings}
             onToggleDemo={() => setDemoMode((value) => !value)}
             onProviderChange={(provider) => { updateSettings({ dmProvider: provider, selectedModel: '', selectedEffort: '' }); setCodexConn(null); }}
             onUpdateSettings={updateSettings}
-            onUpdateForgeSettings={updateForgeSettings}
             onSwitchCampaign={(id) => void switchCampaign(id)}
             onNewCampaign={newCampaign}
             onDuplicateCampaign={() => void duplicateCurrentCampaign()}

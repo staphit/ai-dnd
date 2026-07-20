@@ -2,7 +2,15 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { ArrowRight, BookOpenText, ShieldCheck, Sword } from '@phosphor-icons/react';
 import { motion } from 'framer-motion';
 import type { AbilityKey, AbilityScores, Campaign } from '../types';
-import { localizedPreset, storyPresets, type StoryPreset } from '../data';
+import {
+  buildCustomStorySeed,
+  CUSTOM_STORY_ID,
+  customStoryInstructions,
+  localizedPreset,
+  storyPresets,
+  type CustomStorySeed,
+  type StoryPreset,
+} from '../data';
 import { MagneticButton } from './MagneticButton';
 import { StoryModeModal } from './StoryModeModal';
 import { abilityLabels } from '../labels';
@@ -38,6 +46,7 @@ export function PartySetup({ onComplete, onCancel }: PartySetupProps) {
   // chosen before setup; the created campaign keeps that language server-side.
   const [title, setTitle] = useState(() => localizedPreset(storyPresets[0], lang).title);
   const [selectedStoryId, setSelectedStoryId] = useState(storyPresets[0].id);
+  const [customStory, setCustomStory] = useState<Partial<CustomStorySeed> & { brief: string }>({ brief: '' });
   const [partySize, setPartySize] = useState(2);
   const [players, setPlayers] = useState<DraftPlayer[]>(() => Array.from({ length: 4 }, (_, index) => makeDraft(index)));
   const [classNames, setClassNames] = useState<string[]>(fallbackClasses);
@@ -73,6 +82,15 @@ export function PartySetup({ onComplete, onCancel }: PartySetupProps) {
     setTitle(localizedPreset(story, lang).title);
   }
 
+  function selectCustomStory() {
+    setSelectedStoryId(CUSTOM_STORY_ID);
+    setTitle(lang === 'en' ? 'Custom adventure' : '自訂冒險');
+  }
+
+  function updateCustomStory(patch: Partial<CustomStorySeed>) {
+    setCustomStory((current) => ({ ...current, ...patch }));
+  }
+
   async function create(preset: StoryPreset, campaignTitle: string, seeds: PlayerSeed[], storyMode?: 'scripted' | 'freeform') {
     if (submitting) return;
     setSubmitting(true);
@@ -99,6 +117,47 @@ export function PartySetup({ onComplete, onCancel }: PartySetupProps) {
     }
   }
 
+  async function createCustom(campaignTitle: string, seeds: PlayerSeed[]) {
+    if (submitting) return;
+    setSubmitting(true);
+    setError('');
+    const brief = customStory.brief.trim();
+    const custom = buildCustomStorySeed({
+      ...customStory,
+      title: campaignTitle,
+      brief,
+      ...(lang === 'en' ? {
+        genre: customStory.genre?.trim() || 'Custom',
+        summary: customStory.summary?.trim() || brief.slice(0, 120) || 'A player-authored adventure.',
+        chapter: customStory.chapter?.trim() || 'Chapter I / Departure',
+        scene: customStory.scene?.trim() || 'Adventure opening',
+        objective: customStory.objective?.trim() || 'Investigate the immediate crisis',
+        objectiveContext: customStory.objectiveContext?.trim() || brief.slice(0, 600),
+        stakes: customStory.stakes?.trim() || 'The threat worsens if the party delays.',
+        opening: customStory.opening?.trim() || `The story begins here.\n\n${brief.slice(0, 800)}`,
+      } : {}),
+    });
+    try {
+      const view = await createCampaign({
+        storyId: CUSTOM_STORY_ID,
+        title: campaignTitle,
+        chapter: custom.chapter,
+        scene: custom.scene,
+        objective: custom.objective,
+        objectiveContext: custom.objectiveContext,
+        stakes: custom.stakes,
+        opening: custom.opening,
+        players: seeds,
+        storyMode: 'freeform',
+      });
+      onComplete(view);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : String(caught));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   function submit(event: FormEvent) {
     event.preventDefault();
     if (submitting) return;
@@ -115,6 +174,12 @@ export function PartySetup({ onComplete, onCancel }: PartySetupProps) {
       background: player.background.trim() || undefined,
       abilities: player.abilities,
     }));
+    if (selectedStoryId === CUSTOM_STORY_ID) {
+      if (!customStory.brief.trim()) return setError('請先寫下自訂劇本的冒險構想。');
+      setError('');
+      void createCustom(campaignTitle, seeds);
+      return;
+    }
     const preset = storyPresets.find((story) => story.id === selectedStoryId) || storyPresets[0];
     setError('');
     // Presets with a hand-written script module first ask how to play; the
@@ -130,6 +195,9 @@ export function PartySetup({ onComplete, onCancel }: PartySetupProps) {
   }
 
   const selectedStory = storyPresets.find((story) => story.id === selectedStoryId) || storyPresets[0];
+  const selectedGenre = selectedStoryId === CUSTOM_STORY_ID
+    ? customStory.genre?.trim() || (lang === 'en' ? 'Custom' : '自訂')
+    : localizedPreset(selectedStory, lang).genre;
 
   return (
     <main className='setup-shell'>
@@ -152,7 +220,24 @@ export function PartySetup({ onComplete, onCancel }: PartySetupProps) {
               <span className='story-option-tags'>{shown.tags.map((tag) => <i key={tag}>{tag}</i>)}</span>
             </button>;
           })}
+          <button type='button' className={selectedStoryId === CUSTOM_STORY_ID ? 'story-option story-option-custom story-option-active' : 'story-option story-option-custom'} onClick={selectCustomStory} aria-pressed={selectedStoryId === CUSTOM_STORY_ID}>
+            <span className='story-option-head'><strong>{lang === 'en' ? 'Custom story' : '自訂劇本'}</strong><small>{lang === 'en' ? 'AI freeform' : 'AI 即興'}</small></span>
+            <span className='story-option-summary'>{lang === 'en' ? 'Write your own premise, opening, objective, and stakes.' : '寫下自己的世界、衝突與開場，由 AI 地城主依構想即興推進。'}</span>
+            <span className='story-option-tags'><i>{lang === 'en' ? 'Original' : '原創'}</i><i>{lang === 'en' ? 'Freeform' : '自由模式'}</i></span>
+          </button>
         </div></fieldset>
+        {selectedStoryId === CUSTOM_STORY_ID && <section className='custom-story-panel' aria-label={lang === 'en' ? 'Custom story details' : '自訂劇本內容'}>
+          <div className='custom-story-heading'><BookOpenText size={20} /><div><strong>{lang === 'en' ? 'Write your adventure premise' : '撰寫冒險構想'}</strong><span>{lang === 'en' ? 'The AI DM uses these details as the campaign foundation.' : 'AI 地城主會以這些內容作為整場戰役的基礎。'}</span></div></div>
+          {lang !== 'en' && <div className='custom-story-guide'><p className='custom-story-guide-title'>撰寫指南</p><ol>{customStoryInstructions.split('\n').map((instruction) => <li key={instruction}>{instruction}</li>)}</ol><p className='custom-story-guide-example'><strong>範例：</strong>港城每逢滿月就有人失去影子；玩家從封鎖的燈塔醒來，必須在下一次月升前找出偷走影子的儀式。</p></div>}
+          <div className='custom-story-grid'>
+            <label className='setup-field custom-brief-field custom-span-2'><span>{lang === 'en' ? 'Adventure premise (required)' : '冒險構想（必填）'}</span><textarea aria-label={lang === 'en' ? 'Custom story premise' : '自訂劇本構想'} value={customStory.brief} maxLength={2000} onChange={(event) => updateCustomStory({ brief: event.target.value })} /><small>{lang === 'en' ? 'Describe the setting, conflict, clues, and tone.' : '描述世界、主要衝突、線索與故事調性；最多 2000 字。'}</small></label>
+            <label className='setup-field'><span>{lang === 'en' ? 'Genre' : '類型／調性'}</span><input aria-label={lang === 'en' ? 'Custom story genre' : '自訂劇本類型'} value={customStory.genre || ''} maxLength={80} placeholder={lang === 'en' ? 'Mystery, horror, heroic…' : '懸疑、恐怖、史詩……'} onChange={(event) => updateCustomStory({ genre: event.target.value })} /></label>
+            <label className='setup-field'><span>{lang === 'en' ? 'Opening scene' : '起始場景'}</span><input aria-label={lang === 'en' ? 'Custom story scene' : '自訂劇本起始場景'} value={customStory.scene || ''} maxLength={120} placeholder={lang === 'en' ? 'Where the party begins' : '隊伍從哪裡開始'} onChange={(event) => updateCustomStory({ scene: event.target.value })} /></label>
+            <label className='setup-field custom-span-2'><span>{lang === 'en' ? 'First objective' : '第一個目標'}</span><input aria-label={lang === 'en' ? 'Custom story objective' : '自訂劇本目標'} value={customStory.objective || ''} maxLength={180} placeholder={lang === 'en' ? 'What must the party accomplish first?' : '隊伍首先必須完成什麼？'} onChange={(event) => updateCustomStory({ objective: event.target.value })} /></label>
+            <label className='setup-field custom-span-2'><span>{lang === 'en' ? 'Stakes' : '拖延／失敗的風險'}</span><textarea aria-label={lang === 'en' ? 'Custom story stakes' : '自訂劇本風險'} value={customStory.stakes || ''} maxLength={300} placeholder={lang === 'en' ? 'What worsens if the party fails or delays?' : '如果玩家失敗或拖延，情況會如何惡化？'} onChange={(event) => updateCustomStory({ stakes: event.target.value })} /></label>
+            <label className='setup-field custom-span-2'><span>{lang === 'en' ? 'Opening narration (optional)' : '開場敘事（選填）'}</span><textarea aria-label={lang === 'en' ? 'Custom story opening narration' : '自訂劇本開場敘事'} value={customStory.opening || ''} maxLength={3000} placeholder={lang === 'en' ? 'Leave blank to generate an opening from the premise.' : '留空時會依冒險構想產生預設開場。'} onChange={(event) => updateCustomStory({ opening: event.target.value })} /></label>
+          </div>
+        </section>}
         <label className='setup-field'><span>戰役名稱</span><input value={title} onChange={(event) => setTitle(event.target.value)} maxLength={60} /></label>
         <fieldset className='party-size'><legend>隊伍人數</legend><div>{[1, 2, 3, 4].map((size) => <button key={size} type='button' className={partySize === size ? 'party-size-active' : ''} onClick={() => setPartySize(size)} aria-pressed={partySize === size}><strong>{size}</strong><span>人</span></button>)}</div></fieldset>
         <div className='party-roster'>
@@ -172,7 +257,7 @@ export function PartySetup({ onComplete, onCancel }: PartySetupProps) {
           ))}
         </div>
         {error && <p className='setup-error' role='alert'>{error}</p>}
-        <div className='setup-submit'><span>{lang === 'en' ? `${localizedPreset(selectedStory, lang).genre} / ${partySize} adventurer${partySize > 1 ? 's' : ''}` : `${selectedStory.genre}／${partySize} 位冒險者`}</span><MagneticButton type='submit' disabled={submitting}><span>{submitting ? (lang === 'en' ? 'Creating…' : '建立中…') : (lang === 'en' ? 'Begin the adventure' : '開始冒險')}</span><ArrowRight size={17} /></MagneticButton></div>
+        <div className='setup-submit'><span>{lang === 'en' ? `${selectedGenre} / ${partySize} adventurer${partySize > 1 ? 's' : ''}` : `${selectedGenre}／${partySize} 位冒險者`}</span><MagneticButton type='submit' disabled={submitting}><span>{submitting ? (lang === 'en' ? 'Creating…' : '建立中…') : (lang === 'en' ? 'Begin the adventure' : '開始冒險')}</span><ArrowRight size={17} /></MagneticButton></div>
       </motion.form>
       {pendingCreate && (
         <StoryModeModal

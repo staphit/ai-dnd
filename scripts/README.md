@@ -14,7 +14,7 @@ prerequisites are inventoried in [`../REQUIREMENTS.md`](../REQUIREMENTS.md).
 | `run-mac.sh` | **macOS / Linux:** build frontend + backend (`lsof` port check), serve from Go binary. |
 | `run-windows.sh` | **Windows (git-bash):** same, with `netstat`/`taskkill` and `.exe` binary name. |
 | `restart.sh` | Stop whatever's on `PORT`, rebuild, run again. `lsof` on macOS/Linux, `netstat`/`taskkill` fallback on git-bash. |
-| `build.sh` | Build frontend to `web-dist/`, backend to `backend/bin/dnd-server`, VS Code extension to `out/` — no serving. |
+| `build.sh` | Build frontend to `web-dist/`, backend to `backend/bin/dnd-server`, VS Code extension to `vscode-extension/out/` — no serving. |
 | `test.sh` | Backend `go vet` + `go test`, frontend typecheck + vitest, extension typecheck. Same suites as CI (`.github/workflows/ci.yml`). |
 
 ```bash
@@ -26,17 +26,14 @@ prerequisites are inventoried in [`../REQUIREMENTS.md`](../REQUIREMENTS.md).
 ./scripts/run.sh
 ```
 
-## Local Stable Diffusion (SD Forge) — optional, `IMAGE_BACKEND=local`
+## Image generation
 
-| Script | Purpose | Windows |
-|---|---|---|
-| `forge-setup.sh` | Clone Forge into `vendor/`, optionally download a checkpoint (`--model juggernaut\|turbo\|hyper`). | OK — plain git clone + curl. |
-| `forge.sh` | Start Forge with `--api`. | **Broken** — Forge's own `webui.sh` can't activate a native Windows venv and aborts immediately. Instead, double-click `vendor/stable-diffusion-webui-forge/webui-user.bat` (set `COMMANDLINE_ARGS=--api` in it first; `forge-setup.sh` output reminds you). |
+Scene and portrait art use **Codex `$imagegen` (GPT) only**. Local SD Forge and
+Grok Imagine backends have been removed from the app. The `forge-setup.sh` /
+`forge.sh` scripts under this folder (if still present) are legacy and unused.
 
 ## Double-click behaviour
 
-`forge-setup.sh`, `forge.sh`, `run-mac.sh` and `run-windows.sh` pause on exit ("Press any key to close...") so errors are
-readable when double-clicked from a file manager instead of the window
-flashing shut. This does **not** catch a failure inside `exec` itself
-(e.g. the target binary missing) — bash skips the trap in that case, which is
-why `forge.sh` still just closes on Windows instead of showing the venv error.
+`run-mac.sh` and `run-windows.sh` pause on exit ("Press any key to close...") so
+errors are readable when double-clicked from a file manager instead of the
+window flashing shut.
