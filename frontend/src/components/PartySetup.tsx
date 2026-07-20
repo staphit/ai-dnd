@@ -2,11 +2,12 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { ArrowRight, BookOpenText, ShieldCheck, Sword } from '@phosphor-icons/react';
 import { motion } from 'framer-motion';
 import type { AbilityKey, AbilityScores, Campaign } from '../types';
-import { storyPresets, type StoryPreset } from '../data';
+import { localizedPreset, storyPresets, type StoryPreset } from '../data';
 import { MagneticButton } from './MagneticButton';
 import { StoryModeModal } from './StoryModeModal';
 import { abilityLabels } from '../labels';
 import { createCampaign, getCatalog, type PlayerSeed } from '../api';
+import { useI18n } from '../i18n';
 
 // abilities stays undefined until the player opts into custom scores; the
 // server then applies the class preset values.
@@ -32,7 +33,10 @@ interface PartySetupProps {
 }
 
 export function PartySetup({ onComplete, onCancel }: PartySetupProps) {
-  const [title, setTitle] = useState(storyPresets[0].title);
+  const { lang } = useI18n();
+  // Campaign text (title, opening, objective…) is authored in the UI language
+  // chosen before setup; the created campaign keeps that language server-side.
+  const [title, setTitle] = useState(() => localizedPreset(storyPresets[0], lang).title);
   const [selectedStoryId, setSelectedStoryId] = useState(storyPresets[0].id);
   const [partySize, setPartySize] = useState(2);
   const [players, setPlayers] = useState<DraftPlayer[]>(() => Array.from({ length: 4 }, (_, index) => makeDraft(index)));
@@ -66,23 +70,24 @@ export function PartySetup({ onComplete, onCancel }: PartySetupProps) {
 
   function selectStory(story: StoryPreset) {
     setSelectedStoryId(story.id);
-    setTitle(story.title);
+    setTitle(localizedPreset(story, lang).title);
   }
 
   async function create(preset: StoryPreset, campaignTitle: string, seeds: PlayerSeed[], storyMode?: 'scripted' | 'freeform') {
     if (submitting) return;
     setSubmitting(true);
     setError('');
+    const localized = localizedPreset(preset, lang);
     try {
       const view = await createCampaign({
         storyId: preset.id,
         title: campaignTitle,
-        chapter: preset.chapter,
-        scene: preset.scene,
-        objective: preset.objective,
-        objectiveContext: preset.objectiveContext,
-        stakes: preset.stakes,
-        opening: preset.opening,
+        chapter: localized.chapter,
+        scene: localized.scene,
+        objective: localized.objective,
+        objectiveContext: localized.objectiveContext,
+        stakes: localized.stakes,
+        opening: localized.opening,
         players: seeds,
         storyMode,
       });
@@ -139,11 +144,14 @@ export function PartySetup({ onComplete, onCancel }: PartySetupProps) {
       <motion.form className='setup-form' onSubmit={submit} initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}>
         <header><div><p className='eyebrow'>劇本與隊伍</p><h2>選擇這次的冒險</h2></div><BookOpenText size={24} /></header>
         <fieldset className='story-selection'><legend>冒險劇本</legend><div className='story-options'>
-          {storyPresets.map((story) => <button key={story.id} type='button' className={selectedStoryId === story.id ? 'story-option story-option-active' : 'story-option'} onClick={() => selectStory(story)} aria-pressed={selectedStoryId === story.id}>
-            <span className='story-option-head'><strong>{story.title}</strong><small>{story.genre}</small></span>
-            <span className='story-option-summary'>{story.summary}</span>
-            <span className='story-option-tags'>{story.tags.map((tag) => <i key={tag}>{tag}</i>)}</span>
-          </button>)}
+          {storyPresets.map((story) => {
+            const shown = localizedPreset(story, lang);
+            return <button key={story.id} type='button' className={selectedStoryId === story.id ? 'story-option story-option-active' : 'story-option'} onClick={() => selectStory(story)} aria-pressed={selectedStoryId === story.id}>
+              <span className='story-option-head'><strong>{shown.title}</strong><small>{shown.genre}</small></span>
+              <span className='story-option-summary'>{shown.summary}</span>
+              <span className='story-option-tags'>{shown.tags.map((tag) => <i key={tag}>{tag}</i>)}</span>
+            </button>;
+          })}
         </div></fieldset>
         <label className='setup-field'><span>戰役名稱</span><input value={title} onChange={(event) => setTitle(event.target.value)} maxLength={60} /></label>
         <fieldset className='party-size'><legend>隊伍人數</legend><div>{[1, 2, 3, 4].map((size) => <button key={size} type='button' className={partySize === size ? 'party-size-active' : ''} onClick={() => setPartySize(size)} aria-pressed={partySize === size}><strong>{size}</strong><span>人</span></button>)}</div></fieldset>
@@ -164,7 +172,7 @@ export function PartySetup({ onComplete, onCancel }: PartySetupProps) {
           ))}
         </div>
         {error && <p className='setup-error' role='alert'>{error}</p>}
-        <div className='setup-submit'><span>{selectedStory.genre}／{partySize} 位冒險者</span><MagneticButton type='submit' disabled={submitting}><span>{submitting ? '建立中…' : '開始冒險'}</span><ArrowRight size={17} /></MagneticButton></div>
+        <div className='setup-submit'><span>{lang === 'en' ? `${localizedPreset(selectedStory, lang).genre} / ${partySize} adventurer${partySize > 1 ? 's' : ''}` : `${selectedStory.genre}／${partySize} 位冒險者`}</span><MagneticButton type='submit' disabled={submitting}><span>{submitting ? (lang === 'en' ? 'Creating…' : '建立中…') : (lang === 'en' ? 'Begin the adventure' : '開始冒險')}</span><ArrowRight size={17} /></MagneticButton></div>
       </motion.form>
       {pendingCreate && (
         <StoryModeModal

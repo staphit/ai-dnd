@@ -26,10 +26,22 @@ type ScriptModule struct {
 }
 
 // ScriptObjective is one stage's mission summary for the campaign header.
+// The *En fields are optional English variants; empty falls back to Chinese.
 type ScriptObjective struct {
-	Objective string `json:"objective"`
-	Context   string `json:"context"`
-	Stakes    string `json:"stakes"`
+	Objective   string `json:"objective"`
+	Context     string `json:"context"`
+	Stakes      string `json:"stakes"`
+	ObjectiveEn string `json:"objectiveEn,omitempty"`
+	ContextEn   string `json:"contextEn,omitempty"`
+	StakesEn    string `json:"stakesEn,omitempty"`
+}
+
+// pick returns the English variant when lang is "en" and one exists.
+func pick(lang, zh, en string) string {
+	if lang == "en" && strings.TrimSpace(en) != "" {
+		return en
+	}
+	return zh
 }
 
 // ScriptNode is one beat of the module: explore, town, combat, boss,
@@ -39,24 +51,37 @@ type ScriptNode struct {
 	Stage     string `json:"stage"` // 前期 | 中期 | 後期 | 結局
 	Type      string `json:"type"`  // explore | town | combat | boss | treasure | ending
 	Title     string `json:"title"`
+	TitleEn   string `json:"titleEn,omitempty"`
 	Directive string `json:"directive"`
 	// Narration is the pre-written player-facing prose for the local (no-AI)
 	// scripted turn resolver; Directive remains the AI-DM instruction.
-	Narration  string          `json:"narration,omitempty"`
-	Choices    []ScriptChoice  `json:"choices,omitempty"`
-	Combat     *ScriptCombat   `json:"combat,omitempty"`
-	Treasure   *ScriptTreasure `json:"treasure,omitempty"`
-	EndingKind string          `json:"endingKind,omitempty"` // good | bad (ending nodes)
+	Narration   string          `json:"narration,omitempty"`
+	NarrationEn string          `json:"narrationEn,omitempty"`
+	Choices     []ScriptChoice  `json:"choices,omitempty"`
+	Combat      *ScriptCombat   `json:"combat,omitempty"`
+	Treasure    *ScriptTreasure `json:"treasure,omitempty"`
+	EndingKind  string          `json:"endingKind,omitempty"` // good | bad (ending nodes)
 }
 
 // playerText is the prose shown to players when the server narrates a node
 // itself: the authored narration, falling back to the directive for modules
-// that predate the field.
-func (n *ScriptNode) playerText() string {
+// that predate the field. lang "en" prefers the English narration when the
+// module carries one.
+func (n *ScriptNode) playerText(lang string) string {
+	if lang == "en" {
+		if t := strings.TrimSpace(n.NarrationEn); t != "" {
+			return t
+		}
+	}
 	if t := strings.TrimSpace(n.Narration); t != "" {
 		return t
 	}
 	return strings.TrimSpace(n.Directive)
+}
+
+// title returns the node title in the requested language.
+func (n *ScriptNode) title(lang string) string {
+	return pick(lang, n.Title, n.TitleEn)
 }
 
 // ScriptChoice is one player-facing option; picking it moves the campaign to
@@ -64,9 +89,15 @@ func (n *ScriptNode) playerText() string {
 type ScriptChoice struct {
 	ID        string `json:"id"`
 	Text      string `json:"text"`
+	TextEn    string `json:"textEn,omitempty"`
 	Next      string `json:"next"`
 	Alignment int    `json:"alignment"`
 	CheckHint string `json:"checkHint,omitempty"`
+}
+
+// text returns the option label in the requested language.
+func (c *ScriptChoice) text(lang string) string {
+	return pick(lang, c.Text, c.TextEn)
 }
 
 // ScriptCombat describes a scripted encounter, scaled to party size by
@@ -75,6 +106,7 @@ type ScriptCombat struct {
 	Enemies           []ScriptEnemy `json:"enemies"`
 	AddPerExtraPlayer []ScriptEnemy `json:"addPerExtraPlayer,omitempty"`
 	Intro             string        `json:"intro,omitempty"`
+	IntroEn           string        `json:"introEn,omitempty"`
 }
 
 // ScriptEnemy mirrors EnemySpec with JSON tags matching the module files.
@@ -90,9 +122,10 @@ type ScriptEnemy struct {
 
 // ScriptTreasure is loot granted when the party enters the node.
 type ScriptTreasure struct {
-	Gold  int          `json:"gold"`
-	Items []ScriptItem `json:"items,omitempty"`
-	Intro string       `json:"intro,omitempty"`
+	Gold    int          `json:"gold"`
+	Items   []ScriptItem `json:"items,omitempty"`
+	Intro   string       `json:"intro,omitempty"`
+	IntroEn string       `json:"introEn,omitempty"`
 }
 
 // ScriptItem is one treasure item; items with weapon dice become attacks.
@@ -374,7 +407,8 @@ func matchScriptChoice(node *ScriptNode, chosenOption string, orderedActions []s
 			continue
 		}
 		for i := range node.Choices {
-			if t == strings.TrimSpace(node.Choices[i].Text) {
+			// English campaigns send the en label; match either variant.
+			if t == strings.TrimSpace(node.Choices[i].Text) || (node.Choices[i].TextEn != "" && t == strings.TrimSpace(node.Choices[i].TextEn)) {
 				return &node.Choices[i]
 			}
 		}
@@ -445,7 +479,7 @@ func scriptPromptLines(mod *ScriptModule, state *ScriptState, combatActive bool)
 // threshold — otherwise the same door leads to the fall. Side effects on the
 // entered node (treasure, scripted combat) are the caller's job via the
 // returned node, gated on first entry.
-func advanceScript(mod *ScriptModule, state *ScriptState, choice *ScriptChoice) (*ScriptNode, []string) {
+func advanceScript(mod *ScriptModule, state *ScriptState, choice *ScriptChoice, lang string) (*ScriptNode, []string) {
 	if mod == nil || state == nil || choice == nil || state.Ended {
 		return nil, nil
 	}
@@ -467,7 +501,9 @@ func advanceScript(mod *ScriptModule, state *ScriptState, choice *ScriptChoice) 
 		for _, alt := range from.Choices {
 			if fallen := mod.node(alt.Next); fallen != nil && fallen.Type == "ending" && fallen.EndingKind == "bad" {
 				next = fallen
-				logs = append(logs, "命運的重量壓過了最後的抉擇：過往的選擇已將結局引向幽暗。")
+				logs = append(logs, pick(lang,
+					"命運的重量壓過了最後的抉擇：過往的選擇已將結局引向幽暗。",
+					"The weight of fate overrules the final choice: what came before has already bent the ending toward the dark."))
 				break
 			}
 		}
@@ -479,7 +515,11 @@ func advanceScript(mod *ScriptModule, state *ScriptState, choice *ScriptChoice) 
 	if next.Type == "ending" {
 		state.Ended = true
 		state.Ending = next.EndingKind
-		logs = append(logs, fmt.Sprintf("劇本抵達%s「%s」。", endingKindLabel(next.EndingKind), next.Title))
+		if lang == "en" {
+			logs = append(logs, fmt.Sprintf("The script reaches %s: 「%s」.", endingKindLabelLang(next.EndingKind, lang), next.title(lang)))
+		} else {
+			logs = append(logs, fmt.Sprintf("劇本抵達%s「%s」。", endingKindLabel(next.EndingKind), next.Title))
+		}
 	}
 	return next, logs
 }
@@ -493,6 +533,41 @@ func endingKindLabel(kind string) string {
 		return "蒼灰結局"
 	default:
 		return "沉沒結局"
+	}
+}
+
+// endingKindLabelLang is endingKindLabel with an English variant.
+func endingKindLabelLang(kind, lang string) string {
+	if lang != "en" {
+		return endingKindLabel(kind)
+	}
+	switch kind {
+	case "good":
+		return "the good ending"
+	case "neutral":
+		return "the neutral ending"
+	default:
+		return "the bad ending"
+	}
+}
+
+// stageLabelLang renders a stage enum (前期/中期/後期/結局) for player-facing
+// text; the stored enum itself always stays Chinese.
+func stageLabelLang(stage, lang string) string {
+	if lang != "en" {
+		return stage
+	}
+	switch stage {
+	case "前期":
+		return "Act I"
+	case "中期":
+		return "Act II"
+	case "後期":
+		return "Act III"
+	case "結局":
+		return "the finale"
+	default:
+		return stage
 	}
 }
 

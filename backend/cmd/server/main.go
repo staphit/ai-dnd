@@ -29,7 +29,6 @@ import (
 	"dndduet/internal/memory"
 	"dndduet/internal/provider"
 	"dndduet/internal/store"
-	"dndduet/internal/tts"
 	schema "dndduet/schemas"
 )
 
@@ -249,14 +248,12 @@ func main() {
 		ProviderCWD:         codexCWD,
 		ImageRenderers:      imageRenderers,
 		DefaultImageBackend: defaultImageBackend,
-		TTS:                 tts.NewClientFromEnv(),
 		Memory:              mem,
 		Game:                game.New(db, nil),
 		TacticsSchemaPath:   tacticsSchemaPath,
 		NovelSchemaPath:     novelSchemaPath,
 		Prompt:              promptSession,
 	}
-	log.Printf("語音朗讀：GPT-SoVITS %s（未啟動時 /api/tts 會回報連線錯誤）", srv.TTS.BaseURL)
 
 	addr := net.JoinHostPort("127.0.0.1", port)
 	httpServer := &http.Server{

@@ -42,7 +42,6 @@ type importedCampaign struct {
 	FontScale       float64         `json:"fontScale"`
 	ShowStatHints   *bool           `json:"showStatHints"`
 	AutoSceneImages *bool           `json:"autoSceneImages"`
-	TTSEnabled      *bool           `json:"ttsEnabled"`
 	DismissedTips   []string        `json:"dismissedTips"`
 	SceneImages     json.RawMessage `json:"sceneImages"`
 	SceneImage      json.RawMessage `json:"sceneImage"`
@@ -342,9 +341,6 @@ func buildImportSettings(imp importedCampaign) string {
 	put("showStatHints", imp.ShowStatHints == nil || *imp.ShowStatHints)
 	if imp.AutoSceneImages != nil {
 		put("autoSceneImages", *imp.AutoSceneImages)
-	}
-	if imp.TTSEnabled != nil {
-		put("ttsEnabled", *imp.TTSEnabled)
 	}
 	if imp.DismissedTips != nil {
 		put("dismissedTips", imp.DismissedTips)

@@ -16,21 +16,26 @@
           "id": "A",
           "text": "頂風趕往碼頭,查看海面出了什麼事",
           "next": "harbor_black_sails",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Fight the wind down to the docks and see what has happened at sea"
         },
         {
           "id": "B",
           "text": "爬上鐘樓,看看敲鐘的到底是誰",
           "next": "bell_tower",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Climb the bell tower and find out who is ringing it"
         },
         {
           "id": "C",
           "text": "沿街拍門叫醒鄰舍,帶著人一起去碼頭",
           "next": "harbor_black_sails",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Hammer on doors along the street to wake the neighbours, and bring them to the docks with you"
         }
-      ]
+      ],
+      "titleEn": "Seven Tolls of the Harbour Bell",
+      "narrationEn": "The bell drags you out of sleep. One toll, two… by the seventh, the whole frozen street is humming, icicles rattling down from the eaves. Frostharbor's harbour bell rings only for shipwreck — and it has always taken two strong men hauling together on the rope. Right now the window of the bell tower is black as a dry well: no lamp, no one. Wind pours in off the strait, thick with salt-grit and snow, striking your faces like a fistful of ground glass. At the end of the street a shutter creaks open, a head leans out, then snaps back and bolts itself in. The white of your breath has not yet faded when, far out over the sea, from deep within the ice, comes a long, grinding groan."
     },
     {
       "id": "harbor_black_sails",
@@ -44,22 +49,27 @@
           "id": "A",
           "text": "衝上冰面,砍向那些蒼白的手救船長",
           "next": "icebreaker_rescue",
-          "alignment": 2
+          "alignment": 2,
+          "textEn": "Rush onto the ice and hack at the pale hands to save the captain"
         },
         {
           "id": "B",
           "text": "冰面太危險,退上棧橋繞開這片海",
           "next": "pier_wreck",
-          "alignment": -2
+          "alignment": -2,
+          "textEn": "The ice is too dangerous — fall back to the pier and skirt this stretch of sea"
         },
         {
           "id": "C",
           "text": "留在岸邊拋出纜繩,把她往岸上拖",
           "next": "icebreaker_rescue",
           "alignment": 1,
-          "checkHint": "運動:在結冰的地面上穩住繩索"
+          "checkHint": "運動:在結冰的地面上穩住繩索",
+          "textEn": "Stay on the shore, throw her a line, and haul her toward land"
         }
-      ]
+      ],
+      "titleEn": "Black Sails Beneath the Ice",
+      "narrationEn": "The bollards on the dock wear a fist's thickness of ice. You lean on the rail and look out, and your blood runs cold: beneath the frozen sheet, a black-sailed ship glides upside down, masts pointing into the deep — yet her sails are full. The wind blows from the north; her sails belly toward the north. Closer in, the icebreaker Dawnwife sits skewed in the ice, her hull groaning. Captain Helga lies flat on the surface, one leg already through a hole in the ice, and around its rim cling five or six pale hands, long-knuckled, frost-blue, drawing her down joint by joint. The wind tears her scream to rags: 'The axe — get the axe —!'"
     },
     {
       "id": "icebreaker_rescue",
@@ -127,22 +137,27 @@
             "damageType": "揮砍"
           }
         ],
-        "intro": "冰面炸裂,蒼白的手成排探出,一具纏滿凍藻的水手屍撐著冰洞爬了上來。"
+        "intro": "冰面炸裂,蒼白的手成排探出,一具纏滿凍藻的水手屍撐著冰洞爬了上來。",
+        "introEn": "The ice bursts apart; pale hands reach up in ranks, and a corpse-sailor wrapped in frozen weed climbs out of the hole."
       },
       "choices": [
         {
           "id": "A",
           "text": "拉起賀爾嘉退回岸上,聽她說完再做打算",
           "next": "captain_ashore",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Pull Helga back to shore and hear her out before deciding anything"
         },
         {
           "id": "B",
           "text": "趁冰面未合,先去曙婦號船艙搜航路圖",
           "next": "chart_treasure",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "While the ice still stands open, search the Dawnwife's cabin for the sea chart"
         }
-      ]
+      ],
+      "titleEn": "Hands Beneath the Ice",
+      "narrationEn": "The moment your boots touch the sea ice, the whole sheet cracks into a spiderweb like a struck mirror. Pale hands reach out of every fissure — not grabbing, only open, waiting for you to step in on your own. Helga's sailor's knife has hacked its edge to curls; she snarls and slams its spine against the rim of the hole. Then, with a boom, the ice three paces from you bursts apart, and a bloated sailor's corpse hauls itself up over the edge, seaweed hanging from the gaps in its ribs, frozen into rods of dark green ice. Its jaw drops open, spills half a mouthful of black water, and makes a sound like a hull being crushed."
     },
     {
       "id": "captain_ashore",
@@ -156,15 +171,19 @@
           "id": "A",
           "text": "去曙婦號船艙,取回那張航路圖",
           "next": "chart_treasure",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Go to the Dawnwife's cabin and retrieve the sea chart"
         },
         {
           "id": "B",
           "text": "先扶她去避風處,再趕往燈塔崖下察看",
           "next": "lighthouse_dark",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Help her to shelter first, then hurry to the cliffs below the lighthouse"
         }
-      ]
+      ],
+      "titleEn": "Captain Helga",
+      "narrationEn": "Helga slides down against a bollard, one trouser-leg frozen to a hard shell — yet her first act is to lift a hand toward the far side of the strait. 'Look at North Cape.' On the black clifftop, the lighthouse has dwindled to a single spark guttering at its crown. 'Ninety-seven years,' her teeth are chattering, 'that light has not gone out in ninety-seven years. Old Ole keeps it. Three days ago I brought his supplies and he wouldn't open the door — just pushed a note through the crack: Send no more oil. It does not eat oil.' She seizes your wrists, nails biting in. 'That ship under the ice is the Whitebeak Fleet. My grandmother said they went down in the Winter of the Great Freeze. My sea chart is in the Dawnwife's cabin — it carries the old lamp-code the elders handed down. Take it. Don't let that spark go out.'"
     },
     {
       "id": "chart_treasure",
@@ -185,22 +204,27 @@
             "properties": "可為提燈續火三夜,或引燃一堆濕柴"
           }
         ],
-        "intro": "海圖桌上釘著完好的北岬航路圖,圖緣一行褪色小字記著白喙船隊最怕的燈語。"
+        "intro": "海圖桌上釘著完好的北岬航路圖,圖緣一行褪色小字記著白喙船隊最怕的燈語。",
+        "introEn": "Pinned to the chart table lies the North Cape chart, intact, one faded line along its margin recording the lamp-code the Whitebeak Fleet fears most."
       },
       "choices": [
         {
           "id": "A",
           "text": "收好圖與鯨油,趕往燈塔崖下確認火光",
           "next": "lighthouse_dark",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Stow the chart and the whale oil, and hurry to the cliffs to check the light"
         },
         {
           "id": "B",
           "text": "沿凍住的棧橋走,順路查看那些沉船殘骸",
           "next": "pier_wreck",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Walk the frozen pier, checking those wrecked boats along the way"
         }
-      ]
+      ],
+      "titleEn": "The Dawnwife's Sea Chart",
+      "narrationEn": "The Dawnwife's cabin door hangs askew on its hinges; you squeeze through sideways. Inside, frost-flowers coat every surface and your breath comes out in clouds. On the chart table, a map of the North Cape passage is pinned down by four brass tacks, every reef, ice-lane and anchorage drawn with a fine hand; along the margin runs a line of faded ink: 'Lamp-code three long, two short — the Whitebeak sees it and must turn away.' A half-jar of whale oil sits at the table's corner, the oil at its mouth frozen wax-white. Then the whole hull lurches; outside, the ice gnaws squealing at the planking, and a few silver coins roll from an overturned drawer to your feet, as if hurrying you out."
     },
     {
       "id": "pier_wreck",
@@ -214,15 +238,19 @@
           "id": "A",
           "text": "敲開冰殼,撬起艙板看看反光的是什麼",
           "next": "frost_key_find",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Break open the ice shell and prise up the deck boards to see what is glinting"
         },
         {
           "id": "B",
           "text": "不動守塔人的遺物,直接趕往燈塔崖下",
           "next": "lighthouse_dark",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Leave the keeper's belongings untouched and head straight for the cliffs"
         }
-      ]
+      ],
+      "titleEn": "The Broken-Bone Pier",
+      "narrationEn": "The planks of the pier are frozen harder than iron; every step rings out with a crack like breaking glass. Alongside, five or six small boats hang at their moorings, lines iced stiff, holding them half out of the water like a row of fish frozen dead on the gallows. The outermost bears two carved words on her bow: Ole's Oar. The keeper's ferry — she should be moored at North Cape. Her hull wears a full shell of ice, and through it you can see something glint in the seam of the deck boards: a small, iron-grey, regular gleam. Wind rakes the rigging with a reed-thin whistle, and across the strait, the spark at the lighthouse crown dims by one more degree."
     },
     {
       "id": "frost_key_find",
@@ -245,22 +273,27 @@
             "properties": "可投擲(20/60呎);柄刻燈塔印記"
           }
         ],
-        "intro": "油布下裹著一柄覆霜不融的燈塔鑰匙,還有一支叉尖雪亮的凍鐵魚叉。"
+        "intro": "油布下裹著一柄覆霜不融的燈塔鑰匙,還有一支叉尖雪亮的凍鐵魚叉。",
+        "introEn": "Wrapped in the oilcloth lies a lighthouse key sheathed in frost that will not melt, and a frost-iron harpoon with its point honed bright."
       },
       "choices": [
         {
           "id": "A",
           "text": "揣著鑰匙,趕往燈塔崖下確認火光",
           "next": "lighthouse_dark",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Pocket the key and hurry to the cliffs below the lighthouse to check the light"
         },
         {
           "id": "B",
           "text": "先登上鐘樓眺望全港,再定去向",
           "next": "bell_tower",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Climb the bell tower first for a view of the whole harbour, then choose your road"
         }
-      ]
+      ],
+      "titleEn": "The Frosted Key",
+      "narrationEn": "The instant the ice shell cracks open, a cold that has been sleeping in the bilge wells up, colder than the wind outside. Beneath the deck boards, wrapped in oilcloth, lies an iron key the length of a palm, a lighthouse cast in relief on its bow, fine white frost laced between its teeth. You cup it in your hands and warm it a long while; the frost does not stir — instead it creeps half an inch up your glove toward the cuff. Under the oilcloth lies a frost-iron harpoon as well, its point honed bright, the same lighthouse mark cut into the shaft. From far out in the frozen sea comes one long, drawn-out moan — not wind, and not ice — and without a word passing between you, the key goes into an inside pocket."
     },
     {
       "id": "bell_tower",
@@ -274,21 +307,26 @@
           "id": "A",
           "text": "捏著那縷紅線,循霜手印的方向追下樓",
           "next": "girl_red_cloak",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Take the red strand and follow the direction of the frost handprints down"
         },
         {
           "id": "B",
           "text": "先奮力敲鐘警醒全鎮,再追下樓去",
           "next": "girl_red_cloak",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Ring the bell hard first to rouse the town, then give chase down the stairs"
         },
         {
           "id": "C",
           "text": "不追了,下樓直奔北岬燈塔崖下",
           "next": "lighthouse_dark",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Let it go — head down and straight for the cliffs below North Cape"
         }
-      ]
+      ],
+      "titleEn": "The Bell That Rang Itself",
+      "narrationEn": "The tower stair turns four times, each tread carrying a layer of dust no foot has disturbed. The bell-rope hangs exactly where it should, its dust unbroken too — seven tolls, and no hand pulled them. You raise your lamp to the bronze bell, and in the light its rim wears a ring of fresh frost handprints: five fingers each, pitifully small — a child's hand, pressed seven times, neat and evenly spaced. Through the window the town's rooftops spread into a rolling snowfield, and across the strait, on North Cape's clifftop, the spark burns so low the wind might pinch it out at any breath. On the way down, someone finds a strand of red wool caught on a nail-head — not yet frosted over."
     },
     {
       "id": "girl_red_cloak",
@@ -302,23 +340,28 @@
           "id": "A",
           "text": "朝她消失的方向追,問清她父親是誰",
           "next": "lighthouse_dark",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Chase after where she vanished and demand who her father is"
         },
         {
           "id": "B",
           "text": "抄封凍的海面直插燈塔崖下,截住她",
           "next": "ice_crack_ambush",
           "alignment": 0,
-          "checkHint": "運動:在夜裡橫越開裂的海冰"
+          "checkHint": "運動:在夜裡橫越開裂的海冰",
+          "textEn": "Cut across the frozen sea straight to the cliffs, and head her off"
         },
         {
           "id": "C",
           "text": "蹲下細查她站過的雪地,再往崖下去",
           "next": "lighthouse_dark",
           "alignment": 0,
-          "checkHint": "調查:無腳印、無影子意味著什麼"
+          "checkHint": "調查:無腳印、無影子意味著什麼",
+          "textEn": "Crouch and examine the snow where she stood, then make for the cliffs"
         }
-      ]
+      ],
+      "titleEn": "The Girl in the Red Cloak",
+      "narrationEn": "A girl stands in the snow at the mouth of the lane, eight or nine years old, the hem of her red cloak lifting and falling with the wind. She stands in the very centre of your lamplight, and on the white ground she casts no shadow. 'You're going to North Cape. Aren't you.' It is not a question. Her voice is very soft, as if she speaks through a pane of ice. 'Don't wake my father. When the lamp goes out, he can sleep. He has kept it so long his hands have frozen to the railing.' She steps back into the falling snow, and the red cloak pales and disperses, the way blood spreads into water. You chase her to the corner: the snow holds only your own footprints, all the way down, and no others."
     },
     {
       "id": "lighthouse_dark",
@@ -332,16 +375,20 @@
           "id": "A",
           "text": "進霜港鎮整備人手與補給,再圖北岬",
           "next": "gate_of_frostharbor",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Enter Frostharbor to raise hands and supplies, then plan for North Cape"
         },
         {
           "id": "B",
           "text": "不繞路了,抄開裂的海冰直插鎮子",
           "next": "ice_crack_ambush",
           "alignment": 0,
-          "checkHint": "運動:黑暗中橫越裂冰"
+          "checkHint": "運動:黑暗中橫越裂冰",
+          "textEn": "No detours — cut across the cracking sea ice straight for the town"
         }
-      ]
+      ],
+      "titleEn": "The Last Light",
+      "narrationEn": "You reach the rise below the cliffs just in time to watch it die. The spark at the crown of the North Cape lighthouse flares once, hard — the last surfacing of a drowning man — then shrinks to a needle's point, and then is gone. Darkness comes down the strait like a tide running backwards. A few breaths later, a rolling thunder of dull blows sounds from deep in the ice: the inverted fleet is turning beneath it, ship after ship, mast-shadows sweeping under your feet, every yard swinging round to point at Frostharbor. The salt in the wind thickens all at once, mixed with the smell of old timber rotted soft on the sea floor. They will arrive before dawn. Every one of you understands this now."
     },
     {
       "id": "ice_crack_ambush",
@@ -409,22 +456,27 @@
             "damageType": "揮砍"
           }
         ],
-        "intro": "冰面自下而上透出冷光,霜爪破冰而出,兩具倒折著關節的水鬼橫著爬了上來。"
+        "intro": "冰面自下而上透出冷光,霜爪破冰而出,兩具倒折著關節的水鬼橫著爬了上來。",
+        "introEn": "Cold light rises through the ice from below; a frost-clawed corpse breaks through, and two drowned things with back-bent joints come scuttling sideways."
       },
       "choices": [
         {
           "id": "A",
           "text": "翻檢屍骸,取走那些鏽蝕的船隊徽章",
           "next": "gate_of_frostharbor",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Pick through the remains and take the rusted fleet badges"
         },
         {
           "id": "B",
           "text": "不碰屍骸,趁冰面未再裂快步上岸",
           "next": "gate_of_frostharbor",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Touch nothing — hurry ashore before the ice cracks again"
         }
-      ]
+      ],
+      "titleEn": "Ambush on the Cracking Ice",
+      "narrationEn": "Halfway along the shortcut, the ice beneath you begins to glow — not moonlight: something is crawling pressed to the underside of the sheet, its pale spine striking a cold phosphor light. The first crack bursts on your left; an arm bristling with frost-spines punches through, and the whole pane tilts. Two drowned things haul themselves out of the fissure, joints bent backwards, scuttling sideways like crabs, throats full of seawater, laughing in wet gulps. Farther out beneath the ice, the shadows of black sails slide past without pausing for any of this. You are gravel on their road — something to be crushed in passing."
     },
     {
       "id": "gate_of_frostharbor",
@@ -438,15 +490,19 @@
           "id": "A",
           "text": "把海上所見一五一十告訴民兵,再進鎮",
           "next": "town_hub_1",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Tell the militia everything you saw at sea, then go in"
         },
         {
           "id": "B",
           "text": "只說一句『天亮前燈必須亮』,徑直進鎮",
           "next": "town_hub_1",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Say only, 'The light must burn before dawn,' and walk straight in"
         }
-      ]
+      ],
+      "titleEn": "The Gate of Frostharbor",
+      "narrationEn": "Frostharbor's gate is really no more than a timber palisade slung between two stone cairns, and tonight it bristles with fish-oil torches, their flames pressed flat against the faggots by the wind. Two militiamen bar the way behind it, harpoons levelled, the points trembling in the torchlight — and not only from cold. 'What's out on the water?' the elder one asks, voice worn hoarse. 'The bell rings itself, the lighthouse has gone dark, there are sails under the ice. My grandson says he saw a little girl with no shadow walk in through the fence gap, her feet never touching the snow.' In the town at his back, a hushed sound of prayer drifts from the church, and the warmth of several hundred bodies steams a thin white mist into the blizzard. That warmth is exactly what the fleet is coming for."
     },
     {
       "id": "town_hub_1",
@@ -460,21 +516,26 @@
           "id": "A",
           "text": "下到凍港酒窖,買口熱酒順便探聽消息",
           "next": "cellar_door",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Go down into the Icebound Cellar for a hot drink and whatever news is passing"
         },
         {
           "id": "B",
           "text": "去漁市棚下,找老漁婦打聽白喙船隊",
           "next": "fishmarket",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Try the fish market awnings and ask the old fishwife about the Whitebeak Fleet"
         },
         {
           "id": "C",
           "text": "去教堂避難所,看看鎮民安置得如何",
           "next": "church_shelter",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Look in on the church shelter and see how the townsfolk are settled"
         }
-      ]
+      ],
+      "titleEn": "The Upper Street",
+      "narrationEn": "Frostharbor's upper street winds along the harbourside, its snow trodden to a grey-white crust by hundreds of boots. Panic, if anything, has kept the town awake: heat and voices rise from the cellar mouth of the Icebound Cellar, a few storm-lanterns still burn under the fish market's awnings, and the church spire sways a dim yellow halo through the driving snow. Some are hauling their goods indoors; others are jacking up the price of rope and oil while they can. Supplies, news, a brazier to thaw your hands over — this street can furnish all of it. Only, before anyone speaks, they glance once toward the sea."
     },
     {
       "id": "cellar_door",
@@ -488,15 +549,19 @@
           "id": "A",
           "text": "提燈進裡間,撬開那道暗艙的艙板",
           "next": "cellar_smugglers",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Carry a lamp into the back room and prise open the boards of the hidden hold"
         },
         {
           "id": "B",
           "text": "買足熱酒乾糧,打聽完就回上街",
           "next": "town_hub_2",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Buy your fill of hot drink and hardtack, finish your asking, and return to the upper street"
         }
-      ]
+      ],
+      "titleEn": "The Icebound Cellar",
+      "narrationEn": "The cellar is half underground; you push the door and go down into a faceful of heat, wine-lees and wet wool. A few dozen sailors crowd between the oak casks — no dicing, no songs, only the same word passed low from mouth to mouth: the lighthouse. The taverner is an old one-eyed sailor; he ladles you scalding mead and keeps his voice down. 'Beds if you want beds, hardtack if you want hardtack, prices as ever — Frostharbor isn't dead yet.' He pauses, and juts his chin toward the innermost room. 'One thing, though. The smugglers' hidden hold back there — scratching sounds out of it these past two nights. The owner sailed last month and never came back. If you dare open it, whatever's inside is yours to deal with.'"
     },
     {
       "id": "cellar_smugglers",
@@ -564,22 +629,27 @@
             "damageType": "冷凍"
           }
         ],
-        "intro": "三具凍斃的走私客循著體溫轉過頭來,指端冰稜劃著桶架逼近。"
+        "intro": "三具凍斃的走私客循著體溫轉過頭來,指端冰稜劃著桶架逼近。",
+        "introEn": "Three frozen smugglers turn their heads toward your warmth, ice-spur fingers scraping along the cask racks as they close in."
       },
       "choices": [
         {
           "id": "A",
           "text": "搜暗艙裡的貨箱,看走私的是什麼",
           "next": "cellar_cache",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Search the crates in the hold and see what was being smuggled"
         },
         {
           "id": "B",
           "text": "把艙板原樣封死,上樓回街上",
           "next": "town_hub_2",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Seal the boards back down as they were and go up to the street"
         }
-      ]
+      ],
+      "titleEn": "The Thing in the Hidden Hold",
+      "narrationEn": "The boards come up a crack, and a cold like dead water floods out through it, biting a piece clean out of the cellar's warmth. Inside, three smugglers stand frozen in mid-labour, skins glazed with the sheen of green porcelain. The instant your lamp touches them, three heads turn together — crushed ice grinding in their necks, click on click. 'Warm.' The nearest one speaks, a voice like bubbles rising off the sea floor. 'So warm.' They come on stiff and fast at once, ice-spur fingers raking curls of wood off the cask racks. On the stair behind you the taverner kicks a barrel over to block the way up: 'Don't let them up here!'"
     },
     {
       "id": "cellar_cache",
@@ -600,22 +670,27 @@
             "properties": "著裝者對寒冷傷害具抗性"
           }
         ],
-        "intro": "鐵箍木桶裡是泛著珍珠光的白鯨油,箱底還壓著海豹皮大氅與一袋銀幣。"
+        "intro": "鐵箍木桶裡是泛著珍珠光的白鯨油,箱底還壓著海豹皮大氅與一袋銀幣。",
+        "introEn": "In the iron-hooped casks gleams pearl-white whale oil; beneath them lie a sealskin greatcoat and a bag of silver."
       },
       "choices": [
         {
           "id": "A",
           "text": "扛起鯨油與大氅,回到上街",
           "next": "town_hub_2",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Shoulder the whale oil and the greatcoat, and return to the upper street"
         },
         {
           "id": "B",
           "text": "追問掌櫃:歐勒說燈燒的不是油,是什麼",
           "next": "town_hub_2",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Press the taverner: if not oil, what did Ole say that lamp burns?"
         }
-      ]
+      ],
+      "titleEn": "The Smugglers' Cargo",
+      "narrationEn": "The crate's lock froze brittle long ago; one twist and it comes open. Inside stand two iron-hooped casks; you start a bung, and the milk-white grease within gleams like pearl — white whale oil, lighthouse-grade fuel, bright-burning and long, one cask worth ten of common fish oil. Beneath them lie a sealskin greatcoat, fur turned inward, and a small bag of silver sealed with wax. The taverner leans at the stair foot, counting what you carry up, and something alive comes back into his one eye. 'A deal's a deal — it's all yours. White whale oil, though… if old Ole were here, the sight of it would bring him to tears. Years back he bought it month upon month. Then all at once he stopped, and said the flame in that tower didn't burn oil.'"
     },
     {
       "id": "fishmarket",
@@ -629,15 +704,19 @@
           "id": "A",
           "text": "放一枚銀幣進蚌殼,聽瑪珂講白喙的舊事",
           "next": "fishmarket_whisper",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Set a silver coin in the clamshell and hear Marka's tale of the Whitebeak"
         },
         {
           "id": "B",
           "text": "只買乾糧與漁線,補給完回上街",
           "next": "town_hub_2",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Buy only hardtack and fishing line, then head back to the upper street"
         }
-      ]
+      ],
+      "titleEn": "The Frozen Fish Market",
+      "narrationEn": "The market awnings creak under their weight of snow; on the boards, the cod have frozen one by one into bows, their eyes filmed white like rows of little moons. Trade, remarkably, goes on — even facing the end of the world, Frostharbor folk will haggle first. In the deepest corner of the shelter, old Marka the fishwife sits cross-legged by a charcoal pan, ninety-odd years wrapped in three layers of oilcloth, an empty clamshell set out before her for coin. 'Supplies to the left, stories to the right.' She does not look up. 'The left-hand stalls take copper. Here on the right, I take silver. And the words Whitebeak Fleet — don't shout them outside my awning. It hears, under the ice.'"
     },
     {
       "id": "fishmarket_whisper",
@@ -651,15 +730,19 @@
           "id": "A",
           "text": "追問艾拉的模樣,她是不是穿紅披風",
           "next": "town_hub_2",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Ask what Ella looked like — whether she wore a red cloak"
         },
         {
           "id": "B",
           "text": "把話記在心裡,謝過瑪珂回上街",
           "next": "town_hub_2",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Hold her words close, thank Marka, and return to the upper street"
         }
-      ]
+      ],
+      "titleEn": "Marka's Whisper",
+      "narrationEn": "Marka stirs the coals with her fire-tongs, and the sparks glint in her clouded eyes. 'Ninety-seven years ago, I was seven. The Whitebeak Fleet chased a slave-runner into the strait, the Great Freeze came down, and the ice bit through iron hulls. The Admiral died standing at his masthead, cursing — cursing Frostharbor's light for luring him to his ruin, swearing he would teach this port an everlasting night.' She spits into the fire. 'That same winter, the keeper Ole's little daughter Ella was gone. My mother helped bear the coffin, and came home with one sentence in her mouth — the coffin was too light, light as if all it held was a cloak. From that year on, Ole never bought another cask of oil, and still the lamp burned every night. So ask yourselves: these ninety-seven years, what has that lamp been burning?'"
     },
     {
       "id": "church_shelter",
@@ -673,21 +756,26 @@
           "id": "A",
           "text": "下地窖家墓,查一查那頭的怪聲",
           "next": "church_crypt",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Go down to the family crypts and look into that strange noise"
         },
         {
           "id": "B",
           "text": "留下口糧和藥品,幫牧師安頓病人",
           "next": "town_hub_2",
-          "alignment": 2
+          "alignment": 2,
+          "textEn": "Leave rations and medicine, and help the pastor settle the sick"
         },
         {
           "id": "C",
           "text": "只烤火歇口氣,什麼也不留就走",
           "next": "town_hub_2",
-          "alignment": -1
+          "alignment": -1,
+          "textEn": "Warm yourselves at the fire, leave nothing, and go"
         }
-      ]
+      ],
+      "titleEn": "The Church Shelter",
+      "narrationEn": "The pews have all been broken up for firewood; several hundred people huddle in blankets on the stone floor, their breath gathering into a thin cloud beneath the vault. Pastor Sel wades through the press with his register under one arm, doling out hot fish soup a ladle at a time, his voice long since worn to a rasp: 'Queue for the fire, the sick go first, and nobody pockets coal for his own hearth.' Seeing you, he clamps the register beneath his elbow. 'If you need rest, there's dry straw behind the altar. Bandages and salve, the sisters still have some. And if… if you have strength to spare, we're short of hands with the sick — and there's been a strange noise from the family crypts below this whole while. I can't spare a soul to look.'"
     },
     {
       "id": "church_crypt",
@@ -701,15 +789,19 @@
           "id": "A",
           "text": "默記銘文上的名字,將棺蓋原樣闔上",
           "next": "town_hub_2",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Commit the name on the inscription to memory, and close the lid as it was"
         },
         {
           "id": "B",
           "text": "帶走那縷紅羊毛線,再闔棺離開",
           "next": "town_hub_2",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Take the strand of red wool, then close the coffin and go"
         }
-      ]
+      ],
+      "titleEn": "The Keeper's Family Crypt",
+      "narrationEn": "The crypt passage is wide enough only to walk sideways; niches climb the walls rank upon rank, and in the candlelight three hundred years of Frostharbor's names watch you in silence. The noise comes from the deepest recess — the Vance family niches, where a child-sized coffin is giving out the faintest sound from within: the dry scratch of fingernails on wood. The lid's inscription is cut deep and sure: Ella Vance, died in the Winter of the Great Freeze. You lift the lid together, and in the crack of breaking sealing-wax the scratching stops. Inside there are no bones and no shroud — only frost-flowers blooming across every inner surface, and, laid straight and neat at the centre, a strand of red wool, like a marker someone meant to be found."
     },
     {
       "id": "town_hub_2",
@@ -723,21 +815,26 @@
           "id": "A",
           "text": "進船具行,採買繩索釘爪與燈油",
           "next": "chandlery",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Enter the chandlery and buy rope, crampons and lamp oil"
         },
         {
           "id": "B",
           "text": "去街尾的看守小屋,找歐勒留下的線索",
           "next": "keeper_hut",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Go to the keeper's hut at the street's end and look for what Ole left behind"
         },
         {
           "id": "C",
           "text": "翻進封死的乾船塢,探那哐當作響的地方",
           "next": "shipyard_risk",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Climb into the sealed dry dock and probe whatever is clanging there"
         }
-      ]
+      ],
+      "titleEn": "The Lower Street",
+      "narrationEn": "The lower street runs along the shipyard, the wind funnelling between its two rows of houses into a corridor of white. The chandlery windows are lit; old Boren has hung his OPEN board on the door-nail as always, though the board itself has frozen and cracked. At the street's end stands a lone stone hut, shutters nailed fast, a dead signal-lantern above the lintel — the keeper Ole's lodging in town, though they say he sleeps there barely a handful of nights a year. Beyond it, from the direction of the dry dock, comes the clang of chains knocked about by the wind; that place has been sealed since the Winter of the Great Freeze, and the lock on its chains is bigger than your fist. Out on the water, the black sails are a finger's width nearer."
     },
     {
       "id": "chandlery",
@@ -751,15 +848,19 @@
           "id": "A",
           "text": "用戰利品或承諾,換下那盞不滅風暴燈",
           "next": "chandlery_lamp",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Trade a trophy or a promise for the undying storm lantern"
         },
         {
           "id": "B",
           "text": "只買齊繩索釘爪與燈油,回街上",
           "next": "town_hub_3",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Buy only the rope, crampons and lamp oil, and return to the street"
         }
-      ]
+      ],
+      "titleEn": "The Chandlery",
+      "narrationEn": "Inside the chandlery it is warm as another season, the iron stove glowing, coils of hemp rope, oiled canvas and anchors of every size hanging from the beams. Old Boren is bent over the counter mending a lamp and does not raise his eyes. 'Rope, crampons, lamp oil, hide gloves — prices on the board, honest dealing for all, no mark-up for doomsday.' Only when your purchases are heaped on the counter does he set down his screwdriver and lift an old brass lantern from beneath it, its glass polished bright. 'My grandfather's storm lantern. No magic dark can blow it out. Not for sale — not for money.' He wipes the glass with his cuff. 'But whoever truly dares go up North Cape and light that lamp again — bring me something worthy in trade. Or bring me a promise.'"
     },
     {
       "id": "chandlery_lamp",
@@ -780,22 +881,27 @@
             "properties": "攀爬冰壁與橫渡冰面的檢定具優勢"
           }
         ],
-        "intro": "卜壬交出祖傳的不滅風暴燈與一副鋼齒雪亮的攀冰釘爪,只說了四個字:燈在人在。"
+        "intro": "卜壬交出祖傳的不滅風暴燈與一副鋼齒雪亮的攀冰釘爪,只說了四個字:燈在人在。",
+        "introEn": "Boren hands over his grandfather's undying storm lantern and a pair of bright-toothed ice-crampons, and says only this: while the lamp lives, we live."
       },
       "choices": [
         {
           "id": "A",
           "text": "收好風暴燈與釘爪,回街上集合",
           "next": "town_hub_3",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Stow the storm lantern and crampons, and return to the street to muster"
         },
         {
           "id": "B",
           "text": "再向卜壬細問北岬水道與冰橋的走法",
           "next": "town_hub_3",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Question Boren further on the North Cape channels and the way across the ice bridge"
         }
-      ]
+      ],
+      "titleEn": "The Undying Storm Lantern",
+      "narrationEn": "You lay the fleet badge scavenged from under the ice on the counter. Old Boren stares at it a long moment, his throat working, and at last pushes the storm lantern across. 'In the Winter of the Great Freeze, my grandfather carried this and led three ships' crews ashore.' He takes down a pair of ice-crampons from the top shelf, their steel teeth ground bright. 'At the end of the North Cape causeway there's a stretch of ice bridge — it cracked two years back. No heroics. Strap the crampons tight.' He walks you to the door and does not flinch when the storm drives in. 'While the lamp lives, we live. These old bones won't make the climb — but every lit window in this town, count it given into your keeping.'"
     },
     {
       "id": "keeper_hut",
@@ -809,15 +915,19 @@
           "id": "A",
           "text": "撬開抽屜,翻看歐勒的航海日誌",
           "next": "keeper_journal",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Force the drawer and read through Ole's logbook"
         },
         {
           "id": "B",
           "text": "不動這屋裡的東西,悄悄退出去",
           "next": "town_hub_3",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Disturb nothing in this house, and slip quietly out"
         }
-      ]
+      ],
+      "titleEn": "The Keeper's Hut",
+      "narrationEn": "The hut door is unlocked; ice-grit showers from the hinges as it swings. The cold inside sits heavier than the cold without; even the ash in the stove has frozen into a single clod. On the wall hangs a row of wooden pegs — an oilskin coat, old mooring line — but the centre peg is empty, a short twist of red wool wound about its head. In the corner stands a child-sized bed, the bedding folded into a neat square, a little carved wooden seal at the pillow — all of it under a fall of dust as thick as snow. No one has slept in that bed for ninety-seven years, and for ninety-seven years no one has borne to move it. The desk drawer is locked, and the varnish around the keyhole is scored with scratches old and new, layer over layer, as if someone locked it again and again, and again and again could not keep from opening it."
     },
     {
       "id": "keeper_journal",
@@ -831,15 +941,19 @@
           "id": "A",
           "text": "撕下關鍵幾頁貼身收好,帶去北岬",
           "next": "town_hub_3",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Tear out the crucial pages, keep them next to your skin, and carry them to North Cape"
         },
         {
           "id": "B",
           "text": "把日誌照原樣放回抽屜,鎖好",
           "next": "town_hub_3",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Return the journal to the drawer exactly as it was, and lock it"
         }
-      ]
+      ],
+      "titleEn": "The Keeper's Journal",
+      "narrationEn": "The first half of the log is a keeper's honest record: wind headings, oil levels, the names of ships passing the harbour. Then, from one winter on, the hand changes. 'It does not eat oil. I have tried whale oil, pine pitch, my own blood. It kindled only on the night I lifted her onto the brazier.' 'Each night it burns, she forgets one thing. Last night it took her mother's face. This morning she asked me who the woman in the picture on the wall was.' 'She says it doesn't hurt. She says when the lamp is lit she can see the whole strait, as if she had a thousand eyes. She is lying to me. It hurts.' On the last page the letters have all but torn through the paper, a single line: 'It is nearly burned out. The fleet is counting the days under the ice. They know.'"
     },
     {
       "id": "shipyard_risk",
@@ -853,15 +967,19 @@
           "id": "A",
           "text": "砸鎖破鏈,下到坑底探那半截旗艦",
           "next": "shipyard_dead",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Smash the lock, break the chains, and go down to search the half-sunk flagship"
         },
         {
           "id": "B",
           "text": "鎮令封死必有緣故,退回街上",
           "next": "town_hub_3",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "The town sealed it for a reason — withdraw to the street"
         }
-      ]
+      ],
+      "titleEn": "The Sealed Dry Dock",
+      "narrationEn": "The lock on the chains has rusted into a lump of red-brown; on the gate a town-decree board still hangs, its lettering weathered: 'Set in the second year after the Winter of the Great Freeze. Never to be unsealed.' Through the palings you can see, lying across the dry dock's deep pit, half the hulk of a great ship, her stem-post rearing high, carved with a worn white bird's beak — the flagship of the Whitebeak Fleet, towed home in those days for breaking. The breaking got halfway before something happened, and no one has touched her since. In the shadows of the pit there is a rustling, and from more than one place, as if things are climbing close along the ship's ribs. The wind moans through the bare frames, and if you listen long enough, it begins to sound like someone counting."
     },
     {
       "id": "shipyard_dead",
@@ -929,22 +1047,27 @@
             "damageType": "鈍擊"
           }
         ],
-        "intro": "三具穿著保養如新軍裝的水手屍從船肋間立起,朝你們行了個水兵禮,鏈鎚隨即砸下。"
+        "intro": "三具穿著保養如新軍裝的水手屍從船肋間立起,朝你們行了個水兵禮,鏈鎚隨即砸下。",
+        "introEn": "Three corpse-sailors in immaculately kept uniforms rise from between the ship's ribs, give you a navy man's salute, and bring their chain-flails down."
       },
       "choices": [
         {
           "id": "A",
           "text": "搜旗艦的軍官艙,看它們守的是什麼",
           "next": "shipyard_prize",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Search the flagship's officers' cabin and see what they were guarding"
         },
         {
           "id": "B",
           "text": "不再深入,爬出船塢回街上",
           "next": "town_hub_3",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Go no deeper — climb out of the dock and back to the street"
         }
-      ]
+      ],
+      "titleEn": "The Dead of the Dry Dock",
+      "narrationEn": "You pick your way down the iced ramp to the pit floor, and the instant your light sweeps the hulk, the rustling stops as one. Three figures straighten up from between the ribs — sailors of the Whitebeak Fleet, the wool of their uniforms frozen to iron shell, the white-beak badges on their breasts polished bright. Ninety-seven years, and still they keep their dress in order. The foremost has lost half his face; the half that remains is perfectly composed. He raises an arm wound with broken chain and gives you a regulation naval salute. Then the chain comes whistling down. They do not shout and they do not cry out; they kill the way a drill-manual is executed — by the numbers, and cold to the bone."
     },
     {
       "id": "shipyard_prize",
@@ -963,22 +1086,27 @@
             "properties": "命中亡靈時追加1d6冷凍傷害;提督認得這柄劍"
           }
         ],
-        "intro": "劍架上的斷劍斷口凍著藍光,桌上殘頁寫著:三長兩短,全隊躲開它。"
+        "intro": "劍架上的斷劍斷口凍著藍光,桌上殘頁寫著:三長兩短,全隊躲開它。",
+        "introEn": "The broken sword on the rack is frozen blue at the break, and the surviving log pages read: three long, two short — the whole fleet is to avoid it."
       },
       "choices": [
         {
           "id": "A",
           "text": "帶著斷劍與殘頁,爬出船塢回街上",
           "next": "town_hub_3",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Take the broken sword and the log pages, and climb out of the dock to the street"
         },
         {
           "id": "B",
           "text": "臨走前把殘骸潑油點了,絕它們的巢",
           "next": "town_hub_3",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Before you go, douse the hulk in oil and burn out their nest"
         }
-      ]
+      ],
+      "titleEn": "The Admiral's Broken Sword",
+      "narrationEn": "The officers' cabin bears a spread-winged white beak carved over its lintel; within, table and chairs stand ready, as if waiting for the Admiral to return to dinner. Of the ship's log on the table only a few pages remain unrotted, the hand ragged with fury: 'Frostharbor's light is making that signal again. Three long. Two short. The helmsman calls it pilotage; I call it mockery. Avoid it. The whole fleet is to avoid it.' Across the sword-rack lies a broken sword, its break clean as if bitten through by an entire winter, the fracture frozen over with a faint blue light. The moment you take it up, the wind outside the pit holds its breath — as if something the length of the strait had turned its head, slightly, toward this place."
     },
     {
       "id": "town_hub_3",
@@ -992,21 +1120,26 @@
           "id": "A",
           "text": "整備完畢,出鎮直奔北岬堤道",
           "next": "causeway_bottleneck",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Fully provisioned, leave town and make straight for the North Cape causeway"
         },
         {
           "id": "B",
           "text": "繞去半沉的舊禮拜堂,查那唱詩聲",
           "next": "drowned_chapel",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Turn aside to the half-sunken chapel and trace that singing"
         },
         {
           "id": "C",
           "text": "先進議事廳,聽婭德的整套部署",
           "next": "council_hall",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Step into the council hall first and hear the whole of Yda's dispositions"
         }
-      ]
+      ],
+      "titleEn": "Muster in the Storm",
+      "narrationEn": "A great fire has been lit in the middle of the square, and Mayor Yda stands on an overturned sledge dealing out work, her voice cracked and carrying on regardless: 'Able bodies to the palisade, women and children into the church, oil and firewood move at my say!' Seeing you, she jumps down, ice beading her brows. 'North Cape falls to you. Before you set out, buy what wants buying and rest what wants resting — past the causeway there is no next shop.' By the fire, someone slips two hot stones into your packs without a word. And from the town's edge word is passing that the old chapel half-sunk in the ice was heard singing last night — the requiem set of ninety-seven years ago — and no one dares go and look."
     },
     {
       "id": "council_hall",
@@ -1020,21 +1153,26 @@
           "id": "A",
           "text": "勸婭德備船,先把老弱送出冰道",
           "next": "causeway_bottleneck",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Urge Yda to ready the ship and send the old and young out through the ice-lane first"
         },
         {
           "id": "B",
           "text": "勸婭德集中火油守柵欄,背水一戰",
           "next": "causeway_bottleneck",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Urge Yda to mass the fire-oil at the palisade and make a stand"
         },
         {
           "id": "C",
           "text": "承諾:天亮前燈塔必亮,兩頭都不用賭",
           "next": "causeway_bottleneck",
-          "alignment": 2
+          "alignment": 2,
+          "textEn": "Give your word: the lighthouse burns before dawn — no need to wager either way"
         }
-      ]
+      ],
+      "titleEn": "The Council Hall",
+      "narrationEn": "The charcoal in the council hall is nearly spent. The harbour map lies spread across the long table, weighted with four reef-stones. Yda's finger moves over it. 'Two roads. One: load the old and the young aboard the icebreaker and run them south while the ice-lane holds, and wager that those things follow lights, not ships. Two: mass every drop of the town's fire-oil at the palisade, burn a wall of flame, and wager that they fear fire.' Against the wall, Helga, wrapped in bandages, speaks up hoarse: 'The Dawnwife has one more run in her — if someone gives me half a crew.' Every eye settles on you. Outside, the wind throws itself against the boards, as if something across the water were pressing for an answer."
     },
     {
       "id": "drowned_chapel",
@@ -1048,15 +1186,19 @@
           "id": "A",
           "text": "沿舊鑿痕破冰而下,潛入沉沒的堂內",
           "next": "chapel_ghosts",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Break through along the old chisel-marks and slip down into the sunken hall"
         },
         {
           "id": "B",
           "text": "不淌這渾水,折返直奔北岬堤道",
           "next": "causeway_bottleneck",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Leave this trouble be — turn back and make straight for the North Cape causeway"
         }
-      ]
+      ],
+      "titleEn": "The Half-Sunken Chapel",
+      "narrationEn": "Of the old chapel only the roof-ridge and half a bell tower still break the ice, like a wreck run aground in time itself. You kneel and press an ear to the surface — there truly is singing. Many parts, men's voices and women's, a requiem sung strict and steady, rising from the chapel hall a dozen feet below, each phrase-end held rock-firm, not one voice straying off pitch. The singers have been dead ninety-seven years, and still they keep evensong on time. Beneath the ice a warm yellow glow drifts faintly, as if candles were lit in the hall. Near the roof-ridge one patch of ice is visibly thinner, old chisel-marks around its edge. You are not the first who meant to go down. But none of the earlier footprints ever turned back."
     },
     {
       "id": "chapel_ghosts",
@@ -1124,22 +1266,27 @@
             "damageType": "冷凍"
           }
         ],
-        "intro": "唱詩班的頭顱齊齊轉向你們,安魂曲轉調成審判曲,冰稜應聲崩落如箭。"
+        "intro": "唱詩班的頭顱齊齊轉向你們,安魂曲轉調成審判曲,冰稜應聲崩落如箭。",
+        "introEn": "The choir's heads turn to you as one; the requiem wrenches into a hymn of judgement, and icicles shear loose like arrows."
       },
       "choices": [
         {
           "id": "A",
           "text": "上祭壇,取下那件仍在發光的聖物",
           "next": "chapel_relic",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Approach the altar and take down the relic that still gives light"
         },
         {
           "id": "B",
           "text": "見好就收,立刻爬回冰面上",
           "next": "causeway_bottleneck",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Take what luck you have and climb straight back to the ice above"
         }
-      ]
+      ],
+      "titleEn": "The Choir Beneath the Ice",
+      "narrationEn": "The hall below the ice-hole is, impossibly, dry; the sea has frozen against its walls into a ring of green glass. On the candle-stands a row of flames burns quietly, shedding no wax. In the choir stalls sit a dozen shapes, bloated hands folded in their laps — and at the breath-mark in the music, a dozen heads turn toward you at once. The singing does not stop. The melody wrenches into a new key; the requiem becomes a hymn of judgement, and the wave of sound rolls off the stone walls and into your chests until your eardrums ache, and the icicles along the eaves shear away like arrows. The leader of the choir rises from the front row, a drowned throat producing an organ's roar, and opens both arms to you."
     },
     {
       "id": "chapel_relic",
@@ -1156,22 +1303,27 @@
             "properties": "每場戰鬥限一次:搖鈴令亡者退避一輪,不敢近身"
           }
         ],
-        "intro": "祭壇絨布早朽,黃銅小鈴卻亮得像剛擦過,鈴身鏨著日出的紋樣。"
+        "intro": "祭壇絨布早朽,黃銅小鈴卻亮得像剛擦過,鈴身鏨著日出的紋樣。",
+        "introEn": "The altar velvet rotted long ago, but the small brass bell shines as if freshly polished, a rising sun chased on its flank."
       },
       "choices": [
         {
           "id": "A",
           "text": "揣好小鈴,趕往北岬堤道",
           "next": "causeway_bottleneck",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Tuck the little bell away and make for the North Cape causeway"
         },
         {
           "id": "B",
           "text": "朝著黑沉沉的海面,再搖一次鈴試音",
           "next": "causeway_bottleneck",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Turn to the black sweep of sea and ring the bell once more, to test its voice"
         }
-      ]
+      ],
+      "titleEn": "The Frozen Bell Relic",
+      "narrationEn": "Under the altar's dust rests a small brass bell chased with a rising sun, its velvet cushion long rotted, the bell itself bright as if newly polished. As you lift it, a fingertip brushes out a single note — light, yet it travels straight through the whole sunken hall. Behind you, the singing stops, all together. Not the stop of an interruption: the stop of a thing completed. A dozen shapes bow their heads slowly, keeping their seats, like worshippers closing their books after evensong. The candles go out row by row, and in the dark there is one small sigh, light as a burden set down. When you climb back to the ice, the little bell against your chest still holds a warmth it has no right to hold."
     },
     {
       "id": "causeway_bottleneck",
@@ -1186,15 +1338,19 @@
           "text": "頂著正面的風,沿堤道大路強行推進",
           "next": "ice_bridge_broken",
           "alignment": 0,
-          "checkHint": "體質:在割臉的風雪中保持行軍"
+          "checkHint": "體質:在割臉的風雪中保持行軍",
+          "textEn": "Take the wind head-on and force the march along the causeway road"
         },
         {
           "id": "B",
           "text": "貼著崖根背風面,慢些但穩地繞行",
           "next": "ice_bridge_broken",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Hug the sheltered side at the cliff base and work around — slower, but steady"
         }
-      ]
+      ],
+      "titleEn": "The North Cape Causeway",
+      "narrationEn": "The causeway lies like a black belt flung down in the blizzard, one end knotted to the town's lights, the other to the lightless cape. Here the wind stops being wind; it is a solid thing, striking the chest blow upon blow. You look back once: several hundred windows of Frostharbor glowing warm yellow, and behind every one a bundle of living heat — which, to the things beneath the ice, is a row of lit beacons marking the channel. Out on the water the black sails are near enough to count: eleven, in a single line abreast, frost thickening on their yards, like eleven fingers pointed at the town. You cinch your collars tight and step onto the causeway. Past this point, there is no room left for turning back."
     },
     {
       "id": "ice_bridge_broken",
@@ -1209,22 +1365,27 @@
           "text": "卸下重物,助跑飛越裂口",
           "next": "bridge_leap",
           "alignment": 0,
-          "checkHint": "運動:兩丈裂口上的一躍"
+          "checkHint": "運動:兩丈裂口上的一躍",
+          "textEn": "Shed your heavy gear, take a run, and leap the rift"
         },
         {
           "id": "B",
           "text": "用釘爪與繩索,沿斷面下降再攀上對岸",
           "next": "bridge_leap",
           "alignment": 0,
-          "checkHint": "若備有攀冰釘爪,此路穩妥得多"
+          "checkHint": "若備有攀冰釘爪,此路穩妥得多",
+          "textEn": "With crampons and rope, descend the broken face and climb up the far side"
         },
         {
           "id": "C",
           "text": "退下橋基,鑽冰縫走底下的冰洞繞路",
           "next": "ice_caves",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Drop back off the bridge footing and thread the ice caves below to go around"
         }
-      ]
+      ],
+      "titleEn": "The Shattered Ice Bridge",
+      "narrationEn": "Boren was right. The ice bridge has burst open at its very middle, a rift more than two fathoms wide, the broken faces so fresh they show blue — this happened tonight. You lean out and look down: far below, the seawater shines black, and a lantern hangs frozen partway down the ice wall, still held high in the posture its owner gave it. Of the owner there is no sign. On the far side, the tower's footing at North Cape is already dimly visible. Wind drives up out of the rift, carrying the fish-cold smell of the deep sea, like something below breathing, evenly. The remnant ice of the bridge deck keeps up a small, maddening splintering underfoot, reminding you: standing still is also a way of choosing wrongly."
     },
     {
       "id": "bridge_leap",
@@ -1238,15 +1399,19 @@
           "id": "A",
           "text": "整隊繼續前進,循赤足印直奔塔基",
           "next": "girl_second_meeting",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Re-form and press on, following the bare footprints straight to the tower's footing"
         },
         {
           "id": "B",
           "text": "回望裂口深處那盞凍住的燈,默記一刻",
           "next": "girl_second_meeting",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Look back at the lantern frozen deep in the rift, and hold it in mind a moment"
         }
-      ]
+      ],
+      "titleEn": "Across the Rift",
+      "narrationEn": "The instant you land, white fracture-lines burst across the ice like a spider's web; you lie flat on the far side gulping air, lungs packed with shards of frost. Behind you, the breathing in the rift misses half a beat, as if faintly sorry to see prey slip off the hook. Someone spots it first — ahead of your landing place, a line of prints marks the snow. Small ones. A child's bare feet, the arches clean-cut, and not one thread of frostbite blood soaked into the snow. The prints begin at the rift's edge, as if out of thin air, and run on toward the tower's footing. The girl in the red cloak has beaten you there. And she asked you not to wake her father."
     },
     {
       "id": "ice_caves",
@@ -1260,15 +1425,19 @@
           "id": "A",
           "text": "循著呼吸聲最冷的方向,快步穿過去",
           "next": "cave_ambush",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Follow the breathing where the air runs coldest, and move through fast"
         },
         {
           "id": "B",
           "text": "挑安靜的岔道,舉燈緩步摸索",
           "next": "cave_ambush",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Take the silent fork, lamp raised, and feel your way step by step"
         }
-      ]
+      ],
+      "titleEn": "The Crevasse Gallery",
+      "narrationEn": "The world inside the crevasse is quiet as the bottom of the sea. Lamplight strikes the ice walls and breaks into shelf upon shelf of deep blue; frozen in the depths are galaxies of trapped bubbles — and other things. Half a coil of rope. A leather glove. A small shield with its painted letters flaking, on which you can just make out the word RESCUE. In ninety-seven years, you are not the first to try for North Cape. Ahead, the gallery forks. Down the left-hand way comes a slow, even breathing, and with each breath the blue light in the walls brightens and dims; the right-hand way is silent — too silent, your own footfalls swallowed by something you cannot see."
     },
     {
       "id": "cave_ambush",
@@ -1336,22 +1505,27 @@
             "damageType": "揮砍"
           }
         ],
-        "intro": "冰壁裡的搜救隊破冰而出,喊著「抓緊繩子」,冰鎬帶著風聲砸來。"
+        "intro": "冰壁裡的搜救隊破冰而出,喊著「抓緊繩子」,冰鎬帶著風聲砸來。",
+        "introEn": "The rescue party breaks out of the ice wall, crying 'hold the rope!', their ice-axes whistling down."
       },
       "choices": [
         {
           "id": "A",
           "text": "從隊長遺體上取回哨子與那張舊油票",
           "next": "girl_second_meeting",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Recover the whistle and the old oil chit from the captain's body"
         },
         {
           "id": "B",
           "text": "為他們合上眼,儘速衝出冰縫",
           "next": "girl_second_meeting",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Close their eyes for them, and get clear of the crevasse with all speed"
         }
-      ]
+      ],
+      "titleEn": "Ambush in the Gallery",
+      "narrationEn": "It is the right-hand wall that moves first. A human face opens its eyes in the blue light; then a second; then a third. The men of the old rescue party tear themselves out of the ice, and their frost-split lips are still discharging their duty: 'Hold the rope! Everyone hold the rope!' The lines they throw rotted years since into slivers of ice, but the ice-axes they swing come down with honest weight. The one who was their captain wears a brass whistle at his chest and blows it with every stroke, the note striking a dozen echoes down the gallery. They do not hate you. They mean to save you — to save you into this wall of never-melting ice, beside them."
     },
     {
       "id": "girl_second_meeting",
@@ -1365,21 +1539,26 @@
           "id": "A",
           "text": "蹲下與她平視,起誓找到不燒她的辦法",
           "next": "lighthouse_gate",
-          "alignment": 2
+          "alignment": 2,
+          "textEn": "Kneel to meet her eyes and swear to find a way that does not burn her"
         },
         {
           "id": "B",
           "text": "如實告訴她:鎮上幾百條命,對不起妳",
           "next": "lighthouse_gate",
-          "alignment": -1
+          "alignment": -1,
+          "textEn": "Tell her the truth: hundreds of lives in the town — and that you are sorry"
         },
         {
           "id": "C",
           "text": "追問『活人捨得的東西』究竟怎麼個燒法",
           "next": "lighthouse_gate",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Press her: how exactly does one burn 'what the living bear to give up'?"
         }
-      ]
+      ],
+      "titleEn": "Do Not Wake My Father",
+      "narrationEn": "She is waiting for you on the stone steps at the tower's footing, her red cloak snapping, snow passing through its hem and settling without so much as a dimple. 'You came anyway.' She tilts her face up; the eyes in it are far too old for a child. 'I am begging you one last time. The thing in the brazier — I was the price of it. Each night it is lit, it burns away a piece of me. First my mother's face. Then our dog. Then the cradle-song. There is not much of me left now. Once more, and I won't even keep my own name.' She twists the corner of her cloak in her fists, and for the first time her voice shakes the way a child's does. 'But it can burn other things too. It can burn what living people truly bear to give up. Only my father… my father cannot bear to burn what belongs to anyone else. Please. Don't wake him.'"
     },
     {
       "id": "lighthouse_gate",
@@ -1393,22 +1572,27 @@
           "id": "A",
           "text": "取出結霜的鑰匙,插進那朵霜花正中",
           "next": "gallery_hall",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Draw out the frosted key and set it into the heart of the frost-flower"
         },
         {
           "id": "B",
           "text": "撬鎖破門,硬闖進去",
           "next": "gallery_hall",
           "alignment": 0,
-          "checkHint": "巧手:凍死的鎖簧又硬又脆"
+          "checkHint": "巧手:凍死的鎖簧又硬又脆",
+          "textEn": "Pick the lock, break the door, and force your way in"
         },
         {
           "id": "C",
           "text": "不走正門,攀外壁上迴廊平台",
           "next": "outer_climb",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Forget the door — climb the outer wall to the gallery walk"
         }
-      ]
+      ],
+      "titleEn": "The Tower Door",
+      "narrationEn": "Up close, the North Cape lighthouse stands taller than you had imagined, frost-flowers rooted in every seam of its stonework, like a great tree frozen dead. The iron door is a full two inches thick, and around the keyhole the frost has closed into one perfect six-petalled flower — you have seen that pattern before, identical to the frost on the key from the boat at the pier. Under the door, a wet drag-trail runs in from outside and sets into black ice across the threshold. The tower's crown is lost in the blizzard; all that reaches you is the sound, on and off, of a metal chain hauled over stone stairs. One pull. Another. Unhurried — as if something has patrolled this tower for ninety-seven years and does not intend to rest tonight."
     },
     {
       "id": "outer_climb",
@@ -1423,15 +1607,19 @@
           "text": "咬牙攀完最後一段,翻上迴廊平台",
           "next": "gallery_hall",
           "alignment": 0,
-          "checkHint": "運動:無遮蔽段的最後衝刺"
+          "checkHint": "運動:無遮蔽段的最後衝刺",
+          "textEn": "Grit through the final pitch and haul yourselves over onto the gallery walk"
         },
         {
           "id": "B",
           "text": "從氣窗擠進塔內,改走裡面的樓梯",
           "next": "gallery_hall",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Squeeze in through the vent-window and take the stairs inside instead"
         }
-      ]
+      ],
+      "titleEn": "The Outer Climb",
+      "narrationEn": "The ice sheath on the outer wall peels away in plates under your fingers; the wind hauls you out over the cliff, and the rope hums taut as a fiddle-string. Halfway up, a vent-window is set into the stone, most of its glass gone. Pressed against the opening to catch your breath, you steal one look inside — the spiral stair winding up, and on the walls to either side, frost. Frost grown into pictures: a woman's face, a dog lying flat, a crooked line of cradle-song notation. As if someone had upended a whole chest of memories against the wall, and winter had frozen them exactly where they fell. Above your heads the wind screams through the gallery railing; the last pitch has no cover at all. Set your teeth. Up."
     },
     {
       "id": "gallery_hall",
@@ -1445,15 +1633,19 @@
           "id": "A",
           "text": "搶佔階梯口的地利,迎向下來的東西",
           "next": "drowned_mate",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Seize the ground at the stairfoot and meet what is coming down"
         },
         {
           "id": "B",
           "text": "先急搜儲物間抄起半桶陳年鯨油再應戰",
           "next": "drowned_mate",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Raid the storeroom first for the half-cask of old whale oil, then take the fight"
         }
-      ]
+      ],
+      "titleEn": "The Hall at the Tower's Foot",
+      "narrationEn": "The hall keeps a tidiness that closes around the heart like a fist: the stove scrubbed clean, army blankets folded square, boots set in a line by the door. On the wall hangs a small charcoal portrait — the keeper's face in his youth, a wife beside him, and a girl grinning wide, the outline of the cloak on her shoulders traced over, carefully, in red ochre: the only colour in the picture. On the shelf below it lies a wildflower offered long ago, withered to grey. Overhead, from the spiral stair, comes a wet, heavy dragging, laced with the clang of chain on stone steps, descending slowly, one stair at a time. It has heard you."
     },
     {
       "id": "drowned_mate",
@@ -1521,22 +1713,27 @@
             "damageType": "揮砍"
           }
         ],
-        "intro": "溺亡的大副拖著船錨自梯井轉出,正了正軍帽:「日出之前,塔上不得有火。」"
+        "intro": "溺亡的大副拖著船錨自梯井轉出,正了正軍帽:「日出之前,塔上不得有火。」",
+        "introEn": "The drowned mate hauls his anchor round the turn of the stairwell and straightens his cap: 'Before sunrise, no fire in the tower.'"
       },
       "choices": [
         {
           "id": "A",
           "text": "搜他懷裡防水油布包著的登岸令",
           "next": "spiral_stairs",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Search his coat for the landing orders wrapped in waxed cloth"
         },
         {
           "id": "B",
           "text": "把屍身推出塔門,立刻搶上樓梯",
           "next": "spiral_stairs",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Shove the corpse out the tower door and take the stairs at once"
         }
-      ]
+      ],
+      "titleEn": "The Drowned First Mate",
+      "narrationEn": "The thing that swings round the turn of the spiral stair nearly fills the stairwell. The first mate of the Whitebeak Fleet — epaulettes still on, cap still on, only the face beneath the brim swollen blue-white, seawater running steadily off the skirts of his coat and striking the floor without freezing. His left hand drags a ship's anchor, the chain ploughing sparks from the stone steps. Seeing you, he pauses half a breath — and actually raises a hand to straighten his cap. 'The Admiral's orders.' Seawater wells between his teeth. 'Before sunrise, no fire in the tower.' The anchor-chain comes round, and the whole stairwell shudders."
     },
     {
       "id": "spiral_stairs",
@@ -1550,15 +1747,19 @@
           "id": "A",
           "text": "放慢腳步,把每一幅霜畫記進心裡",
           "next": "lamp_room",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Slow your climb and take every frost-picture into memory"
         },
         {
           "id": "B",
           "text": "別看了,趁黎明未至衝上燈室",
           "next": "lamp_room",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Look no longer — rush the lamp room before dawn arrives"
         }
-      ]
+      ],
+      "titleEn": "The Frost-Painted Stair",
+      "narrationEn": "The walls flanking the stair are furred deep with frost, and the frost has grown itself into pictures. The first is a woman's face, gentle. A few steps higher, a dog with one drooping ear lies across a doorsill. Higher again, a crooked line of song-notation, and two figures seen from behind, walking hand in hand, one tall, one small, climbing toward the tower's crown. You know these — the logbook recorded them entry by entry. The things she forgot never scattered at all; they were burned into the tower's bones. The higher you climb, the sparser the pictures come, the gaps between them stretching longer. On the last flight the walls stand empty, only a thin skin of new frost, like a white page waiting for the pen."
     },
     {
       "id": "lamp_room",
@@ -1572,21 +1773,26 @@
           "id": "A",
           "text": "上前搖醒被鎖鏈鎖在欄杆上的守塔人",
           "next": "keeper_wakes",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Go to the keeper chained to the railing and shake him awake"
         },
         {
           "id": "B",
           "text": "先細查火盆與心臟,弄清點燃的法子",
           "next": "keeper_wakes",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Examine the brazier and the heart first, and work out how it is lit"
         },
         {
           "id": "C",
           "text": "依女孩所願誰也不吵醒,低聲與她商量",
           "next": "keeper_wakes",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Wake no one, as the girl wishes, and confer with her in whispers"
         }
-      ]
+      ],
+      "titleEn": "The Lamp Room and the Heart",
+      "narrationEn": "The lamp room is smaller than you expected, wind driving through eight panes of broken glass. The great brazier at its centre is cold through, and in the basin lies a heart — ice-blue, half translucent, like glass frozen out of seawater — and it is still beating. At every contraction a ring of faint light wells across the basin floor, weak as a wick burnt to its end. At the gallery rail a tall figure kneels, half his body sheathed in frost, a chain locking his own wrist dead to the railing. Ole the keeper, eyes closed — sleeping or dead, you cannot tell. The girl in the red cloak stands on the brazier's far side, watching the heart, and says softly: 'You see. It's tired. It has beaten for all of you for ninety-seven years.' Beyond the windows, eleven black sails slide line abreast into Frostharbor's outer anchorage."
     },
     {
       "id": "keeper_wakes",
@@ -1600,15 +1806,19 @@
           "id": "A",
           "text": "與歐勒並肩,先守住燈室再談別的",
           "next": "fuel_decision",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Stand with Ole — hold the lamp room first, and talk after"
         },
         {
           "id": "B",
           "text": "逼問他:除了心臟到底還有什麼能燒",
           "next": "fuel_decision",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Press him: besides the heart, what else will that fire burn?"
         }
-      ]
+      ],
+      "titleEn": "Ole the Keeper",
+      "narrationEn": "Frost has sealed Ole's eyelids; opening them tears the film of ice. He sees the girl, and something kindles in his clouded eyes — then goes out utterly. 'Ella died of sickness in the Winter of the Great Freeze.' His voice is a stone ground down for ninety-seven years. 'The night the fleet sank, the thing in the ice came to me: her heart for a lamp-wick, and Frostharbor would have light for ever. I said yes. I put my daughter's heart into this basin.' The chain crashes as he lifts his wrist to show you. 'I chained myself for fear that one day I would weaken — and put the fire out with my own hands.' The tower shudders; below, the iron door bursts inward, and the smell of the sea climbs the stairs. He straightens his back. 'The Admiral has come. Decide now — does this fire burn tonight, and what do we feed it?'"
     },
     {
       "id": "fuel_decision",
@@ -1622,21 +1832,26 @@
           "id": "A",
           "text": "定意點燈,但發誓找心臟以外的燒法",
           "next": "admiral_boss",
-          "alignment": 2
+          "alignment": 2,
+          "textEn": "Resolve to light the lamp — but swear to find a fuel other than the heart"
         },
         {
           "id": "B",
           "text": "定意點燈,燒什麼都行,先亮起來再說",
           "next": "admiral_boss",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Resolve to light the lamp with whatever will burn; brightness first, reckoning after"
         },
         {
           "id": "C",
           "text": "盤算著把心臟交給提督,換全鎮平安",
           "next": "admiral_boss",
-          "alignment": -2
+          "alignment": -2,
+          "textEn": "Weigh handing the heart to the Admiral, to buy the whole town's safety"
         }
-      ]
+      ],
+      "titleEn": "The Fire Before Dawn",
+      "narrationEn": "Measured footsteps sound in the stairwell, unhurried: one stair, then the next. At each fall, a frost-picture shatters on the wall — the woman's face splits, the dog scatters, the song-notation flakes away. Ella clutches her cloak tight. Ole strains until his chain sings. In the basin the heart beats faster and faster, its glow flickering, as if it were afraid. There is time for one decision only: what burns in this basin tonight? The white whale oil stands stacked by the wall — but Ole has told you the thing does not eat oil. Put the heart back, and it will burn away the last of her, name and all. And the one climbing the stairs might yet name a price for that heart. The footsteps stop outside the door. The handle turns."
     },
     {
       "id": "admiral_boss",
@@ -1704,28 +1919,34 @@
             "damageType": "冷凍"
           }
         ],
-        "intro": "莫爾凡拔劍,冰殼自大衣剝落:「讓開,或者,躺下。」兩盞黑火艦燈在他身後亮起。"
+        "intro": "莫爾凡拔劍,冰殼自大衣剝落:「讓開,或者,躺下。」兩盞黑火艦燈在他身後亮起。",
+        "introEn": "Morvane draws his sabre, ice shearing from his greatcoat: 'Stand aside. Or lie down.' Behind him, two ship-lanterns kindle with black fire."
       },
       "choices": [
         {
           "id": "A",
           "text": "乘勝搶到火盆前,趕在黎明前處置燈火",
           "next": "dawn_brink",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Press the advantage to the brazier and settle the light before dawn"
         },
         {
           "id": "B",
           "text": "對跪地的殘存亡者喊話,談一個條件",
           "next": "cold_bargain",
-          "alignment": -1
+          "alignment": -1,
+          "textEn": "Call out terms to the broken dead still kneeling — strike a bargain"
         },
         {
           "id": "C",
           "text": "趁亂抱起冰藍心臟,轉身奔下塔去",
           "next": "flee_ice",
-          "alignment": -2
+          "alignment": -2,
+          "textEn": "In the chaos, snatch up the ice-blue heart and run down the tower"
         }
-      ]
+      ],
+      "titleEn": "The Whitebeak Admiral",
+      "narrationEn": "The door opens. Admiral Morvane of the Whitebeak ducks through the frame, plates of ice shearing off his greatcoat and ringing on the floor. His face is almost perfectly kept; only the eyes are two pools of frozen deep sea. Two attendants follow, bearing extinguished ship-lanterns in which a black fire sits. 'Ninety-seven years ago, this tower's light steered me into a grave of ice.' His voice is calm as a frozen sea. 'I have not come to butcher the town. I have come for the heart that cheated me of my long sleep — it will light my fleet's way home. As for those warm little lights ashore, they too must go out, lest they cheat a second fleet.' He draws his sabre — the same steel, from the same forge, as the broken sword in your hands. 'Stand aside. Or lie down.'"
     },
     {
       "id": "dawn_brink",
@@ -1739,22 +1960,27 @@
           "id": "A",
           "text": "將心臟放進火盆,燒盡它,換全鎮活命",
           "next": "ending_ashen_dawn",
-          "alignment": 2
+          "alignment": 2,
+          "textEn": "Lay the heart in the brazier and burn it to nothing, and buy the town its lives"
         },
         {
           "id": "B",
           "text": "割開掌心按住盆沿,號召眾人各獻其暖共燃",
           "next": "ending_shared_flame",
           "alignment": 2,
-          "checkHint": "意志:把自己真心捨得的東西交出去"
+          "checkHint": "意志:把自己真心捨得的東西交出去",
+          "textEn": "Open your palm on the basin's rim and call on all to give up something warm of their own, and burn together"
         },
         {
           "id": "C",
           "text": "手一鬆,任火盆冷下去,帶著人往南逃",
           "next": "ending_silent_landing",
-          "alignment": -2
+          "alignment": -2,
+          "textEn": "Let your hands fall, leave the brazier cold, and lead the people south"
         }
-      ]
+      ],
+      "titleEn": "The Edge of Dawn",
+      "narrationEn": "The Admiral's ruin crumbles into black ice by the window — yet the sails on the water do not withdraw. They hold at anchor, waiting on an outcome. Along the eastern rim of the sky seeps a thin line of crab-shell green: dawn is on its way, but the fleet is nearer. The heart lies in your palms, too light for something that has carried ninety-seven years of light, each beat one shade fainter than the last. Ella stands at the brazier. She does not weep and she does not plead; she only wrings her cloak into creases. Ole's chain lies snapped at his feet; his mouth opens, and in the end nothing comes out. The brazier is cold. Wind pours through all eight windows. Now someone must decide what to feed it."
     },
     {
       "id": "cold_bargain",
@@ -1768,21 +1994,26 @@
           "id": "A",
           "text": "議定:亡者取走港中船隻與亡籍,活人留岸",
           "next": "ending_half_harbor",
-          "alignment": 0
+          "alignment": 0,
+          "textEn": "Seal it: the dead take the harbour's ships and its register of the dead, and the living keep the shore"
         },
         {
           "id": "B",
           "text": "假意應約,近身時反手奪心據為己有",
           "next": "ending_frozen_crown",
-          "alignment": -2
+          "alignment": -2,
+          "textEn": "Feign assent — then, at close quarters, wrench the heart away for your own"
         },
         {
           "id": "C",
           "text": "撕毀盟約,搶在他起身前把燈點回來",
           "next": "ending_ashen_dawn",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Tear up the pact and relight the lamp before he can rise"
         }
-      ]
+      ],
+      "titleEn": "A Bargain with the Dead",
+      "narrationEn": "Morvane kneels on one knee among the broken glass, propped on his snapped sabre, and the deep-sea eyes hold not one shade of defeat. 'Listen, living ones.' Black ice flakes from his wounds. 'Before sunrise I can still bring eleven ships onto your shore. But I can also not.' He extends a hand mailed in ice. 'Give me the heart, and the fleet turns south this hour — only this port lights no lamp and puts out no boat, ever again. Or give me your town's register of the dead: I take the names, crew the ships I lost beneath the ice, and not one living soul is touched.' Ella backs half a step toward the brazier. A low growl climbs out of Ole's throat. The terms lie spread in the driving snow, waiting for your hand."
     },
     {
       "id": "flee_ice",
@@ -1796,21 +2027,26 @@
           "id": "A",
           "text": "聽從低語,轉身走向黑帆旗艦的舷梯",
           "next": "ending_frozen_crown",
-          "alignment": -2
+          "alignment": -2,
+          "textEn": "Heed the whisper, and turn toward the black flagship's boarding ladder"
         },
         {
           "id": "B",
           "text": "揣著心臟頭也不回,往南方雪原去",
           "next": "ending_silent_landing",
-          "alignment": -1
+          "alignment": -1,
+          "textEn": "Keep the heart and go south into the snowfields without a backward glance"
         },
         {
           "id": "C",
           "text": "在堤道盡頭停步,咬牙回身跑上塔",
           "next": "ending_ashen_dawn",
-          "alignment": 1
+          "alignment": 1,
+          "textEn": "Stop at the causeway's end, set your teeth, and run back up the tower"
         }
-      ]
+      ],
+      "titleEn": "Fleeing with the Heart",
+      "narrationEn": "You run down the spiral stair with the heart in your arms, Ella's cry cut off behind you by the wind. The thing you carry grows warmer and warmer — no: your own warmth grows more and more like its. Its pulse settles, beat by beat, onto the rhythm of your hearts, until no one can say which is leading which. The whisper seeps in through the creases of your palms, and it does not threaten; it promises. 'Keep it. The ice fields will answer you. The blizzard will answer you. Eleven ships will answer you. Cold will never hurt you again.' The causeway runs out ahead: at one end, the black sails waiting at anchor; at the other, the endless southern snows. From the tower's crown, faint on the wind, comes the sound of Ole howling against the railing. Against your chest the heart beats — steady, and cold."
     },
     {
       "id": "ending_ashen_dawn",
@@ -1820,7 +2056,9 @@
       "endingKind": "good",
       "directive": "有代價的光明結局:心臟入盆燒盡,燈塔大亮,艦隊轉向沉回冰下,霜港得救。代價是艾拉最後的記憶焚盡——但契約隨心臟燒完而終結,黎明時她有了影子與體溫,成了一個不記得任何事的活著的女孩。若玩家去過家墓或記過霜畫,由他們告訴她的名字,歐勒接她回家。哀而不傷,收在具體的小事上。",
       "narration": "心臟沉進盆心的剎那,火不是燃起來的,是炸開的:白得近乎透明的光柱直貫夜空,海峽兩岸的積雪同時亮成了白晝。十一艘黑帆像被無形的手按住,帆桁一根根垂下,船身緩緩傾側,沉回冰層之下,連漣漪都沒留下一圈。光柱裡,無數細小的畫面升騰而上:女人的臉、耷拉耳朵的狗、搖籃曲、牽著的手,一一燒透,化作灰燼似的星屑。火穩定下來時,東方已經破曉。艾拉還站在盆邊。朝陽照過來,她腳下拖出一條長長的影子,呵出的氣凝成了白霧。她低頭看著自己的影子,茫然地抬起頭:「我……我叫什麼?」歐勒踉蹌著撲過去把她摟進懷裡,嚎啕得不成樣子。你們蹲下來,握住她凍紅的手,一字一字地告訴她墓碑上、霜畫裡、九十七年沒人敢忘的那個名字:「妳叫艾拉。回家吧,妳的床鋪好了,被褥疊得方方正正的。」霜港的窗子一扇扇推開,鐘樓上,港鐘噹噹地響了七下——這一回,是活人拉的繩。",
-      "choices": []
+      "choices": [],
+      "titleEn": "Ashen Dawn",
+      "narrationEn": "The instant the heart sinks into the basin, the fire does not catch — it detonates: a column of light, white to the edge of transparency, stands straight up into the night, and the snow on both shores of the strait turns to noon. The eleven black sails are pressed down as if by an unseen hand; yard after yard drops, hull after hull heels slowly over and settles back beneath the ice, leaving not one ring of ripple behind. Within the column, countless small pictures stream upward: a woman's face, a dog with a drooping ear, a cradle-song, two joined hands — each one burning through, scattering into ash-fine stars. By the time the flame steadies, the east has broken. Ella is still standing at the basin. The young sun reaches her, and a long shadow spills out from her feet; her breath comes out white. She looks down at her own shadow, then up, lost: 'What… what is my name?' Ole stumbles to her and crushes her into his arms, weeping past all dignity. You crouch down, take her cold-reddened hands, and give her, word by word, the name from the gravestone, from the frost-pictures, the name no one in ninety-seven years dared forget: 'Your name is Ella. Come home. Your bed is made — the blankets are folded square.' The windows of Frostharbor swing open one after another, and up in the bell tower the harbour bell clangs out seven strokes — pulled, this time, by living hands."
     },
     {
       "id": "ending_shared_flame",
@@ -1830,7 +2068,9 @@
       "endingKind": "good",
       "directive": "光明結局之二:依艾拉所言,火盆燒得動活人真心捨得的東西。玩家帶頭獻出,歐勒獻出僅餘的年歲,鎮民循光而來各獻其暖,燈以眾人之捨為薪長明。艾拉保住名字與殘存記憶,歐勒黎明時含笑而逝,由艾拉與鎮民接任守塔。收在傳承與代價並存的暖意上,寫清玩家獻出的是什麼由DM與玩家共同定奪。",
       "narration": "你們把掌心按在冰冷的盆沿上,說出自己真心捨得的東西。話音落下的瞬間,盆底騰起一簇金紅的火苗,小,卻穩。歐勒掙脫斷鏈跪到盆前:「我這條老命裡剩下的年歲,全數奉上。」火苗躥高了一尺。塔下傳來腳步聲,是循著火光踏上堤道的鎮民:賀爾嘉獻出再不出海的誓言,卜壬獻出祖傳的風暴燈,瑪珂顫巍巍地獻出她守了九十年的那段往事。每一份「捨得」入盆,火就旺一分,到後來,整座燈室亮得像捧著一輪小太陽。十一艘黑帆在光裡靜了許久,而後一艘接一艘垂下帆桁,沉回冰下長眠。艾拉站在火盆邊,還記得自己的名字,還記得爹的臉,她哭著笑了。黎明照進燈室時,歐勒靠著欄杆睡去,再沒有醒來,嘴角是鬆開的。鎮民把他葬在塔基下,朝著海。從那個冬天起,霜港的燈由艾拉和輪值的鎮民一起守,燈火要靠每一代人捨出一點東西才燒得旺——霜港人都說,這樣正好。",
-      "choices": []
+      "choices": [],
+      "titleEn": "The Shared Flame",
+      "narrationEn": "You press your palms to the freezing rim of the basin and speak aloud what you truly bear to give. As the words fall, a tongue of gold-red flame stands up from the basin floor — small, but steady. Ole tears free of his broken chain and kneels at the brazier: 'The years left in this old life — take them, every one.' The flame leaps a foot higher. Then come footsteps on the stairs: townsfolk, climbing the causeway toward the light. Helga gives up her oath to sail again; Boren gives up his grandfather's storm lantern; Marka, trembling, gives up the story she has kept for ninety years. With every offering the fire swells, until the lamp room holds something like a small cradled sun. Out on the water, the eleven black sails stand silent in the light a long while — then, one after another, drop their yards and settle back beneath the ice to sleep. Ella stands by the brazier and still knows her own name, still knows her father's face, and she laughs while she cries. When dawn reaches the lamp room, Ole is asleep against the railing and does not wake again; his mouth has come unclenched at last. The town buries him at the tower's foot, facing the sea. From that winter on, Frostharbor's light is kept by Ella and the townsfolk in their turns, and the fire burns only so long as each generation gives up a little of its own to feed it — which, Frostharbor folk will tell you, is exactly as it should be."
     },
     {
       "id": "ending_half_harbor",
@@ -1840,7 +2080,9 @@
       "endingKind": "neutral",
       "directive": "蒼灰結局:和約成立,亡者取走港中所有船隻與亡籍之名,活人保全。霜港從此不得點燈、不得出海,靠陸路苟活,漁港之魂已死。艾拉隨心臟與父親一同登上白喙旗艦離港。寫出「誰也沒輸、誰也沒贏」的空落,代價換平衡,結尾留一絲極淡的、不確定的慰藉。",
       "narration": "莫爾凡以斷劍為筆,在燈室的石地上刻下約文,每一劃都滲出黑冰。黎明前,霜港所有的船,曙婦號、漁船、連孩子的舢舨,纜繩自行鬆脫,排成一列滑向錨地,桅杆上凝起黑霜。教堂的記名冊自己翻到亡者名錄那幾頁,墨字一行行淡去,像退潮。歐勒抱著火盆裡的心臟,牽著艾拉的手,走上旗艦的舷梯;女孩回頭望了你們一眼,揮了揮手,紅披風在黑帆間小得像一滴血。「約成。」提督戴上軍帽,「此港永不點燈,永不出海。犯約之日,我回來收利息。」艦隊沉入冰下,連同霜港三百年的船歌。此後的霜港靠陸路的鹽和貨活著,活得下去,只是漁市再沒開過張,鎮民走過海邊都不朝海面看。只有每年大凍之夜,守夜人會聽見冰層深處極輕的七響鐘聲——不催,不怨,像一家人在很遠的地方,報一聲平安。",
-      "choices": []
+      "choices": [],
+      "titleEn": "The Pale Accord",
+      "narrationEn": "Morvane writes with his broken sabre for a pen, cutting the terms into the lamp-room floor, black ice welling from every stroke. Before dawn, every vessel Frostharbor owns — the Dawnwife, the fishing boats, even the children's dinghies — slips its own moorings and glides out in single file toward the anchorage, black frost thickening on their masts. In the church, the register opens itself to the pages of the dead, and the inked names fade line by line, like a tide going out. Ole carries the heart from the brazier in both arms, takes Ella's hand, and climbs the flagship's ladder; at the rail the girl looks back once and lifts a hand to you, her red cloak small as a drop of blood among the black sails. 'It is sealed.' The Admiral sets on his cap. 'This port lights no lamp and puts out no boat, for ever. Break the terms, and I return to collect interest.' The fleet goes down beneath the ice, and three hundred years of Frostharbor's sea-songs go with it. The town lives on by the salt and freight of the land roads — it lives, but the fish market never opens again, and people crossing the shore road do not look at the water. Only on the night of the great freeze each year, the watch hears, from deep beneath the ice, seven strokes of a bell, very faint — not urging, not accusing; the sound of a family, very far away, sending word that all is well."
     },
     {
       "id": "ending_silent_landing",
@@ -1850,7 +2092,9 @@
       "endingKind": "bad",
       "directive": "惡結局之一(棄守之因):燈未點亮,玩家南逃或放任火盆冷卻,艦隊循體溫登岸,霜港於黎明前陷落成凍港。寫登岸的安靜與徹底,窗火一盞盞熄滅的遠景,倖存者只剩南逃的玩家一行,結在漫天風雪裡自己的心跳聲——如今是雪原上唯一的暖。",
       "narration": "你們在南方雪原的高坡上回頭時,登岸已經開始了。沒有號角,沒有喊殺。十一艘黑帆靜靜靠上凍港的岸壁,亡者列隊踏過棧橋,像潮水漫過沙灘。霜港的窗火一盞、一盞、一盞地熄滅,順著街道的走向,從碼頭到教堂,從上街到下街,規律得像有人逐戶吹燈。教堂的尖頂最後暗下去,誦禱聲被風雪掐斷在半句。沒有火光沖天,沒有斷壁殘垣。凍死的鎮子連倒塌都不會,霜港只是完完整整地、安安靜靜地涼了下去,成了海峽邊一件保存良好的標本。雪落下來,把街道、屋脊、柵欄上的魚油火把一一蓋住,像替誰收拾現場。你們站在坡頂,懷裡或許還揣著那顆越跳越冷的心臟,或許什麼也沒有。風停的間隙,整片雪原安靜得只剩你們自己的心跳——撲通,撲通,是方圓百里之內,僅存的溫暖的聲音。而冰層底下,有什麼東西聽見了,調轉了帆。",
-      "choices": []
+      "choices": [],
+      "titleEn": "The Silent Landing",
+      "narrationEn": "By the time you look back from the high ground of the southern snows, the landing has begun. No horns. No war-cries. Eleven black sails stand gently against the frozen quays, and the dead file over the pier like a tide crossing sand. Frostharbor's windows go out one, by one, by one, following the run of the streets — dock to church, upper street to lower — regular as a man going door to door snuffing lamps. The church spire darkens last, its prayer cut off mid-sentence by the wind. There is no burning, no broken wall. A frozen town does not even fall down: Frostharbor simply cools, whole and quiet, into a well-kept specimen on the strait's edge. Snow comes down and covers street and roof-ridge and the fish-oil torches on the palisade, like someone tidying a room when the thing is done. You stand on the ridge, perhaps with the heart still against your chest beating colder and colder, perhaps with nothing at all. In a lull of the wind, the whole snowfield is so quiet that all that remains is your own heartbeat — thump, thump: the only warm sound within a hundred miles. And beneath the ice, something hears it, and puts its helm over."
     },
     {
       "id": "ending_frozen_crown",
@@ -1860,24 +2104,35 @@
       "endingKind": "bad",
       "directive": "惡結局之二(貪婪之因,與棄守成因不同):玩家奪心自用或投靠艦隊,被寒冷加冕為新的提督。力量是真的,代價是體溫、牽掛與名字被一一凍去,最終坐上旗艦望向下一座亮著燈火的港。寫誘惑兌現後的空洞,結在自己已認不出的倒影上。",
       "narration": "心臟貼上你們胸口的瞬間,寒冷不再是敵人了。風雪繞著你們分開,冰面在腳下鋪出平整的路,十一艘黑帆齊齊降下半帆,那是艦隊的臣服禮。莫爾凡的殘軀在你們面前躬身,軍帽摘下,露出一張終於可以休息的臉:「艦隊交割完畢。」他化作黑冰碎在風裡,語氣裡竟有如釋重負。你們登上旗艦,掌心貼著舵輪,整支艦隊的感官便湧進來:冰下的洋流、風的走向、還有遠方岸上每一團體溫的位置,亮得像星圖。力量是真的,誰也奪不走。只是體溫再也回不來了;只是霜港的方向漸漸想不起來了;只是某天夜裡,你們俯身看艙窗上的倒影,那張結著白霜的臉端正、威嚴、陌生——你們認了很久,沒認出那是誰。艦隊在冰下巡弋,不飢不渴,不老不死。直到某個冬夜,瞭望位報告前方有一座亮著燈火的港口,而你們聽見自己用陌生的嗓音下令:「熄了它。」",
-      "choices": []
+      "choices": [],
+      "titleEn": "The Frost-Iron Crown",
+      "narrationEn": "The moment the heart touches your chest, the cold stops being your enemy. The blizzard parts around you; the ice lays a level road beneath your feet; eleven black sails dip to half-mast in a single motion — a fleet making its obeisance. Morvane's ruin bows before you and lifts off his cap, baring the face of a man finally permitted to rest. 'The fleet is handed over.' He breaks apart into black ice on the wind, and there is relief in the sound of it. You board the flagship and lay a palm on the wheel, and the fleet's senses pour into you: the currents beneath the ice, the wind's intentions, and far away on every shore the position of each small knot of body-heat, bright as a chart of stars. The power is real. No one can take it from you. Only, warmth never comes back; only, the way to Frostharbor slowly slips your mind; only, one night, bending to the cabin window, you study the reflection there — a frost-rimed face, composed, commanding, unfamiliar — and after a long while you still cannot say whose it is. The fleet patrols beneath the ice, never hungry, never thirsty, never aging, never dying. Until, some winter night, the lookout reports a harbour ahead lit with lamps, and you hear your own voice, in a stranger's timbre, give the order: 'Put it out.'"
     }
   ],
   "stageObjectives": {
     "中期": {
       "objective": "在霜港鎮打探守塔人與燈塔的真相,備齊登上北岬的裝備與路線",
       "context": "燈塔鑰匙已到手,但冰橋崩裂、亡者船隊逼近;鎮上的酒窖、漁市與教堂各藏著一段往事。",
-      "stakes": "黎明前燈塔若不亮,幽靈艦隊將循居民體溫登岸。"
+      "stakes": "黎明前燈塔若不亮,幽靈艦隊將循居民體溫登岸。",
+      "objectiveEn": "Learn the truth of the keeper and the lighthouse in Frostharbor, and gather the gear and the route for the climb to North Cape",
+      "contextEn": "The lighthouse key is in hand, but the ice bridge has shattered and the fleet of the dead draws near; the town's cellar, fish market and church each hold a piece of the past.",
+      "stakesEn": "If the lighthouse is not burning by dawn, the ghost fleet will come ashore, homing on the townsfolk's body-heat."
     },
     "後期": {
       "objective": "穿越冰橋登上北岬,決定燈塔以什麼重新點亮",
       "context": "守塔人與紅披風女孩的秘密已然揭開;火盆裡的冰藍心臟仍在跳動。",
-      "stakes": "每拖一刻,黑帆更近一分;點燈的代價,得有人來付。"
+      "stakes": "每拖一刻,黑帆更近一分;點燈的代價,得有人來付。",
+      "objectiveEn": "Cross the ice bridge to North Cape, and decide what the lighthouse is to be relit with",
+      "contextEn": "The secret of the keeper and the girl in the red cloak lies open; the ice-blue heart in the brazier is still beating.",
+      "stakesEn": "Every moment of delay brings the black sails nearer; someone must pay the price of the light."
     },
     "結局": {
       "objective": "見證霜港的黎明或長夜",
       "context": "燈塔的火與女孩的記憶,已依你們的抉擇定下歸屬。",
-      "stakes": "結局已定,不可回頭。"
+      "stakes": "結局已定,不可回頭。",
+      "objectiveEn": "Witness Frostharbor's dawn, or its long night",
+      "contextEn": "The lighthouse fire and the girl's memories have found their fates, as your choices decreed.",
+      "stakesEn": "The ending is set. There is no turning back."
     }
   }
 }

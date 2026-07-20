@@ -42,6 +42,7 @@ import { SpellCastModal } from '../SpellCastModal';
 import { StageClearModal } from '../StageClearModal';
 import { StoryFeed } from '../StoryFeed';
 import { StoryRevisionPanel } from '../StoryRevisionPanel';
+import { useI18n } from '../../i18n';
 
 interface SpellModalState {
   playerId: PlayerId;
@@ -118,6 +119,7 @@ interface TablePageProps {
 }
 
 export function TablePage(props: TablePageProps) {
+  const { tz } = useI18n();
   const {
     campaign,
     settings,
@@ -152,10 +154,10 @@ export function TablePage(props: TablePageProps) {
 
         <div className="viewer-switch">
           <LockKey />
-          <span>訊息視角</span>
+          <span>{tz('訊息視角')}</span>
           <select value={viewer} onChange={(event) => props.onViewerChange(event.target.value as MessageAudience)}>
-            <option value="public">公開訊息</option>
-            {campaign.players.map((player) => <option key={player.id} value={player.id}>{player.name} 的私密訊息</option>)}
+            <option value="public">{tz('公開訊息')}</option>
+            {campaign.players.map((player) => <option key={player.id} value={player.id}>{player.name}{tz(' 的私密訊息')}</option>)}
           </select>
         </div>
 
@@ -175,7 +177,7 @@ export function TablePage(props: TablePageProps) {
             />
             <div className="story-revision-toggle-row">
               <button type="button" className={`story-revision-toggle ${props.revisionOpen ? 'active' : ''}`} disabled={!props.latestDm || props.loading || props.revising} onClick={props.onToggleRevision}>
-                {props.revisionOpen ? '關閉敘事修正' : '修正上一則 DM 敘事'}
+                {props.revisionOpen ? tz('關閉敘事修正') : tz('修正上一則 DM 敘事')}
               </button>
             </div>
           </div>
@@ -184,7 +186,7 @@ export function TablePage(props: TablePageProps) {
             onClose={props.onCloseRevision}
             loading={props.revising}
             disabled={props.loading || props.needsDmConnect || !props.latestDm}
-            disabledReason={props.needsDmConnect ? `請先連線 ${props.dmLabel}` : !props.latestDm ? '尚無公開 DM 敘事' : undefined}
+            disabledReason={props.needsDmConnect ? `${tz('請先連線')} ${props.dmLabel}` : !props.latestDm ? tz('尚無公開 DM 敘事') : undefined}
             previousDraft={props.latestDm?.text || ''}
             chat={props.revisionChat}
             onSubmit={props.onSubmitRevision}
@@ -201,7 +203,7 @@ export function TablePage(props: TablePageProps) {
         )}
         {campaign.combat?.active && campaign.id && (
           <section className="inline-combat">
-            <div className="section-heading"><div><p className="eyebrow">戰鬥進行中</p><h2>先攻與回合操作</h2></div></div>
+            <div className="section-heading"><div><p className="eyebrow">{tz('戰鬥進行中')}</p><h2>{tz('先攻與回合操作')}</h2></div></div>
             <CombatTracker
               campaignId={campaign.id}
               players={campaign.players}
@@ -222,37 +224,38 @@ export function TablePage(props: TablePageProps) {
 }
 
 function TableContext(props: TablePageProps) {
+  const { tz } = useI18n();
   const { campaign, contextualTip } = props;
   return (
     <div className="table-preamble table-context">
       {contextualTip && (
-        <aside className="novice-tip novice-tip-inline" aria-label="新手提示">
+        <aside className="novice-tip novice-tip-inline" aria-label={tz('新手提示')}>
           <Lightbulb size={20} />
           <div><strong>{contextualTip.title}</strong><span>{contextualTip.text}</span></div>
-          {contextualTip.page && <button type="button" className="tip-action" onClick={() => props.onPageChange(contextualTip.page!)}>前往查看</button>}
-          <button type="button" className="tip-dismiss" aria-label="關閉提示" onClick={() => props.onDismissTip(contextualTip.id)}><XCircle /></button>
+          {contextualTip.page && <button type="button" className="tip-action" onClick={() => props.onPageChange(contextualTip.page!)}>{tz('前往查看')}</button>}
+          <button type="button" className="tip-dismiss" aria-label={tz('關閉提示')} onClick={() => props.onDismissTip(contextualTip.id)}><XCircle /></button>
         </aside>
       )}
       {props.notice && <div className="notice-banner"><span>{props.notice}</span><button type="button" onClick={props.onDismissNotice}><XCircle /></button></div>}
       {props.status && !props.status.connected && !props.demoMode && (
         <div className="model-notice">
           <ShieldWarning size={20} />
-          <div><strong>本機 AI 尚未連線</strong><span>請先執行 codex login，或使用示範 DM。</span></div>
-          <MagneticButton variant="quiet" onClick={props.onEnableDemo}>使用示範 DM</MagneticButton>
+          <div><strong>{tz('本機 AI 尚未連線')}</strong><span>{tz('請先執行 codex login，或使用示範 DM。')}</span></div>
+          <MagneticButton variant="quiet" onClick={props.onEnableDemo}>{tz('使用示範 DM')}</MagneticButton>
         </div>
       )}
       {props.needsDmConnect && props.canConnectDm && (
         <div className="model-notice">
           <Plugs size={20} />
-          <div><strong>需要連線 {props.dmLabel}</strong><span>每個故事各自一條 DM 連線；「{campaign.title}」要先連線後 DM 才會裁定。切換故事、切換資料源或連線中斷後都需要重新連線。</span></div>
-          <MagneticButton onClick={props.onConnectDm} disabled={props.connecting}>{props.connecting ? '連線中…' : `連線 ${props.dmLabel}`}</MagneticButton>
+          <div><strong>{tz('需要連線')} {props.dmLabel}</strong><span>{tz('每個故事各自一條 DM 連線；')}「{campaign.title}」{tz('要先連線後 DM 才會裁定。切換故事、切換資料源或連線中斷後都需要重新連線。')}</span></div>
+          <MagneticButton onClick={props.onConnectDm} disabled={props.connecting}>{props.connecting ? tz('連線中…') : `${tz('連線')} ${props.dmLabel}`}</MagneticButton>
         </div>
       )}
       {props.error && (
         <div className="error-banner" role="alert">
           <XCircle size={19} />
-          <div><strong>操作中斷</strong><span>{props.error}</span></div>
-          {props.retryAvailable && !props.needsDmConnect && !props.loading && <button type="button" className="retry-turn" onClick={props.onRetryLastTurn}><ArrowClockwise />重試上一步</button>}
+          <div><strong>{tz('操作中斷')}</strong><span>{props.error}</span></div>
+          {props.retryAvailable && !props.needsDmConnect && !props.loading && <button type="button" className="retry-turn" onClick={props.onRetryLastTurn}><ArrowClockwise />{tz('重試上一步')}</button>}
           <button type="button" onClick={props.onDismissError}><XCircle /></button>
         </div>
       )}
@@ -264,58 +267,69 @@ function TableContext(props: TablePageProps) {
 }
 
 function ReviveNotice(props: TablePageProps) {
+  const { lang, tz } = useI18n();
   const { campaign } = props;
   if (campaign.combat?.active || !campaign.id || !campaign.players.some((player) => player.hp === 0)) return null;
   return (
     <div className="model-notice revive-notice">
       <Heartbeat size={20} />
-      <div><strong>有隊友倒地</strong><span>救援會消耗 1 點探索行動時間；倒地者最多花費 2 顆生命骰回復生命後重新站起。</span></div>
+      <div><strong>{tz('有隊友倒地')}</strong><span>{tz('救援會消耗 1 點探索行動時間；倒地者最多花費 2 顆生命骰回復生命後重新站起。')}</span></div>
       {campaign.players.filter((player) => player.hp === 0).map((target) => {
         const rescuer = campaign.players.find((player) => player.hp > 0 && player.id !== target.id);
-        return rescuer ? <MagneticButton key={target.id} variant="quiet" disabled={props.loading} onClick={() => props.onRevive(target.id, rescuer.id)}>{rescuer.name}救援{target.name}</MagneticButton> : null;
+        if (!rescuer) return null;
+        const label = lang === 'en' ? `${rescuer.name} rescues ${target.name}` : `${rescuer.name}救援${target.name}`;
+        return <MagneticButton key={target.id} variant="quiet" disabled={props.loading} onClick={() => props.onRevive(target.id, rescuer.id)}>{label}</MagneticButton>;
       })}
     </div>
   );
 }
 
 function SceneStrip(props: TablePageProps) {
+  const { lang, tz } = useI18n();
   const { campaign } = props;
+  const combatState = campaign.combat?.active
+    ? (props.currentCombatantName
+      ? (lang === 'en' ? `In combat・${props.currentCombatantName} acting` : `戰鬥中・${props.currentCombatantName} 行動`)
+      : tz('戰鬥中'))
+    : tz('探索中');
   return (
-    <section className="scene-strip" aria-label="場景與遊戲狀態">
+    <section className="scene-strip" aria-label={tz('場景與遊戲狀態')}>
       <MapTrifold size={21} />
-      <div><span>目前場景</span><strong>{campaign.scene}</strong></div>
+      <div><span>{tz('目前場景')}</span><strong>{campaign.scene}</strong></div>
       <div className={`game-state ${campaign.combat?.active ? 'game-state-combat' : 'game-state-exploration'}`}>
         {campaign.combat?.active ? <Sword size={17} weight="fill" /> : <Compass size={17} />}
-        <div><span>遊戲狀態</span><strong>{campaign.combat?.active ? `戰鬥中${props.currentCombatantName ? `・${props.currentCombatantName} 行動` : ''}` : '探索中'}</strong></div>
+        <div><span>{tz('遊戲狀態')}</span><strong>{combatState}</strong></div>
       </div>
-      <div className="round-mark"><span>{campaign.combat?.active ? '戰鬥輪' : '探索回合'}</span><strong>{String(campaign.combat?.active ? campaign.combat.round : campaign.round).padStart(2, '0')}</strong></div>
-      <button type="button" className="shop-open" disabled={Boolean(campaign.combat?.active)} title={campaign.combat?.active ? '戰鬥中無法交易' : '向裝備商買賣裝備'} onClick={props.onOpenShop}><Storefront size={16} />裝備商店</button>
+      <div className="round-mark"><span>{campaign.combat?.active ? tz('戰鬥輪') : tz('探索回合')}</span><strong>{String(campaign.combat?.active ? campaign.combat.round : campaign.round).padStart(2, '0')}</strong></div>
+      <button type="button" className="shop-open" disabled={Boolean(campaign.combat?.active)} title={campaign.combat?.active ? tz('戰鬥中無法交易') : tz('向裝備商買賣裝備')} onClick={props.onOpenShop}><Storefront size={16} />{tz('裝備商店')}</button>
     </section>
   );
 }
 
 function ObjectiveCard({ campaign }: { campaign: Campaign }) {
+  const { lang, tz } = useI18n();
   const arc = campaign.storyArc;
   const phase = arc && !arc.ended ? arc.phases[arc.current] : undefined;
   const pct = phase ? Math.min(100, Math.round((campaign.round / Math.max(1, phase.deadlineRound)) * 100)) : 0;
   return (
-    <section className="objective objective-preamble" aria-label="任務摘要">
-      <p className="eyebrow">任務摘要</p>
-      {arc?.ended && <div className="arc-progress arc-ended">劇本三階段已完成，故事進入尾聲</div>}
+    <section className="objective objective-preamble" aria-label={tz('任務摘要')}>
+      <p className="eyebrow">{tz('任務摘要')}</p>
+      {arc?.ended && <div className="arc-progress arc-ended">{tz('劇本三階段已完成，故事進入尾聲')}</div>}
       {phase && (
-        <div className={`arc-progress ${campaign.round > phase.deadlineRound ? 'arc-overdue' : ''}`} aria-label="劇本進度">
-          <span className="arc-stage">{phase.stage}</span><div className="arc-track" role="presentation"><i style={{ width: `${pct}%` }} /></div><span className="arc-rounds">第 {campaign.round}／{phase.deadlineRound} 回合</span><span className="arc-reward">限時獎勵 {phase.rewardXp} XP</span>
+        <div className={`arc-progress ${campaign.round > phase.deadlineRound ? 'arc-overdue' : ''}`} aria-label={tz('劇本進度')}>
+          <span className="arc-stage">{tz(phase.stage)}</span><div className="arc-track" role="presentation"><i style={{ width: `${pct}%` }} /></div><span className="arc-rounds">{lang === 'en' ? `Round ${campaign.round} / ${phase.deadlineRound}` : `第 ${campaign.round}／${phase.deadlineRound} 回合`}</span><span className="arc-reward">{lang === 'en' ? `Timed bonus ${phase.rewardXp} XP` : `限時獎勵 ${phase.rewardXp} XP`}</span>
         </div>
       )}
       <strong>{campaign.objective}</strong>
       <p className="objective-context">{campaign.objectiveContext}</p>
-      <div className="objective-stakes"><span>風險</span><p>{campaign.stakes}</p></div>
-      <small>{campaign.combat?.active ? `戰鬥第 ${campaign.combat.round} 輪（戰鬥操作在對話下方）` : '探索進行中'}</small>
+      <div className="objective-stakes"><span>{tz('風險')}</span><p>{campaign.stakes}</p></div>
+      <small>{campaign.combat?.active ? (lang === 'en' ? `Combat round ${campaign.combat.round} (combat controls are below the dialogue)` : `戰鬥第 ${campaign.combat.round} 輪（戰鬥操作在對話下方）`) : tz('探索進行中')}</small>
     </section>
   );
 }
 
 function PlayerComposers(props: TablePageProps) {
+  const { lang } = useI18n();
   const { campaign, settings } = props;
   const targets = [
     ...campaign.players.map((entry) => ({ id: entry.id, name: entry.name, side: 'party' as const })),
@@ -324,7 +338,7 @@ function PlayerComposers(props: TablePageProps) {
   return (
     <div className={`composer-grid party-${campaign.players.length}`}>
       {campaign.players.map((player) => (
-        <section className="player-console" key={player.id} aria-label={`${player.name}玩家操作區`}>
+        <section className="player-console" key={player.id} aria-label={lang === 'en' ? `${player.name} player console` : `${player.name}玩家操作區`}>
           <CharacterPanel
             player={player}
             xp={campaign.xpProgress?.[player.id]}

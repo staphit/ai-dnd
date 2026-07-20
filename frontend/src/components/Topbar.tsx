@@ -1,5 +1,6 @@
 import { WifiHigh, WifiSlash } from '@phosphor-icons/react';
 import type { AiStatus, Campaign } from '../types';
+import { useI18n } from '../i18n';
 
 interface TopbarProps {
   campaign: Campaign;
@@ -8,8 +9,9 @@ interface TopbarProps {
 }
 
 export function Topbar({ campaign, status, demoMode }: TopbarProps) {
+  const { t } = useI18n();
   const connected = demoMode || status?.connected;
-  const label = demoMode ? '示範 DM' : status?.model || 'OpenAI Agent 未設定';
+  const label = demoMode ? t('topbar.demoDm') : status?.model || t('topbar.noAgent');
 
   return (
     <header className="topbar">

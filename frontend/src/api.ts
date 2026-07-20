@@ -306,6 +306,8 @@ export interface DmTurnRequest {
   model?: string;
   effort?: string;
   dmProvider?: string;
+  /** "en" asks the DM to narrate in English; empty/absent keeps Traditional Chinese. */
+  language?: string;
   demo?: boolean;
   actions?: Array<{ playerId: PlayerId; text: string }>;
   intents?: Partial<Record<PlayerId, DmIntent>>;
@@ -368,7 +370,7 @@ export function dmTurn(body: DmTurnRequest, signal?: AbortSignal): Promise<DmTur
 
 export function reviseStory(
   campaignId: string,
-  body: { note: string; model?: string; effort?: string; dmProvider?: string },
+  body: { note: string; model?: string; effort?: string; dmProvider?: string; language?: string },
   signal?: AbortSignal,
 ): Promise<{ view: Campaign; text: string; model: string }> {
   return apiFetch(campaignPath(campaignId, '/revise-story'), {

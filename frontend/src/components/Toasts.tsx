@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { Bell, Info, Warning, X } from '@phosphor-icons/react';
+import { useI18n } from '../i18n';
 
 export type ToastKind = 'error' | 'info';
 
@@ -71,14 +72,15 @@ interface ToastStackProps {
 // Toast column inside the fixed layer; each toast auto-dismisses after 10
 // seconds and can be closed manually.
 export function ToastStack({ toasts, onDismiss }: ToastStackProps) {
+  const { tz } = useI18n();
   if (toasts.length === 0) return null;
   return (
-    <div className="toast-stack" role="status" aria-live="polite" aria-label="通知">
+    <div className="toast-stack" role="status" aria-live="polite" aria-label={tz('通知')}>
       {toasts.map((toast) => (
         <div key={toast.id} className={`toast toast-${toast.kind}`}>
           {toast.kind === 'error' ? <Warning size={16} weight="fill" aria-hidden="true" /> : <Info size={16} weight="fill" aria-hidden="true" />}
           <p>{toast.text}</p>
-          <button type="button" aria-label="關閉通知" onClick={() => onDismiss(toast.id)}><X size={14} /></button>
+          <button type="button" aria-label={tz('關閉通知')} onClick={() => onDismiss(toast.id)}><X size={14} /></button>
         </div>
       ))}
     </div>
@@ -93,21 +95,22 @@ interface ToastBellProps {
 // Bell with a badge count; clicking opens the session notification history
 // (newest first) with a clear-all button.
 export function ToastBell({ history, onClear }: ToastBellProps) {
+  const { tz } = useI18n();
   const [open, setOpen] = useState(false);
   return (
     <div className="toast-bell-wrap">
-      <button type="button" className="toast-bell" aria-label="通知紀錄" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
+      <button type="button" className="toast-bell" aria-label={tz('通知紀錄')} aria-expanded={open} onClick={() => setOpen((value) => !value)}>
         <Bell size={18} />
         {history.length > 0 && <span className="toast-bell-badge">{history.length > 99 ? '99+' : history.length}</span>}
       </button>
       {open && (
-        <div className="toast-history" role="region" aria-label="通知紀錄清單">
+        <div className="toast-history" role="region" aria-label={tz('通知紀錄清單')}>
           <header>
-            <strong>通知紀錄</strong>
-            <button type="button" className="toast-history-clear" disabled={history.length === 0} onClick={onClear}>全部清除</button>
+            <strong>{tz('通知紀錄')}</strong>
+            <button type="button" className="toast-history-clear" disabled={history.length === 0} onClick={onClear}>{tz('全部清除')}</button>
           </header>
           {history.length === 0 ? (
-            <p className="toast-history-empty">目前沒有通知。</p>
+            <p className="toast-history-empty">{tz('目前沒有通知。')}</p>
           ) : (
             <ul>
               {history.map((entry) => (

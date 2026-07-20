@@ -26,7 +26,6 @@ import (
 	"dndduet/internal/memory"
 	"dndduet/internal/provider"
 	"dndduet/internal/store"
-	"dndduet/internal/tts"
 )
 
 const maxRequestBody = 1_000_000
@@ -57,10 +56,6 @@ type Server struct {
 	ImageRenderers map[string]images.Renderer
 	// DefaultImageBackend is used when a request omits imageBackend (IMAGE_BACKEND).
 	DefaultImageBackend string
-
-	// TTS reads DM narration aloud through a local GPT-SoVITS server; nil
-	// disables the /api/tts endpoint.
-	TTS *tts.Client
 
 	// imgGate serialises image generation: at most one at a time, with a
 	// minimum gap between runs, so a busy local GPU isn't flooded.
@@ -291,7 +286,6 @@ func (s *Server) Router() http.Handler {
 	r.Get("/api/images/meta", s.handleListImageMeta)
 	r.Post("/api/campaign/{id}/revise-story", s.handleReviseStory)
 	r.Post("/api/campaign/{id}/export-novel", s.handleExportNovel)
-	r.Post("/api/tts", s.handleTTS)
 	r.Get("/generated/*", s.serveGenerated)
 	r.NotFound(s.serveStatic)
 	r.MethodNotAllowed(s.serveStatic)
