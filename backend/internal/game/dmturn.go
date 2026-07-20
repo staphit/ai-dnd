@@ -24,6 +24,7 @@ func CapabilityDigest(c rules.Character) string {
 		classLine,
 		fmt.Sprintf("HP %d/%d", c.HP, c.MaxHP),
 		fmt.Sprintf("AC %d", c.AC),
+		fmt.Sprintf("金幣 %d", c.Gold),
 	}
 	if c.TemporaryHP > 0 {
 		parts[2] += fmt.Sprintf("（另有暫時 %d）", c.TemporaryHP)
@@ -360,6 +361,30 @@ func (s *Service) ApplyDMTurn(id string, prepared PreparedDMTurn, turn *dm.Turn)
 					entries = append(entries, store.StoryRow{Speaker: "system", Text: fmt.Sprintf("%s獲得 %d XP：%s", st.players[i].Name, award.Amount, award.Reason)})
 					break
 				}
+			}
+		}
+	}
+
+	// Treasure: gold splits evenly across the party (remainder to the front of
+	// the marching order); items land in the named player's equipment.
+	if turn.Loot.Gold > 0 && len(st.players) > 0 {
+		share := turn.Loot.Gold / len(st.players)
+		extra := turn.Loot.Gold % len(st.players)
+		for i := range st.players {
+			gain := share
+			if i < extra {
+				gain++
+			}
+			st.players[i].Gold += gain
+		}
+		entries = append(entries, store.StoryRow{Speaker: "system", Text: fmt.Sprintf("拾獲 %d 金幣，已平分給隊伍。", turn.Loot.Gold)})
+	}
+	for _, item := range turn.Loot.Items {
+		for i := range st.players {
+			if st.players[i].ID == item.PlayerID {
+				st.players[i].Equipment = append(st.players[i].Equipment, item.Name)
+				entries = append(entries, store.StoryRow{Speaker: "system", Text: fmt.Sprintf("%s獲得物品：%s。", st.players[i].Name, item.Name)})
+				break
 			}
 		}
 	}

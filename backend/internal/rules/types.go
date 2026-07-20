@@ -224,6 +224,7 @@ type Character struct {
 	Skills           []Skill       `json:"skills"`
 	Attacks          []Attack      `json:"attacks"`
 	Equipment        []string      `json:"equipment"`
+	Gold             int           `json:"gold"`
 	Resources        []Resource    `json:"resources"`
 	Features         []Feature     `json:"features"`
 	Spellcasting     *Spellcasting `json:"spellcasting,omitempty"`

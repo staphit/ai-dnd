@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowClockwise, CloudArrowUp, Compass, Heartbeat, Lightbulb, LockKey, MapTrifold, Plugs, ShieldWarning, Sword, XCircle } from '@phosphor-icons/react';
+import { ArrowClockwise, CloudArrowUp, Compass, Heartbeat, Lightbulb, LockKey, MapTrifold, Plugs, ShieldWarning, Storefront, Sword, XCircle } from '@phosphor-icons/react';
 import { initialCampaign, storyPresets } from './data';
 import type { AbilityKey, AiStatus, Campaign, CampaignSettings, CampaignSummary, CharacterSpell, Choice, ForgeSettings, MessageAudience, Page, PlayerCharacter, PlayerId, RequiredCheck, RestType, SceneImage, StoryEntry } from './types';
 import { Sidebar } from './components/Sidebar';
@@ -15,9 +15,10 @@ import { CombatTracker } from './components/CombatTracker';
 import { CampaignManager } from './components/CampaignManager';
 import { SpellCastModal } from './components/SpellCastModal';
 import { PartyWipeModal } from './components/PartyWipeModal';
+import { ShopModal } from './components/ShopModal';
 import { StoryRevisionPanel, type RevisionChatLine } from './components/StoryRevisionPanel';
 import * as api from './api';
-import { ApiError, type ActionIssue, type CombatConclusion } from './api';
+import { ApiError, type ActionIssue, type CombatConclusion, type SceneSlotInfo } from './api';
 import { getActiveCampaignId, readLegacyVault, setActiveCampaignId } from './campaign-storage';
 
 const CharacterManager = lazy(() => import('./components/CharacterManager').then((module) => ({ default: module.CharacterManager })));
@@ -95,9 +96,13 @@ export default function App() {
   const [spellRoll, setSpellRoll] = useState<{ check: RequiredCheck; casterId: PlayerId; spell: CharacterSpell; asRitual: boolean; targetId: string } | null>(null);
   const [spellModal, setSpellModal] = useState<{ playerId: PlayerId; spell: CharacterSpell } | null>(null);
   const [revisionOpen, setRevisionOpen] = useState(false);
+  const [shopOpen, setShopOpen] = useState(false);
+  const [shopBusy, setShopBusy] = useState(false);
   const [revisionChat, setRevisionChat] = useState<RevisionChatLine[]>([]);
   const [revising, setRevising] = useState(false);
   const [pendingSceneSlotId, setPendingSceneSlotId] = useState('');
+  const [sceneSlots, setSceneSlots] = useState<SceneSlotInfo[]>([]);
+  const [generatingSlotId, setGeneratingSlotId] = useState('');
   const [codexConn, setCodexConn] = useState<{ alive: boolean; storyId: string } | null>(null);
   const [connecting, setConnecting] = useState(false);
   const advancingRef = useRef(false);
@@ -125,6 +130,15 @@ export default function App() {
     ]);
   }
 
+  // refreshSceneSlots reloads the per-beat scene-image row; failures are
+  // non-fatal (the gallery just stays stale).
+  async function refreshSceneSlots(id: string) {
+    try {
+      const { slots } = await api.listSceneSlots(id);
+      setSceneSlots(slots);
+    } catch { /* non-fatal */ }
+  }
+
   // adoptCampaign switches to another campaign: resets per-campaign UI state.
   function adoptCampaign(view: Campaign) {
     setCampaign(view);
@@ -133,6 +147,8 @@ export default function App() {
     setViewer('public');
     setSpellRoll(null);
     retryTurnRef.current = null;
+    setSceneSlots([]);
+    if (view.id) void refreshSceneSlots(view.id);
   }
 
   async function refreshCampaigns() {
@@ -422,6 +438,15 @@ export default function App() {
     } catch (caught) { setError(message(caught)); }
   }
 
+  async function shopAction(run: () => Promise<Campaign>) {
+    if (!campaign.id || shopBusy) return;
+    setShopBusy(true);
+    try {
+      setCampaign(await run());
+      setError('');
+    } catch (caught) { setError(message(caught)); } finally { setShopBusy(false); }
+  }
+
   // Out-of-combat rescue: rescuer spends 1 exploration action point, the
   // downed character spends hit dice to stand back up.
   async function reviveDowned(targetId: PlayerId, rescuerId: PlayerId) {
@@ -490,12 +515,15 @@ export default function App() {
     const slotId = sceneSlotId || pendingSceneSlotId;
     const narration = narrationOverride || latestDm?.text;
     if (!narration && !slotId) return setImageError('目前沒有可供繪製的公開 DM 場景敘事。');
-    setImageLoading(true); setImageError('');
+    setImageLoading(true); setImageError(''); setGeneratingSlotId(slotId || '');
     try {
+      // Async job mode: the server answers immediately with a job id and
+      // renders in the background, so DM turns and actions never wait.
       const response = await fetch('/api/scene-image', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
+          async: true,
           imageBackend: settings.imageBackend || '',
           campaignId: campaign.id || '',
           campaign: { title: campaign.title, scene: sceneOverride || campaign.scene },
@@ -505,11 +533,27 @@ export default function App() {
           forge: forgeDefaults ? forgeRequest(settings.forgeSettings) : undefined,
         }),
       });
-      const data = await response.json().catch(() => ({} as { url?: string; model?: string; error?: string }));
+      const data = await response.json().catch(() => ({} as { jobId?: string; url?: string; model?: string; error?: string }));
       if (!response.ok) throw new Error(data.error || '場景插圖生成失敗');
-      appendSceneImage({ url: data.url!, scene: sceneOverride || campaignRef.current.scene, createdAt: now(), model: data.model || status?.imageModel || 'Image' });
+      let url = data.url;
+      let model = data.model;
+      if (data.jobId) {
+        const started = Date.now();
+        for (;;) {
+          await new Promise((resolve) => window.setTimeout(resolve, 4000));
+          if (Date.now() - started > 600000) throw new Error('場景插圖生成逾時，請再試一次。');
+          const jobResponse = await fetch(`/api/scene-image/job/${data.jobId}`);
+          const job = await jobResponse.json().catch(() => ({} as { status?: string; url?: string; model?: string; error?: string }));
+          if (!jobResponse.ok) throw new Error(job.error || '查詢圖片生成進度失敗');
+          if (job.status === 'done') { url = job.url; model = job.model; break; }
+          if (job.status === 'error') throw new Error(job.error || '場景插圖生成失敗');
+        }
+      }
+      if (!url) throw new Error('場景插圖生成失敗');
+      appendSceneImage({ url, scene: sceneOverride || campaignRef.current.scene, createdAt: now(), model: model || status?.imageModel || 'Image' });
       if (slotId && slotId === pendingSceneSlotId) setPendingSceneSlotId('');
-    } catch (caught) { setImageError(message(caught)); } finally { setImageLoading(false); }
+      if (campaignRef.current.id) void refreshSceneSlots(campaignRef.current.id);
+    } catch (caught) { setImageError(message(caught)); } finally { setImageLoading(false); setGeneratingSlotId(''); }
   }
 
   async function generatePortrait(player: PlayerCharacter, appearance: string) {
@@ -615,6 +659,9 @@ export default function App() {
   async function advance(input: AdvanceInput) {
     const campaignId = campaign.id;
     if (!campaignId) return;
+    // Re-entry guard: a double-fired dice roll or double submit must not send
+    // two DM turns for the same round.
+    if (advancingRef.current) return;
     const previousCheck = campaign.requiredCheck || null;
     const combatWasActive = campaign.combat?.active === true;
     setLoading(true); setError(''); advancingRef.current = true;
@@ -645,10 +692,12 @@ export default function App() {
       }
       setCampaign(resp.view);
       if (resp.sceneSlot?.id) setPendingSceneSlotId(resp.sceneSlot.id);
-      if (resp.actionIssues.length > 0) {
+      void refreshSceneSlots(campaignId); // new beat = new slot in the row
+      const rejectedIssues = resp.actionIssues || [];
+      if (rejectedIssues.length > 0) {
         // AI narrative veto: the view already carries the 【行動駁回】 entry and
         // the released locks; mirror it in the error banner.
-        showRejection(resp.actionIssues, resp.view.players);
+        showRejection(rejectedIssues, resp.view.players);
         return;
       }
       const combatStarted = !combatWasActive && resp.view.combat?.active === true;
@@ -675,6 +724,14 @@ export default function App() {
         }
         if (latest) setCampaign(latest);
         showRejection(issues, (latest || campaign).players);
+        return;
+      }
+      // Stale dice tray: the server says there is no pending check (it was
+      // already resolved — duplicate roll or another window). Adopt server
+      // truth and close the tray instead of restoring it forever.
+      if (input.checkRoll && caught instanceof ApiError && caught.status === 400) {
+        try { setCampaign(await api.getCampaign(campaignId)); } catch { /* keep local view */ }
+        setError('');
         return;
       }
       const msg = message(caught);
@@ -856,12 +913,15 @@ export default function App() {
             <SceneVisual
               image={sceneImage}
               images={settings.sceneImages || []}
+              slots={sceneSlots}
+              generatingSlotId={generatingSlotId}
               scene={campaign.scene}
               loading={imageLoading}
               error={imageError}
               canGenerate={canGenerateImages}
               onGenerate={() => void generateImage()}
               onSelect={setSceneImage}
+              onGenerateSlot={(slotId) => void generateImage(undefined, undefined, undefined, slotId)}
             />
           </div>
 
@@ -968,6 +1028,15 @@ export default function App() {
                 <span>{campaign.combat?.active ? '戰鬥輪' : '探索回合'}</span>
                 <strong>{String(campaign.combat?.active ? campaign.combat.round : campaign.round).padStart(2, '0')}</strong>
               </div>
+              <button
+                type="button"
+                className="shop-open"
+                disabled={Boolean(campaign.combat?.active)}
+                title={campaign.combat?.active ? '戰鬥中無法交易' : '向裝備商買賣裝備'}
+                onClick={() => setShopOpen(true)}
+              >
+                <Storefront size={16} />裝備商店
+              </button>
             </section>
 
             <section className="objective objective-preamble" aria-label="任務摘要">
@@ -1078,6 +1147,15 @@ export default function App() {
           </div>
           {partyWiped && campaign.id && (
             <PartyWipeModal busy={loading} onRetry={() => void retryCombat()} onEndStory={() => void endCombat(true)} />
+          )}
+          {shopOpen && campaign.id && (
+            <ShopModal
+              players={campaign.players}
+              busy={shopBusy}
+              onClose={() => setShopOpen(false)}
+              onBuy={(playerId, itemId) => void shopAction(() => api.buyItem(campaign.id!, playerId, itemId))}
+              onSell={(playerId, itemName) => void shopAction(() => api.sellItem(campaign.id!, playerId, itemName))}
+            />
           )}
           {spellModal && (() => {
             const caster = campaign.players.find((p) => p.id === spellModal.playerId);

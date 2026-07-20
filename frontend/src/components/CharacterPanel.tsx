@@ -42,6 +42,14 @@ function signed(value: number) {
   return value >= 0 ? `+${value}` : String(value);
 }
 
+// Rough visual grouping for equipment chips by item-name keywords.
+function equipmentKindClass(name: string): string {
+  if (/[劍弓斧鎚矛匕杖鞭弩箭]/.test(name)) return 'equip-weapon';
+  if (/[甲盾盔]/.test(name)) return 'equip-armor';
+  if (/藥|劑|卷軸/.test(name)) return 'equip-potion';
+  return 'equip-gear';
+}
+
 export function CharacterPanel({ player, xp, showStatHints = true, combatActive = false, spellTargets, onResourceChange, onCastSpell, onRest, onGeneratePortrait, pending, actionDisabled, partySize, choices, resourceSummary, onSubmitAction, onUnlockAction }: CharacterPanelProps) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [tab, setTab] = useState<QuickTab>('action');
@@ -135,7 +143,17 @@ export function CharacterPanel({ player, xp, showStatHints = true, combatActive 
 
         {tab === 'equipment' && <>
           <div className="quick-attacks">{player.attacks.map((attack) => <div key={attack.id}><Sword /><span><strong>{attack.name}</strong><small>{attack.properties.join('・') || '一般攻擊'}</small></span><b>{signed(attack.attackBonus)}</b><em>{attack.damage} {attack.damageType}</em></div>)}</div>
-          <ul className="quick-equipment">{player.equipment.map((item) => <li key={item}>{item}</li>)}</ul>
+          <div className="quick-gold" aria-label="金幣">
+            <span className="quick-gold-coin" aria-hidden="true" />
+            <strong>{player.gold ?? 0}</strong>
+            <small>gp・寶箱與任務會增加，裝備商可買賣</small>
+          </div>
+          <ul className="quick-equipment">
+            {player.equipment.map((item, index) => (
+              <li key={`${item}-${index}`} className={equipmentKindClass(item)}>{item}</li>
+            ))}
+            {player.equipment.length === 0 && <li className="quick-equipment-empty">行囊空空如也</li>}
+          </ul>
         </>}
 
         {tab === 'features' && <div className="quick-features">{player.features.map((feature) => <div key={feature.id}><strong>{feature.name}</strong><p>{feature.description}</p></div>)}</div>}

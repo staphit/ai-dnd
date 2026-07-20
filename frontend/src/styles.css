@@ -239,7 +239,7 @@ button:not(:disabled):active:where(.tip-dismiss, .notice-banner button, .error-b
 .scene-strip {
   min-height: 72px;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  grid-template-columns: auto minmax(0, 1fr) auto auto auto;
   align-items: center;
   gap: 14px;
   border-bottom: 1px solid var(--line);
@@ -292,6 +292,112 @@ button:not(:disabled):active:where(.tip-dismiss, .notice-banner button, .error-b
 .arc-rounds { font-family: var(--font-mono), monospace; }
 .arc-reward { white-space: nowrap; }
 .arc-ended { color: var(--accent); }
+
+/* Equipment merchant button in the scene strip. */
+.shop-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 13px;
+  border: 1px solid var(--accent-soft);
+  background: oklch(74% 0.13 72 / 0.07);
+  color: var(--accent);
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.shop-open:hover:not(:disabled) { background: oklch(74% 0.13 72 / 0.14); }
+.shop-open:disabled { opacity: .45; cursor: not-allowed; }
+
+/* Equipment merchant modal. */
+.shop-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 42;
+  display: grid;
+  place-items: center;
+  padding: 24px 16px;
+  background: oklch(8% 0.02 55 / 0.78);
+  backdrop-filter: blur(10px);
+}
+.shop-modal {
+  position: relative;
+  width: min(860px, 100%);
+  max-height: min(88dvh, 780px);
+  overflow: auto;
+  padding: 20px 22px 22px;
+  border: 1px solid var(--line);
+  border-top: 2px solid var(--accent);
+  background: linear-gradient(180deg, oklch(22% 0.025 55 / 0.98), var(--color-paper-2));
+  box-shadow: 0 40px 100px -40px oklch(0% 0 0 / 0.85);
+}
+.shop-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; color: var(--accent); }
+.shop-head h2 { margin: 2px 0 0; color: var(--color-ink); }
+.shop-close { margin-left: auto; border: 0; background: transparent; color: var(--muted); cursor: pointer; }
+.shop-close:hover { color: var(--accent); }
+.shop-players { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.shop-players button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.02);
+  color: var(--color-ink);
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.shop-players button.active { border-color: var(--accent); background: oklch(74% 0.13 72 / 0.1); }
+.shop-gold { display: inline-flex; align-items: center; gap: 4px; color: var(--accent); font-family: var(--font-mono), monospace; font-size: 11px; }
+.shop-error { color: oklch(70% 0.15 28); font-size: 12px; }
+.shop-columns { display: grid; grid-template-columns: 3fr 2fr; gap: 18px; }
+.shop-columns h3 { margin: 0 0 10px; font-size: 13px; color: var(--muted); letter-spacing: .08em; }
+.shop-list { display: grid; gap: 8px; }
+.shop-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.015);
+}
+.shop-inventory .shop-item { grid-template-columns: minmax(0, 1fr) auto; }
+.shop-item strong { font-size: 13px; color: var(--color-ink); }
+.shop-item small { grid-column: 1 / -2; grid-row: 2; color: var(--muted); font-size: 10.5px; }
+.shop-item button {
+  padding: 6px 10px;
+  border: 1px solid var(--accent-soft);
+  background: transparent;
+  color: var(--accent);
+  font-size: 11.5px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.shop-item button:hover:not(:disabled) { background: oklch(74% 0.13 72 / 0.1); }
+.shop-item button:disabled { opacity: .45; cursor: not-allowed; }
+.shop-kind { display: inline-flex; align-items: center; gap: 4px; padding: 3px 7px; font-size: 10px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+.shop-kind-weapon { color: oklch(72% 0.1 28); border-color: oklch(55% 0.145 28 / 0.45); }
+.shop-kind-armor { color: oklch(72% 0.08 240); border-color: oklch(60% 0.1 240 / 0.4); }
+.shop-kind-potion { color: oklch(74% 0.1 150); border-color: oklch(60% 0.1 150 / 0.4); }
+.shop-empty { color: var(--muted); font-size: 12px; }
+@media (max-width: 720px) { .shop-columns { grid-template-columns: 1fr; } }
+
+/* Gold + equipment chips on the character quick panel. */
+.quick-gold { display: flex; align-items: center; gap: 8px; margin: 10px 0 8px; }
+.quick-gold-coin {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, oklch(88% 0.12 85), oklch(66% 0.13 75));
+  box-shadow: 0 0 6px oklch(74% 0.13 72 / 0.5);
+}
+.quick-gold strong { color: var(--accent); font-family: var(--font-mono), monospace; }
+.quick-gold small { color: var(--muted); font-size: 10.5px; }
+.quick-equipment li.equip-weapon { border-color: oklch(55% 0.145 28 / 0.5); }
+.quick-equipment li.equip-armor { border-color: oklch(60% 0.1 240 / 0.5); }
+.quick-equipment li.equip-potion { border-color: oklch(60% 0.1 150 / 0.5); }
+.quick-equipment li.quick-equipment-empty { border-style: dashed; color: var(--muted); }
 
 /* Mission brief — sits in .table-preamble above 最新對話 */
 .objective {
@@ -497,6 +603,30 @@ button:not(:disabled):active:where(.tip-dismiss, .notice-banner button, .error-b
 .scene-gallery-delete { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; display: grid; place-items: center; padding: 0; border: 1px solid var(--line); background: oklch(18% 0.022 55 / 0.88); color: var(--color-danger); cursor: pointer; }
 .scene-gallery-delete:hover:not(:disabled) { border-color: var(--color-danger); }
 .scene-gallery-delete:disabled { opacity: .5; cursor: not-allowed; }
+/* Per-beat slot row: pending tiles show a dashed generate button; the main
+   caption echoes the prompt recorded for the selected beat. */
+.scene-slot-pending .scene-slot-generate {
+  width: 100%;
+  padding: 0;
+  border: 1px dashed oklch(55% 0.08 72 / 0.55);
+  background: oklch(18% 0.022 55 / 0.9);
+  color: var(--muted);
+  text-align: left;
+  cursor: pointer;
+}
+.scene-slot-pending .scene-slot-generate:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.scene-slot-pending .scene-slot-generate:disabled { opacity: .55; cursor: not-allowed; }
+.scene-caption-prompt {
+  display: block;
+  max-width: 72ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  font-family: var(--font-mono), monospace;
+  font-size: 9px;
+}
+
 /* Pending scene slots live in the same gallery strip as finished images. */
 .scene-gallery-pending > .scene-gallery-placeholder {
   width: 100%;
@@ -1395,8 +1525,9 @@ button:not(:disabled):active:where(.tip-dismiss, .notice-banner button, .error-b
 .quick-attacks > div { display: grid; grid-template-columns: auto 1fr auto minmax(100px,auto); gap: 10px; align-items: center; min-height: 55px; border-bottom: 1px solid var(--line-soft); }
 .quick-attacks svg { color: var(--accent); }.quick-attacks span { display: grid; gap: 3px; }.quick-attacks small { color: var(--muted); font-size: 8px; }
 .quick-attacks b { color: var(--accent); }.quick-attacks em { color: var(--muted); font-size: 10px; font-style: normal; text-align: right; }
-.quick-equipment { columns: 2; margin: 15px 0 0; padding: 14px 14px 4px 30px; border: 1px solid var(--line-soft); color: var(--color-ink-2); font-size: 10px; }
-.quick-equipment li { margin-bottom: 10px; break-inside: avoid; }
+/* Equipment renders as bordered chips (kind-tinted via .equip-* classes). */
+.quick-equipment { display: flex; flex-wrap: wrap; gap: 7px; margin: 12px 0 0; padding: 0; list-style: none; color: var(--color-ink-2); font-size: 11px; }
+.quick-equipment li { margin: 0; padding: 5px 10px; border: 1px solid var(--line-soft); background: rgba(255,255,255,.02); }
 .quick-features { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 0 20px; }
 .quick-features div { padding: 12px 0; border-bottom: 1px solid var(--line-soft); }
 .quick-features strong { color: var(--text); font-size: 11px; }.quick-features p { margin: 5px 0 0; color: var(--muted); font-size: 9px; line-height: 1.55; }

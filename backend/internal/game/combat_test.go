@@ -159,6 +159,46 @@ func TestRetryCombatRestoresSnapshot(t *testing.T) {
 	}
 }
 
+func TestShopBuySell(t *testing.T) {
+	s := newTestService(t)
+	view := createSample(t, s)
+	id := view.ID
+
+	goldBefore := view.Players[0].Gold
+	if goldBefore < 15 {
+		t.Fatalf("expected starting gold, got %d", goldBefore)
+	}
+	bought, err := s.BuyItem(id, "player1", "longsword")
+	if err != nil {
+		t.Fatalf("buy: %v", err)
+	}
+	p := bought.Players[0]
+	if p.Gold != goldBefore-15 {
+		t.Fatalf("gold not deducted: %d -> %d", goldBefore, p.Gold)
+	}
+	if p.Equipment[len(p.Equipment)-1] != "長劍" {
+		t.Fatalf("equipment missing: %v", p.Equipment)
+	}
+
+	sold, err := s.SellItem(id, "player1", "長劍")
+	if err != nil {
+		t.Fatalf("sell: %v", err)
+	}
+	p = sold.Players[0]
+	if p.Gold != goldBefore-15+7 {
+		t.Fatalf("sell refund wrong: %d", p.Gold)
+	}
+	for _, item := range p.Equipment {
+		if item == "長劍" {
+			t.Fatalf("item not removed: %v", p.Equipment)
+		}
+	}
+
+	if _, err := s.BuyItem(id, "player1", "nope"); apperr.StatusOf(err, 0) != 404 {
+		t.Fatalf("expected 404 unknown item, got %v", err)
+	}
+}
+
 func TestReviveDownedAlly(t *testing.T) {
 	s := newTestService(t)
 	view := createSample(t, s)

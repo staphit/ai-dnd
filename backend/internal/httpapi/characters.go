@@ -104,6 +104,28 @@ func (s *Server) handleRevive(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (s *Server) handleShopCatalog(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]any{"items": game.ShopCatalog})
+}
+
+func (s *Server) handleBuyItem(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		ItemID string `json:"itemId"`
+	}
+	s.characterAction(w, r, &body, func(id, pid string) (game.View, error) {
+		return s.Game.BuyItem(id, pid, body.ItemID)
+	})
+}
+
+func (s *Server) handleSellItem(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		ItemName string `json:"itemName"`
+	}
+	s.characterAction(w, r, &body, func(id, pid string) (game.View, error) {
+		return s.Game.SellItem(id, pid, body.ItemName)
+	})
+}
+
 func (s *Server) handleLevelUp(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		ClassName string `json:"className"`

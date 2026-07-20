@@ -194,6 +194,29 @@ export function revive(id: string, targetId: PlayerId | string, rescuerId: Playe
 }
 
 // ---------------------------------------------------------------------------
+// Equipment merchant
+
+export interface ShopItem {
+  id: string;
+  name: string;
+  kind: 'weapon' | 'armor' | 'gear' | 'potion';
+  price: number;
+  note: string;
+}
+
+export function shopCatalog(): Promise<{ items: ShopItem[] }> {
+  return apiFetch('/api/shop/catalog');
+}
+
+export function buyItem(id: string, playerId: PlayerId | string, itemId: string): Promise<Campaign> {
+  return apiFetch(playerPath(id, playerId, '/buy'), { method: 'POST', body: JSON.stringify({ itemId }) });
+}
+
+export function sellItem(id: string, playerId: PlayerId | string, itemName: string): Promise<Campaign> {
+  return apiFetch(playerPath(id, playerId, '/sell'), { method: 'POST', body: JSON.stringify({ itemName }) });
+}
+
+// ---------------------------------------------------------------------------
 // Combat
 
 export interface EnemySpec {
@@ -286,6 +309,21 @@ export interface SceneSlotPayload {
   scene: string;
   imagePrompt: string;
   createdAt: number;
+}
+
+// One scene-image slot per DM beat: the prompt captured at turn time plus the
+// generated image, if the player has rendered it yet.
+export interface SceneSlotInfo {
+  id: string;
+  scene: string;
+  imagePrompt: string;
+  imageUrl: string;
+  imageModel: string;
+  createdAt: number;
+}
+
+export function listSceneSlots(id: string): Promise<{ slots: SceneSlotInfo[] }> {
+  return apiFetch(campaignPath(id, '/scene-slots'));
 }
 
 export interface DmTurnResponse {

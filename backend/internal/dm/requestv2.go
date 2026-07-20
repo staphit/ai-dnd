@@ -95,7 +95,10 @@ func BuildDMRequestV2(in TurnInputV2) string {
 	for _, p := range in.Players {
 		lines = append(lines, p.ID+" "+p.Summary)
 	}
-	lines = append(lines, "")
+	lines = append(lines,
+		"寶藏與經濟：在合理時機（寶箱、任務報酬、戰利品）用 loot 欄位發放金幣與物品；gold 是全隊總額（系統會平分），items 指定給個別玩家。城鎮、商隊或營地場景可安排裝備商供玩家買賣。無戰利品時 loot.gold 為 0、items 為空陣列。",
+		"",
+	)
 
 	switch {
 	case in.Resolution != nil:
