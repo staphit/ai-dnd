@@ -1,0 +1,92 @@
+{
+  "name": "dnd-duet-ai",
+  "displayName": "D&D Duet AI",
+  "description": "A local two-player D&D VS Code extension with an AI Dungeon Master. The browser table lives in frontend/ (React) and backend/ (Go).",
+  "version": "0.1.0",
+  "publisher": "local",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": [
+    "Other",
+    "AI"
+  ],
+  "activationEvents": [
+    "onView:dndDuet.gameView",
+    "onCommand:dndDuet.newCampaign",
+    "onCommand:dndDuet.rollDice"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "dndDuet",
+          "title": "D&D Duet AI",
+          "icon": "media/d20.svg"
+        }
+      ]
+    },
+    "views": {
+      "dndDuet": [
+        {
+          "type": "webview",
+          "id": "dndDuet.gameView",
+          "name": "遊戲桌"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "dndDuet.newCampaign",
+        "title": "D&D Duet: 建立新戰役",
+        "icon": "$(new-file)"
+      },
+      {
+        "command": "dndDuet.rollDice",
+        "title": "D&D Duet: 擲骰"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "dndDuet.newCampaign",
+          "when": "view == dndDuet.gameView",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "D&D Duet AI",
+      "properties": {
+        "dndDuet.language": {
+          "type": "string",
+          "enum": [
+            "繁體中文",
+            "English"
+          ],
+          "default": "繁體中文",
+          "description": "AI Dungeon Master 使用的語言。"
+        },
+        "dndDuet.ruleset": {
+          "type": "string",
+          "default": "D&D 5e",
+          "description": "戰役採用的規則系統。"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "check": "tsc -p ./ --noEmit",
+    "package": "vsce package --no-dependencies --allow-missing-repository"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/vscode": "^1.95.0",
+    "@vscode/vsce": "^3.9.2",
+    "typescript": "^5.7.2"
+  }
+}

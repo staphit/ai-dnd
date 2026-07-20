@@ -1,0 +1,43 @@
+.notice-banner,.viewer-switch,.campaign-picker,.campaign-actions,.combat-actions,.profile-fields,.level-up-panel{display:flex;align-items:center;gap:12px}
+.notice-banner{margin:12px 28px 0;padding:12px 16px;border:1px solid rgba(187,134,62,.35);background:rgba(187,134,62,.08);justify-content:space-between}
+.novice-tip{display:flex;align-items:flex-start;gap:12px;margin:12px 28px 0;padding:13px 15px;border:1px solid rgba(197,150,86,.42);background:rgba(197,150,86,.075)}.novice-tip>svg{flex:0 0 auto;color:var(--accent)}.novice-tip>div{display:grid;gap:4px;flex:1}.novice-tip strong{font-size:12px}.novice-tip span{color:var(--muted);font-size:11px;line-height:1.55}.novice-tip button{border:1px solid var(--line);background:transparent;color:var(--text);min-height:30px;padding:0 9px}.novice-tip .tip-dismiss{border:0;padding:0;display:grid;place-items:center}.novice-tip .tip-action{color:var(--accent)}
+.notice-banner button,.enemy-roster button{border:0;background:transparent;color:inherit;display:grid;place-items:center}
+.viewer-switch{padding:10px 14px;border:1px solid var(--line);background:rgba(255,255,255,.018)}
+.viewer-switch span{font-size:12px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted)}
+.viewer-switch select,.model-selector select,.campaign-picker select,.combat-actions select,.level-up-panel select{margin-left:auto;min-width:220px}
+.story-private,.journal-private{border-color:rgba(136,116,190,.45)!important;background:rgba(96,72,150,.09)!important}
+.story-private .story-meta span::before{content:'🔒 ';font-size:11px}
+.combat-console,.character-editor,.campaign-manager{border:1px solid var(--line);background:var(--panel);padding:22px}
+.combat-console>header,.character-editor>header,.campaign-manager>header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:18px}
+.combat-console h2,.character-editor h2{margin:3px 0 0}
+.muted-copy,.level-up-panel span,.campaign-manager header span{color:var(--muted);font-size:13px}
+.enemy-builder{display:grid;grid-template-columns:2fr repeat(5,minmax(82px,1fr)) auto;gap:10px;align-items:end}
+.enemy-builder label,.profile-fields label,.combat-actions label{display:grid;gap:6px;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+.enemy-builder input,.profile-fields input,.ability-editor input,.setup-advanced input,.campaign-picker select,.combat-actions select,.level-up-panel select,.model-selector select{width:100%;border:1px solid var(--line);background:#11120f;color:var(--text);padding:9px 10px}
+.enemy-builder button,.primary-action,.combat-actions button,.character-editor>button,.level-up-panel button,.campaign-actions button,.campaign-picker button{border:1px solid var(--line);background:transparent;color:var(--text);padding:10px 13px;display:inline-flex;align-items:center;justify-content:center;gap:7px}
+.primary-action{background:var(--accent)!important;color:#12110e!important;border-color:var(--accent)!important}
+.enemy-roster{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}
+.enemy-roster>span{display:flex;align-items:center;gap:7px;border:1px solid var(--line);padding:7px 10px;font-size:12px}
+.initiative-list{display:grid;gap:8px;margin:18px 0}
+.initiative-list article{display:grid;grid-template-columns:44px 1fr 70px 90px;align-items:center;gap:10px;border:1px solid var(--line);padding:12px;opacity:.72}
+.initiative-list article>b{font:600 22px var(--mono)}
+.initiative-list article>span{display:grid}.initiative-list article small{color:var(--muted)}
+.initiative-list article>em{display:flex;align-items:center;gap:5px;font-style:normal}.initiative-list article>i{font-style:normal;font-family:var(--mono)}
+.initiative-list .initiative-active{opacity:1;border-color:var(--accent);box-shadow:inset 3px 0 var(--accent)}
+.initiative-list .initiative-defeated{opacity:.35;text-decoration:line-through}
+.combat-actions{flex-wrap:wrap}.combat-actions label{min-width:280px}.combat-actions select{margin:0}
+.turn-economy{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0}.turn-economy span{padding:6px 8px;border:1px solid var(--accent-soft);color:var(--accent);font-size:10px}.turn-economy span.used{border-color:var(--line);color:var(--muted);text-decoration:line-through}
+.character-manager-page{max-width:none}.character-editor-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.character-editor header>div:nth-child(2){flex:1}.character-editor header p{color:var(--muted);margin:3px 0}
+.profile-fields{align-items:stretch}.profile-fields label{flex:1}
+.ability-editor{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:14px 0}
+.ability-editor label{display:grid;gap:5px;color:var(--muted);font-size:11px;text-align:center}.ability-editor input{text-align:center}
+.portrait-editor{display:grid;grid-template-columns:120px 1fr auto;gap:12px;align-items:end;margin:14px 0;padding:12px;border:1px solid var(--line)}.portrait-editor img,.portrait-placeholder{width:120px;aspect-ratio:1;object-fit:contain;background:#0d0d0b;border:1px solid var(--line)}.portrait-placeholder{display:grid;place-items:center;color:var(--accent);font-size:24px}.portrait-editor label{display:grid;gap:6px;color:var(--muted);font-size:11px}.portrait-editor textarea{min-height:88px;padding:9px;background:#151512;border:1px solid var(--line);color:var(--text);resize:vertical}.portrait-editor button{min-height:38px}
+.level-up-panel{margin-top:18px;padding-top:16px;border-top:1px solid var(--line);flex-wrap:wrap}.level-up-panel>div{display:grid;gap:3px;flex:1;min-width:240px}
+.experience-panel{margin:16px 0;padding:14px;border:1px solid var(--line)}.experience-panel>div:first-child{display:flex;justify-content:space-between;gap:12px}.experience-panel span{color:var(--muted);font-size:11px}.experience-track{height:5px;margin-top:10px;overflow:hidden;background:var(--line-soft)}.experience-track span{display:block;width:100%;height:100%;transform-origin:left;background:var(--accent)}.ability-allocation>div{display:grid;grid-template-columns:1fr auto;gap:5px;position:relative;padding:9px;border:1px solid var(--line)}.ability-allocation>div>span{grid-column:1/-1;color:var(--muted);font-size:10px}.ability-allocation strong{font-size:20px}.ability-allocation button{width:28px;height:28px;border:1px solid var(--accent);background:transparent;color:var(--accent)}.ability-allocation button:disabled{opacity:.25}.ability-points{margin:8px 0 14px;color:var(--muted);font-size:11px}.ability-points strong{color:var(--accent)}
+.spell-config{margin-top:18px;border-top:1px solid var(--line);padding-top:14px}.spell-config summary{display:flex;gap:8px;cursor:pointer}.spell-config>div{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;margin-top:12px;max-height:360px;overflow:auto}
+.spell-config label{display:flex;gap:8px;align-items:flex-start;border:1px solid var(--line);padding:8px}.spell-config label>span{display:grid}.spell-config small{color:var(--muted)}
+.campaign-manager{margin-top:18px}.campaign-manager header>div{display:grid;gap:4px}.campaign-picker select{flex:1;margin:0}.campaign-actions{flex-wrap:wrap;margin-top:12px}
+.advanced-setup-row{grid-template-columns:42px 1.4fr 1fr 100px!important}.setup-advanced{grid-column:2/-1;border-top:1px solid var(--line);padding-top:10px}.setup-advanced summary{cursor:pointer;color:var(--muted);font-size:12px}.setup-advanced-fields{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}.setup-advanced-fields label{min-width:0}
+@media(max-width:1100px){.enemy-builder{grid-template-columns:repeat(3,1fr)}.character-editor-grid{grid-template-columns:1fr}.setup-advanced-fields{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:720px){.notice-banner,.novice-tip{margin:8px 12px 0}.novice-tip{flex-wrap:wrap}.novice-tip>div{min-width:calc(100% - 50px)}.enemy-builder,.ability-editor{grid-template-columns:repeat(2,1fr)}.initiative-list article{grid-template-columns:38px 1fr 60px}.initiative-list article>i{grid-column:2/-1}.viewer-switch,.campaign-picker,.model-selector{align-items:stretch;flex-direction:column}.viewer-switch select,.model-selector select{margin:0;min-width:0}.advanced-setup-row{grid-template-columns:32px 1fr!important}.setup-advanced{grid-column:1/-1}.setup-advanced-fields{grid-template-columns:repeat(2,1fr)}}

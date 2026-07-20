@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "narration": { "type": "string", "minLength": 1, "maxLength": 2000 },
+    "scene": { "type": "string", "minLength": 1, "maxLength": 240 },
+    "imagePrompt": { "type": "string", "minLength": 1, "maxLength": 600 },
+    "objective": { "type": "string", "minLength": 1, "maxLength": 240 },
+    "objectiveContext": { "type": "string", "minLength": 1, "maxLength": 600 },
+    "stakes": { "type": "string", "minLength": 1, "maxLength": 300 },
+    "requiresCheck": { "type": "boolean" },
+    "check": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "character": { "type": "string", "minLength": 1, "maxLength": 100 },
+            "ability": { "type": "string", "minLength": 1, "maxLength": 100 },
+            "skill": { "type": "string", "minLength": 1, "maxLength": 100 },
+            "dc": { "type": "integer", "minimum": 5, "maximum": 30 },
+            "reason": { "type": "string", "minLength": 1, "maxLength": 500 }
+          },
+          "required": ["character", "ability", "skill", "dc", "reason"],
+          "additionalProperties": false
+        },
+        { "type": "null" }
+      ]
+    },
+    "choices": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "text": { "type": "string", "minLength": 1, "maxLength": 240 },
+          "playerId": { "type": "string", "pattern": "^player[1-4]$" }
+        },
+        "required": ["text", "playerId"],
+        "additionalProperties": false
+      },
+      "minItems": 1,
+      "maxItems": 8
+    },
+    "effects": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "properties": {
+          "targetId": { "type": "string", "pattern": "^player[1-4]$" },
+          "kind": { "type": "string", "enum": ["damage", "healing", "condition"] },
+          "amount": {
+            "anyOf": [
+              { "type": "integer", "minimum": 0, "maximum": 500 },
+              { "type": "null" }
+            ]
+          },
+          "condition": {
+            "anyOf": [
+              { "type": "string", "minLength": 1, "maxLength": 40 },
+              { "type": "null" }
+            ]
+          },
+          "reason": { "type": "string", "minLength": 1, "maxLength": 160 }
+        },
+        "required": ["targetId", "kind", "amount", "condition", "reason"],
+        "additionalProperties": false
+      }
+    },
+    "combat": {
+      "type": "object",
+      "properties": {
+        "starts": { "type": "boolean" },
+        "firstTurn": { "type": "string", "enum": ["initiative", "enemy"] },
+        "enemies": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+              "ac": { "type": "integer", "minimum": 1, "maximum": 30 },
+              "hp": { "type": "integer", "minimum": 1, "maximum": 999 },
+              "initiativeBonus": { "type": "integer", "minimum": -10, "maximum": 20 },
+              "attackBonus": { "type": "integer", "minimum": -10, "maximum": 30 },
+              "damage": { "type": "string", "pattern": "^[0-9]+d[0-9]+(?:[+-][0-9]+)?$" },
+              "damageType": { "type": "string", "minLength": 1, "maxLength": 40 }
+            },
+            "required": ["name", "ac", "hp", "initiativeBonus", "attackBonus", "damage", "damageType"],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": ["starts", "firstTurn", "enemies"],
+      "additionalProperties": false
+    },
+    "privateMessages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "playerId": { "type": "string", "pattern": "^player[1-4]$" },
+          "text": { "type": "string", "minLength": 1, "maxLength": 1000 }
+        },
+        "required": ["playerId", "text"],
+        "additionalProperties": false
+      },
+      "maxItems": 4
+    },
+    "actionIssues": {
+      "type": "array",
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "properties": {
+          "playerId": { "type": "string", "pattern": "^player[1-4]$" },
+          "message": { "type": "string", "minLength": 1, "maxLength": 300 }
+        },
+        "required": ["playerId", "message"],
+        "additionalProperties": false
+      }
+    },
+    "experienceAwards": {
+      "type": "array",
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "properties": {
+          "playerId": { "type": "string", "pattern": "^player[1-4]$" },
+          "amount": { "type": "integer", "minimum": 0, "maximum": 10000 },
+          "reason": { "type": "string", "minLength": 1, "maxLength": 200 }
+        },
+        "required": ["playerId", "amount", "reason"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["narration", "scene", "imagePrompt", "objective", "objectiveContext", "stakes", "requiresCheck", "check", "choices", "effects", "combat", "privateMessages", "actionIssues", "experienceAwards"],
+  "additionalProperties": false
+}

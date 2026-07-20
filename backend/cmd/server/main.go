@@ -1,0 +1,263 @@
+// Command server runs the D&D Duet local backend: the /api endpoints, generated
+// images from SQLite, and the built frontend. It replaces server.mjs.
+package main
+
+import (
+	"bufio"
+	"context"
+	"io"
+	"log"
+	"net"
+	"net/http"
+	"os"
+	"os/signal"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"syscall"
+	"time"
+
+	"dndduet/internal/codex"
+	"dndduet/internal/forge"
+	"dndduet/internal/httpapi"
+	"dndduet/internal/images"
+	"dndduet/internal/memory"
+	"dndduet/internal/provider"
+	"dndduet/internal/store"
+	"dndduet/internal/tts"
+	schema "dndduet/schemas"
+)
+
+func main() {
+	repoRoot := resolveRepoRoot()
+	loadEnvFile(filepath.Join(repoRoot, ".env"))
+	loadEnvFile(filepath.Join(repoRoot, "backend", ".env"))
+
+	port := envOr("PORT", "4318")
+
+	// Tee all log output to a file as well as the console, so prompt logs
+	// (LOG_PROMPTS) and errors survive after the window closes. LOG_FILE
+	// overrides the default location; empty disables file logging.
+	logPath := envOr("LOG_FILE", filepath.Join(repoRoot, "logs", "server.log"))
+	if logPath != "" {
+		if err := os.MkdirAll(filepath.Dir(logPath), 0o755); err != nil {
+			log.Printf("cannot create log directory %s: %v (console only)", filepath.Dir(logPath), err)
+		} else if f, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644); err != nil {
+			log.Printf("cannot open log file %s: %v (console only)", logPath, err)
+		} else {
+			log.SetOutput(io.MultiWriter(os.Stderr, f))
+			log.Printf("logging to %s", logPath)
+		}
+	}
+
+	webDist := absOr(envOr("WEB_DIST", filepath.Join(repoRoot, "web-dist")))
+	dataDir := absOr(envOr("DND_DATA_DIR", filepath.Join(repoRoot, "campaign-data")))
+	codexCWD := absOr(envOr("CODEX_CWD", repoRoot))
+
+	if err := os.MkdirAll(dataDir, 0o755); err != nil {
+		log.Fatalf("cannot create data directory %s: %v", dataDir, err)
+	}
+	schemaPath, err := schema.WriteTempFile()
+	if err != nil {
+		log.Fatalf("cannot materialise DM schema: %v", err)
+	}
+	imagePromptSchemaPath, err := schema.WriteImagePromptTempFile()
+	if err != nil {
+		log.Fatalf("cannot materialise image-prompt schema: %v", err)
+	}
+
+	db, err := store.Open(filepath.Join(dataDir, "dnd-duet.db"))
+	if err != nil {
+		log.Fatalf("cannot open database: %v", err)
+	}
+	defer db.Close()
+
+	// CODEX_MODE selects how the DM turn reaches Codex:
+	//   app-server (default) — keep one `codex app-server` process alive and run
+	//                          turns over its persistent connection (long-lived)
+	//   exec                 — spawn `codex exec` per request (fallback)
+	var client provider.API
+	var mem *memory.Manager
+	switch strings.ToLower(envOr("CODEX_MODE", "app-server")) {
+	case "app-server", "appserver", "":
+		ac := codex.NewAppServerClient(codexCWD)
+		defer ac.Close()
+		client = ac
+		log.Printf("Codex 連線模式：app-server（一故事一連線，需玩家同意連線）")
+
+		// Memory: raw turns in SQLite + a compacted Markdown file under the Codex
+		// CWD that the DM turn reads itself, so turns send only the delta.
+		memDir := filepath.Join(codexCWD, "campaign-data", "memory")
+		relDir, rerr := filepath.Rel(codexCWD, memDir)
+		if rerr != nil {
+			relDir = filepath.Join("campaign-data", "memory")
+		}
+		threshold := 20
+		if v, e := strconv.Atoi(envOr("MEMORY_COMPACT_THRESHOLD", "")); e == nil && v > 0 {
+			threshold = v
+		}
+		tailK := 40
+		if v, e := strconv.Atoi(envOr("MEMORY_TAIL", "")); e == nil && v > 0 {
+			tailK = v
+		}
+		summarizer := codex.NewClient()
+		runner := func(ctx context.Context, prompt string) (string, error) {
+			return summarizer.RunText(ctx, prompt, provider.StructuredOpts{CWD: codexCWD, Timeout: 150 * time.Second})
+		}
+		if m, merr := memory.New(db, memDir, relDir, runner, threshold, tailK); merr != nil {
+			log.Printf("記憶系統停用（無法建立記憶目錄 %s）：%v", memDir, merr)
+		} else {
+			mem = m
+			log.Printf("記憶系統：SQLite + 匯出檔 %s（compact 門檻 %d 事件）", relDir, threshold)
+		}
+	case "exec":
+		client = codex.NewClient()
+		log.Printf("Codex 連線模式：exec（每次請求 spawn；完整脈絡，無記憶檔）")
+	default:
+		log.Fatalf("unknown CODEX_MODE %q (use \"app-server\" or \"exec\")", envOr("CODEX_MODE", "app-server"))
+	}
+
+	// IMAGE_BACKEND selects the default illustration backend; the frontend can
+	// override it per request:
+	//   codex (default) — Codex CLI's built-in image_gen tool (cloud)
+	//   local           — Stable Diffusion WebUI Forge on this machine (FORGE_*)
+	forgeClient := forge.NewClientFromEnv()
+	// Optional second local checkpoint (e.g. a fast turbo one alongside the
+	// main quality/lightning one) via FORGE_CHECKPOINT_2/FORGE_PRESET_2.
+	forgeClient2 := forge.NewClientFromEnvVariant("2")
+	defaultImageBackend := strings.ToLower(envOr("IMAGE_BACKEND", "codex"))
+	switch defaultImageBackend {
+	case "codex":
+	case "local", "forge", "sd":
+		defaultImageBackend = "local"
+	default:
+		log.Fatalf("unknown IMAGE_BACKEND %q (use \"codex\" or \"local\")", envOr("IMAGE_BACKEND", "codex"))
+	}
+	log.Printf("圖片後端：預設 %s（本地 SD Forge：%s）", defaultImageBackend, forgeClient.BaseURL)
+
+	// Condenses Chinese scene/narration text into English SD tags for the
+	// local Forge renderers, since their CLIP encoder is English-only.
+	promptTranslator := &images.PromptTranslator{
+		API:        client,
+		CWD:        codexCWD,
+		SchemaPath: imagePromptSchemaPath,
+		Effort:     "low",
+	}
+
+	imageRenderers := map[string]images.Renderer{
+		"codex": images.NewCodexRenderer(client, codexCWD),
+		"local": images.NewForgeRenderer(forgeClient, promptTranslator),
+	}
+	if forgeClient2 != nil {
+		imageRenderers["local2"] = images.NewForgeRenderer(forgeClient2, promptTranslator)
+		log.Printf("圖片後端：額外本地選項 local2（%s）", forgeClient2.Checkpoint)
+	}
+
+	srv := &httpapi.Server{
+		Provider:    client,
+		Store:       db,
+		WebDist:     webDist,
+		SchemaPath:  schemaPath,
+		ProviderCWD: codexCWD,
+		ImageRenderers: imageRenderers,
+		DefaultImageBackend: defaultImageBackend,
+		TTS:                 tts.NewClientFromEnv(),
+		Memory:              mem,
+	}
+	log.Printf("語音朗讀：GPT-SoVITS %s（未啟動時 /api/tts 會回報連線錯誤）", srv.TTS.BaseURL)
+
+	addr := net.JoinHostPort("127.0.0.1", port)
+	httpServer := &http.Server{Addr: addr, Handler: srv.Router()}
+
+	log.Printf("D&D local table: http://127.0.0.1:%s", port)
+	status := client.Status(context.Background())
+	if status.Configured {
+		log.Printf("%s: %s", status.Provider, status.Model)
+	} else {
+		log.Printf("%s: %s", status.Provider, status.Message)
+	}
+
+	// Shut down gracefully on Ctrl-C / SIGTERM so the deferred Close() calls run
+	// (important in app-server mode, which owns a long-lived child process).
+	go func() {
+		sig := make(chan os.Signal, 1)
+		signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
+		<-sig
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		httpServer.Shutdown(shutdownCtx)
+	}()
+
+	if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		log.Fatalf("server stopped: %v", err)
+	}
+}
+
+// resolveRepoRoot finds the repository root by walking up for a .git directory,
+// so the server locates web-dist and campaign-data whether it is launched from
+// the repo root or from backend/.
+func resolveRepoRoot() string {
+	if root := strings.TrimSpace(os.Getenv("DND_ROOT")); root != "" {
+		return absOr(root)
+	}
+	dir, err := os.Getwd()
+	if err != nil {
+		return "."
+	}
+	for {
+		if info, err := os.Stat(filepath.Join(dir, ".git")); err == nil && info.IsDir() {
+			return dir
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			break
+		}
+		dir = parent
+	}
+	cwd, _ := os.Getwd()
+	return cwd
+}
+
+func envOr(key, def string) string {
+	if v := strings.TrimSpace(os.Getenv(key)); v != "" {
+		return v
+	}
+	return def
+}
+
+func absOr(p string) string {
+	if abs, err := filepath.Abs(p); err == nil {
+		return abs
+	}
+	return p
+}
+
+// loadEnvFile applies KEY=VALUE lines from a .env file without overriding
+// variables already present in the environment.
+func loadEnvFile(path string) {
+	f, err := os.Open(path)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		eq := strings.IndexByte(line, '=')
+		if eq < 0 {
+			continue
+		}
+		key := strings.TrimSpace(line[:eq])
+		value := strings.TrimSpace(line[eq+1:])
+		value = strings.Trim(value, `"'`)
+		if key == "" {
+			continue
+		}
+		if _, exists := os.LookupEnv(key); !exists {
+			os.Setenv(key, value)
+		}
+	}
+}
