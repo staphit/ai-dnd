@@ -16,6 +16,7 @@ type gameState struct {
 	combat  *rules.CombatState
 	pending map[string]string
 	check   *rules.RequiredCheck
+	arc     *StoryArc
 }
 
 func (s *Service) loadState(id string) (*gameState, error) {
@@ -45,6 +46,19 @@ func (s *Service) loadState(id string) (*gameState, error) {
 			st.check = nil
 		}
 	}
+	if data, ok, err := s.store.StoryArc(id); err != nil {
+		return nil, err
+	} else if ok {
+		st.arc = &StoryArc{}
+		if err := json.Unmarshal([]byte(data), st.arc); err != nil {
+			st.arc = nil
+		}
+	}
+	// Campaigns without an arc (including pre-feature ones) get a fresh clock
+	// starting at the current round; it persists on the next state write.
+	if st.arc == nil {
+		st.arc = defaultStoryArc(row.Round, row.Objective)
+	}
 	return st, nil
 }
 
@@ -59,6 +73,15 @@ func (s *Service) persist(st *gameState, logs []string) (View, error) {
 			return View{}, err
 		}
 		if err := s.store.SaveCombat(st.row.ID, string(data), s.now().UnixMilli()); err != nil {
+			return View{}, err
+		}
+	}
+	if st.arc != nil {
+		data, err := json.Marshal(st.arc)
+		if err != nil {
+			return View{}, err
+		}
+		if err := s.store.SaveStoryArc(st.row.ID, string(data), s.now().UnixMilli()); err != nil {
 			return View{}, err
 		}
 	}

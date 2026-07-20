@@ -77,7 +77,7 @@ case "$MODEL" in
     download \
       "https://huggingface.co/stabilityai/sd-turbo/resolve/main/sd_turbo.safetensors" \
       "sd_turbo.safetensors"
-    echo "==> backend/.env suggestion (low VRAM, e.g. running alongside TTS):"
+    echo "==> backend/.env suggestion (low VRAM):"
     echo "    FORGE_CHECKPOINT=sd_turbo.safetensors"
     echo "    FORGE_PRESET=turbo"
     ;;

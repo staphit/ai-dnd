@@ -187,6 +187,12 @@ export function unlockAction(id: string, playerId: PlayerId | string): Promise<C
   return apiFetch(playerPath(id, playerId, '/action'), { method: 'DELETE' });
 }
 
+// Revive a downed (0 HP) character: costs the rescuer's combat action in
+// combat, or 1 exploration action point outside combat.
+export function revive(id: string, targetId: PlayerId | string, rescuerId: PlayerId | string): Promise<Campaign> {
+  return apiFetch(playerPath(id, targetId, '/revive'), { method: 'POST', body: JSON.stringify({ rescuerId }) });
+}
+
 // ---------------------------------------------------------------------------
 // Combat
 
@@ -212,6 +218,8 @@ export interface AttackResolution {
 export interface CombatConclusion {
   outcome: 'victory' | 'defeat' | 'withdrawal';
   summary: string;
+  /** Party wipe where the players chose to end the story: DM writes a final chapter. */
+  final?: boolean;
 }
 
 export function combatStart(id: string, enemies: EnemySpec[]): Promise<Campaign> {
@@ -234,6 +242,10 @@ export function combatConclude(id: string): Promise<{ view: Campaign; conclusion
   return apiFetch(campaignPath(id, '/combat/conclude'), { method: 'POST' });
 }
 
+export function combatRetry(id: string): Promise<Campaign> {
+  return apiFetch(campaignPath(id, '/combat/retry'), { method: 'POST' });
+}
+
 // ---------------------------------------------------------------------------
 // DM turn
 
@@ -248,6 +260,7 @@ export interface DmTurnRequest {
   campaignId: string;
   model?: string;
   effort?: string;
+  dmProvider?: string;
   actions?: Array<{ playerId: PlayerId; text: string }>;
   intents?: Partial<Record<PlayerId, DmIntent>>;
   checkRoll?: { natural: number };
@@ -268,6 +281,13 @@ export interface ActionIssue {
   message: string;
 }
 
+export interface SceneSlotPayload {
+  id: string;
+  scene: string;
+  imagePrompt: string;
+  createdAt: number;
+}
+
 export interface DmTurnResponse {
   view: Campaign;
   text: string;
@@ -277,8 +297,21 @@ export interface DmTurnResponse {
   privateMessages: Array<{ playerId: PlayerId; text: string }>;
   actionIssues: ActionIssue[];
   model: string;
+  sceneSlot?: SceneSlotPayload;
 }
 
 export function dmTurn(body: DmTurnRequest, signal?: AbortSignal): Promise<DmTurnResponse> {
   return apiFetch('/api/dm', { method: 'POST', body: JSON.stringify(body), signal });
+}
+
+export function reviseStory(
+  campaignId: string,
+  body: { note: string; model?: string; effort?: string; dmProvider?: string },
+  signal?: AbortSignal,
+): Promise<{ view: Campaign; text: string; model: string }> {
+  return apiFetch(campaignPath(campaignId, '/revise-story'), {
+    method: 'POST',
+    body: JSON.stringify(body),
+    signal,
+  });
 }

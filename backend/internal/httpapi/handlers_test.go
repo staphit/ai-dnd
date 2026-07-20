@@ -73,7 +73,7 @@ func newServerWithLocal(t *testing.T, fake *fakeCodex) (*httpapi.Server, *fakeRe
 	if err := os.WriteFile(filepath.Join(webDist, "index.html"), []byte("<!doctype html><title>table</title>"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	st, err := store.Open(filepath.Join(dir, "test.db"))
+	st, err := store.Open(filepath.Join(dir, "test.db"), filepath.Join(dir, "images"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -237,8 +237,13 @@ func TestDmEndpointSuccess(t *testing.T) {
 	var resp map[string]any
 	json.Unmarshal(w.Body.Bytes(), &resp)
 	text, _ := resp["text"].(string)
-	if !strings.Contains(text, "隊伍推進") || !strings.Contains(text, "可考慮：搜索祭壇／檢查泥痕") {
+	if !strings.Contains(text, "隊伍推進") {
 		t.Errorf("text = %q", text)
+	}
+	// Choices are returned as structured chips, not appended to public text.
+	choices, _ := resp["choices"].([]any)
+	if len(choices) == 0 {
+		t.Errorf("expected structured choices, got %v", resp["choices"])
 	}
 	view, _ := resp["view"].(map[string]any)
 	if view == nil {

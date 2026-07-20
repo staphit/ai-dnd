@@ -38,7 +38,9 @@ export function MagneticButton({
       ref={ref}
       type={type}
       style={{ x, y }}
-      whileTap={{ scale: 0.98, y: 1 }}
+      whileHover={disabled ? undefined : { scale: 1.02 }}
+      whileTap={disabled ? undefined : { scale: 0.96, y: 2 }}
+      transition={{ type: 'spring', stiffness: 420, damping: 28 }}
       onMouseMove={move}
       onMouseLeave={reset}
       onClick={onClick}

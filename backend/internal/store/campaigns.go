@@ -3,6 +3,7 @@ package store
 import (
 	"database/sql"
 	"errors"
+	"strings"
 )
 
 // CampaignRow is one campaigns table row. The JSON document columns (Choices,
@@ -132,6 +133,8 @@ func (s *Store) DeleteCampaign(id string) error {
 	for _, stmt := range []string{
 		`DELETE FROM story_entries WHERE campaign_id = ?`,
 		`DELETE FROM combats WHERE campaign_id = ?`,
+		`DELETE FROM combat_snapshots WHERE campaign_id = ?`,
+		`DELETE FROM story_arcs WHERE campaign_id = ?`,
 		`DELETE FROM characters WHERE campaign_id = ?`,
 		`DELETE FROM campaigns WHERE id = ?`,
 	} {
@@ -215,6 +218,66 @@ func (s *Store) DeleteCombat(campaignID string) error {
 	return err
 }
 
+// SaveCombatSnapshot upserts the combat-start snapshot for a campaign.
+func (s *Store) SaveCombatSnapshot(campaignID, data string, updatedAt int64) error {
+	if campaignID == "" {
+		return errors.New("campaign id is required")
+	}
+	_, err := s.db.Exec(
+		`INSERT INTO combat_snapshots (campaign_id, data, updated_at) VALUES (?, ?, ?)
+		 ON CONFLICT(campaign_id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at`,
+		campaignID, data, updatedAt,
+	)
+	return err
+}
+
+// CombatSnapshot returns the combat-start snapshot; ok is false when none.
+func (s *Store) CombatSnapshot(campaignID string) (string, bool, error) {
+	row := s.db.QueryRow(`SELECT data FROM combat_snapshots WHERE campaign_id = ?`, campaignID)
+	var data string
+	err := row.Scan(&data)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", false, nil
+	}
+	if err != nil {
+		return "", false, err
+	}
+	return data, true, nil
+}
+
+// DeleteCombatSnapshot clears the combat-start snapshot for a campaign.
+func (s *Store) DeleteCombatSnapshot(campaignID string) error {
+	_, err := s.db.Exec(`DELETE FROM combat_snapshots WHERE campaign_id = ?`, campaignID)
+	return err
+}
+
+// SaveStoryArc upserts the story-pacing arc for a campaign.
+func (s *Store) SaveStoryArc(campaignID, data string, updatedAt int64) error {
+	if campaignID == "" {
+		return errors.New("campaign id is required")
+	}
+	_, err := s.db.Exec(
+		`INSERT INTO story_arcs (campaign_id, data, updated_at) VALUES (?, ?, ?)
+		 ON CONFLICT(campaign_id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at`,
+		campaignID, data, updatedAt,
+	)
+	return err
+}
+
+// StoryArc returns the story-pacing arc; ok is false when none.
+func (s *Store) StoryArc(campaignID string) (string, bool, error) {
+	row := s.db.QueryRow(`SELECT data FROM story_arcs WHERE campaign_id = ?`, campaignID)
+	var data string
+	err := row.Scan(&data)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", false, nil
+	}
+	if err != nil {
+		return "", false, err
+	}
+	return data, true, nil
+}
+
 // AppendStoryEntries appends journal entries, assigning per-campaign
 // monotonically increasing seq numbers (same pattern as AppendMemoryEvents).
 func (s *Store) AppendStoryEntries(campaignID string, entries []StoryRow) error {
@@ -244,6 +307,27 @@ func (s *Store) AppendStoryEntries(campaignID string, entries []StoryRow) error 
 		}
 	}
 	return tx.Commit()
+}
+
+// ReplaceLastPublicDMText rewrites the most recent public DM journal entry's text.
+// Used by story revision so mechanical state (round, HP, XP) is untouched.
+func (s *Store) ReplaceLastPublicDMText(campaignID, text string) error {
+	if campaignID == "" || strings.TrimSpace(text) == "" {
+		return errors.New("campaign id and text are required")
+	}
+	var seq int64
+	err := s.db.QueryRow(
+		`SELECT seq FROM story_entries
+		 WHERE campaign_id = ? AND speaker = 'dm' AND (audience = '' OR audience = 'public')
+		 ORDER BY seq DESC LIMIT 1`, campaignID).Scan(&seq)
+	if errors.Is(err, sql.ErrNoRows) {
+		return errors.New("no public DM entry to revise")
+	}
+	if err != nil {
+		return err
+	}
+	_, err = s.db.Exec(`UPDATE story_entries SET text = ? WHERE campaign_id = ? AND seq = ?`, text, campaignID, seq)
+	return err
 }
 
 // StoryTail returns the last limit journal entries, oldest first.

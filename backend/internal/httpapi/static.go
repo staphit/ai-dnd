@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -8,6 +9,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/go-chi/chi/v5"
 )
 
 // mimeByExt matches the mime table in server.mjs.
@@ -54,10 +57,38 @@ func (s *Server) serveGenerated(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("content-type", img.Mime)
+	// Files are immutable once written (new gens get new filenames); long cache is fine.
 	w.Header().Set("cache-control", "private, max-age=31536000, immutable")
 	w.Header().Set("x-content-type-options", "nosniff")
 	w.WriteHeader(http.StatusOK)
 	w.Write(img.Bytes)
+}
+
+// handleDeleteGenerated removes one persisted image from generated-images/.
+// Only the on-disk file is deleted; the client must drop its own URL references.
+func (s *Server) handleDeleteGenerated(w http.ResponseWriter, r *http.Request) {
+	filename := path.Base(strings.TrimSpace(chi.URLParam(r, "filename")))
+	if !generatedNamePattern.MatchString(filename) {
+		writeJSON(w, http.StatusBadRequest, errorBody{Error: "無效的圖片檔名。"})
+		return
+	}
+	// Confirm existence so the UI can distinguish already-gone vs deleted.
+	if _, ok, err := s.Store.GetImage(filename); err != nil {
+		logHandlerErr("generated/delete", err, "filename="+filename)
+		writeErr(w, err, http.StatusServiceUnavailable)
+		return
+	} else if !ok {
+		log.Printf("[generated/delete] not found filename=%s", filename)
+		writeJSON(w, http.StatusNotFound, errorBody{Error: "找不到該圖片檔案。"})
+		return
+	}
+	if err := s.Store.DeleteImage(filename); err != nil {
+		logHandlerErr("generated/delete", err, "filename="+filename+" | tip: 檢查 generated-images 寫入權限")
+		writeErr(w, err, http.StatusServiceUnavailable)
+		return
+	}
+	log.Printf("[generated/delete] ok filename=%s", filename)
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "filename": filename})
 }
 
 func (s *Server) serveStatic(w http.ResponseWriter, r *http.Request) {

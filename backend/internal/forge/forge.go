@@ -67,10 +67,10 @@ type Client struct {
 // Presets bundle sampler settings and native resolution per checkpoint family:
 //   - quality: standard SDXL checkpoints (e.g. JuggernautXL)
 //   - turbo:   SD-Turbo (single-step distillation of SD 2.1), low VRAM —
-//     for running alongside other GPU workloads (e.g. TTS)
+//     for running alongside other GPU workloads
 //   - hyper:   an SD1.5 photoreal checkpoint (e.g. epiCRealism) driven by a
 //     Hyper-SD LoRA (set FORGE_LORA); 6 steps, low CFG, 512x512 — the
-//     lowest-VRAM realistic option, comfortable alongside GPU TTS on 8 GB
+//     lowest-VRAM realistic option on 8 GB cards
 const (
 	PresetQuality = "quality"
 	PresetTurbo   = "turbo"
@@ -293,14 +293,17 @@ func (c *Client) GenerateImage(ctx context.Context, req Txt2Img) ([]byte, error)
 	resp, err := c.httpClient().Do(httpReq)
 	if err != nil {
 		if ctx.Err() != nil {
+			log.Printf("[forge] request canceled url=%s: %v", c.BaseURL, ctx.Err())
 			return nil, ctx.Err()
 		}
+		log.Printf("[forge] dial failed url=%s: %v | tip: 啟動 SD WebUI Forge 並加 --api；檢查 FORGE_BASE_URL", c.BaseURL, err)
 		return nil, fmt.Errorf("無法連線本地 SD Forge（%s）；請先啟動 Forge 並加上 --api 參數", c.BaseURL)
 	}
 	defer resp.Body.Close()
 
 	data, err := io.ReadAll(io.LimitReader(resp.Body, 64<<20))
 	if err != nil {
+		log.Printf("[forge] read body failed url=%s: %v", c.BaseURL, err)
 		return nil, err
 	}
 	if resp.StatusCode != http.StatusOK {
@@ -308,14 +311,18 @@ func (c *Client) GenerateImage(ctx context.Context, req Txt2Img) ([]byte, error)
 		if len(detail) > 300 {
 			detail = detail[:300]
 		}
+		log.Printf("[forge] HTTP %d url=%s checkpoint=%q detail=%s | tip: VRAM/checkpoint 名稱/API 錯誤訊息見 detail",
+			resp.StatusCode, c.BaseURL, c.Checkpoint, detail)
 		return nil, fmt.Errorf("SD Forge 回應錯誤（HTTP %d）：%s", resp.StatusCode, detail)
 	}
 
 	var parsed txt2imgResponse
 	if err := json.Unmarshal(data, &parsed); err != nil {
+		log.Printf("[forge] invalid JSON url=%s bodyHead=%q: %v", c.BaseURL, truncateForLog(string(data), 120), err)
 		return nil, errors.New("SD Forge 沒有回傳有效的 JSON 結果")
 	}
 	if len(parsed.Images) == 0 || strings.TrimSpace(parsed.Images[0]) == "" {
+		log.Printf("[forge] empty images[] url=%s checkpoint=%q | tip: 檢查模型是否載入、prompt 是否過長", c.BaseURL, c.Checkpoint)
 		return nil, errors.New("SD Forge 沒有產生圖片")
 	}
 
@@ -326,12 +333,23 @@ func (c *Client) GenerateImage(ctx context.Context, req Txt2Img) ([]byte, error)
 	}
 	img, err := base64.StdEncoding.DecodeString(encoded)
 	if err != nil {
+		log.Printf("[forge] base64 decode failed url=%s: %v", c.BaseURL, err)
 		return nil, errors.New("SD Forge 回傳的圖片無法解碼")
 	}
 	if len(img) == 0 {
+		log.Printf("[forge] decoded image empty url=%s", c.BaseURL)
 		return nil, errors.New("SD Forge 圖片輸出是空檔案")
 	}
 	return img, nil
+}
+
+func truncateForLog(s string, max int) string {
+	s = strings.TrimSpace(s)
+	if max <= 0 || len(s) <= max {
+		return s
+	}
+	// byte-safe head for logs (not rune-accurate; payloads are mostly ASCII/JSON).
+	return s[:max] + "…"
 }
 
 func (c *Client) httpClient() *http.Client {

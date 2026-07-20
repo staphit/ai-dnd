@@ -5,6 +5,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"io"
 	"log"
 	"net"
@@ -17,9 +18,12 @@ import (
 	"syscall"
 	"time"
 
+	"dndduet/internal/applog"
 	"dndduet/internal/codex"
+	"dndduet/internal/dm"
 	"dndduet/internal/forge"
 	"dndduet/internal/game"
+	"dndduet/internal/grok"
 	"dndduet/internal/httpapi"
 	"dndduet/internal/images"
 	"dndduet/internal/memory"
@@ -36,19 +40,16 @@ func main() {
 
 	port := envOr("PORT", "4318")
 
-	// Tee all log output to a file as well as the console, so prompt logs
-	// (LOG_PROMPTS) and errors survive after the window closes. LOG_FILE
-	// overrides the default location; empty disables file logging.
-	logPath := envOr("LOG_FILE", filepath.Join(repoRoot, "logs", "server.log"))
-	if logPath != "" {
-		if err := os.MkdirAll(filepath.Dir(logPath), 0o755); err != nil {
-			log.Printf("cannot create log directory %s: %v (console only)", filepath.Dir(logPath), err)
-		} else if f, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644); err != nil {
-			log.Printf("cannot open log file %s: %v (console only)", logPath, err)
-		} else {
-			log.SetOutput(io.MultiWriter(os.Stderr, f))
-			log.Printf("logging to %s", logPath)
-		}
+	// Tee all log output to a dated file as well as the console, so prompt logs
+	// (LOG_PROMPTS) and errors survive after the window closes. Files are split
+	// by local calendar day: logs/server-2006-01-02.log. LOG_FILE overrides the
+	// base path (date is still inserted before the extension); empty disables
+	// file logging.
+	logBase := envOr("LOG_FILE", filepath.Join(repoRoot, "logs", "server.log"))
+	if logBase != "" {
+		daily := applog.NewDailyWriter(logBase)
+		log.SetOutput(io.MultiWriter(os.Stderr, daily))
+		log.Printf("logging to %s (daily rotate)", applog.PathFor(logBase, time.Now()))
 	}
 
 	webDist := absOr(envOr("WEB_DIST", filepath.Join(repoRoot, "web-dist")))
@@ -71,87 +72,163 @@ func main() {
 		log.Fatalf("cannot materialise combat-tactics schema: %v", err)
 	}
 
-	db, err := store.Open(filepath.Join(dataDir, "dnd-duet.db"))
+	// Persisted scene/portrait art lives under generated-images/ (DND_IMAGE_DIR overrides).
+	imageDir := absOr(envOr("DND_IMAGE_DIR", filepath.Join(repoRoot, "generated-images")))
+	dbPath := filepath.Join(dataDir, "dnd-duet.db")
+	db, err := store.Open(dbPath, imageDir)
 	if err != nil {
 		log.Fatalf("cannot open database: %v", err)
 	}
 	defer db.Close()
+	log.Printf("database: %s", dbPath)
+	log.Printf("image storage: %s", imageDir)
 
-	// CODEX_MODE selects how the DM turn reaches Codex:
-	//   app-server (default) — keep one `codex app-server` process alive and run
-	//                          turns over its persistent connection (long-lived)
-	//   exec                 — spawn `codex exec` per request (fallback)
-	var client provider.API
-	var mem *memory.Manager
+	// Default DM backend (UI can switch at runtime among registered providers).
+	//   codex — local Codex CLI (ChatGPT login)
+	//   grok  — Grok Build CLI (`grok login`) or XAI_API_KEY HTTP
+	defaultDM := strings.ToLower(envOr("DM_PROVIDER", "codex"))
+	if defaultDM == "xai" {
+		defaultDM = "grok"
+	}
+	if defaultDM == "" {
+		defaultDM = "codex"
+	}
+
+	providers := map[string]provider.API{}
+
+	// PromptSession tracks whether full DM rules already entered a multi-turn
+	// session (Codex thread / Grok HTTP history) so later turns can send a short
+	// compact preamble instead of the full system block.
+	promptSession := dm.NewPromptSession()
+
+	// --- Codex ---
+	var codexClient provider.API
 	switch strings.ToLower(envOr("CODEX_MODE", "app-server")) {
 	case "app-server", "appserver", "":
 		ac := codex.NewAppServerClient(codexCWD)
-		defer ac.Close()
-		client = ac
-		log.Printf("Codex 連線模式：app-server（一故事一連線，需玩家同意連線）")
+		defer func() { _ = ac.Close() }()
+		codexClient = ac
+		log.Printf("DM 資料源已註冊：codex（app-server）")
+	case "exec":
+		codexClient = codex.NewClient()
+		log.Printf("DM 資料源已註冊：codex（exec）")
+	default:
+		log.Fatalf("unknown CODEX_MODE %q (use \"app-server\" or \"exec\")", envOr("CODEX_MODE", "app-server"))
+	}
+	providers["codex"] = codexClient
 
-		// Memory: raw turns in SQLite + a compacted Markdown file under the Codex
-		// CWD that the DM turn reads itself, so turns send only the delta.
-		memDir := filepath.Join(codexCWD, "campaign-data", "memory")
-		relDir, rerr := filepath.Rel(codexCWD, memDir)
-		if rerr != nil {
-			relDir = filepath.Join("campaign-data", "memory")
+	// --- Grok (CLI login preferred; HTTP if key present) ---
+	grokHTTP := grok.NewClientFromEnv()
+	if gp := grok.NewProviderFromEnv(); gp != nil {
+		providers["grok"] = gp
+		st := gp.Status(context.Background())
+		if st.Configured {
+			log.Printf("DM 資料源已註冊：grok（%s / %s）", st.Provider, st.Model)
+		} else {
+			log.Printf("DM 資料源已註冊：grok（尚未就緒：%s）", st.Message)
 		}
-		threshold := 20
-		if v, e := strconv.Atoi(envOr("MEMORY_COMPACT_THRESHOLD", "")); e == nil && v > 0 {
-			threshold = v
+	}
+
+	if _, ok := providers[defaultDM]; !ok {
+		if _, ok := providers["codex"]; ok {
+			defaultDM = "codex"
+		} else if _, ok := providers["grok"]; ok {
+			defaultDM = "grok"
+		} else {
+			log.Fatalf("沒有可用的 DM 資料源")
 		}
-		tailK := 40
-		if v, e := strconv.Atoi(envOr("MEMORY_TAIL", "")); e == nil && v > 0 {
-			tailK = v
-		}
+		log.Printf("DM_PROVIDER 不可用，改用 %s", defaultDM)
+	}
+	client := providers[defaultDM]
+	log.Printf("DM 預設資料源：%s（UI 可切換）", defaultDM)
+
+	// Memory: use Codex text summarizer when available, else Grok structured.
+	var mem *memory.Manager
+	memDir := filepath.Join(codexCWD, "campaign-data", "memory")
+	relDir, rerr := filepath.Rel(codexCWD, memDir)
+	if rerr != nil {
+		relDir = filepath.Join("campaign-data", "memory")
+	}
+	threshold := 20
+	if v, e := strconv.Atoi(envOr("MEMORY_COMPACT_THRESHOLD", "")); e == nil && v > 0 {
+		threshold = v
+	}
+	tailK := 40
+	if v, e := strconv.Atoi(envOr("MEMORY_TAIL", "")); e == nil && v > 0 {
+		tailK = v
+	}
+	var runner func(ctx context.Context, prompt string) (string, error)
+	if _, ok := providers["codex"]; ok {
 		summarizer := codex.NewClient()
-		runner := func(ctx context.Context, prompt string) (string, error) {
+		runner = func(ctx context.Context, prompt string) (string, error) {
 			return summarizer.RunText(ctx, prompt, provider.StructuredOpts{CWD: codexCWD, Timeout: 150 * time.Second})
 		}
+	} else if g, ok := providers["grok"]; ok {
+		runner = func(ctx context.Context, prompt string) (string, error) {
+			raw, err := g.RunStructured(ctx, prompt+"\n\n回傳 JSON：{\"tags\":\"摘要文字\"}", provider.StructuredOpts{
+				SchemaPath: imagePromptSchemaPath, Timeout: 150 * time.Second, CWD: codexCWD,
+			})
+			if err != nil {
+				return "", err
+			}
+			var parsed struct {
+				Tags string `json:"tags"`
+			}
+			if json.Unmarshal(raw, &parsed) == nil && strings.TrimSpace(parsed.Tags) != "" {
+				return parsed.Tags, nil
+			}
+			return string(raw), nil
+		}
+	}
+	if runner != nil {
 		if m, merr := memory.New(db, memDir, relDir, runner, threshold, tailK); merr != nil {
 			log.Printf("記憶系統停用（無法建立記憶目錄 %s）：%v", memDir, merr)
 		} else {
 			mem = m
 			log.Printf("記憶系統：SQLite + 匯出檔 %s（compact 門檻 %d 事件）", relDir, threshold)
 		}
-	case "exec":
-		client = codex.NewClient()
-		log.Printf("Codex 連線模式：exec（每次請求 spawn；完整脈絡，無記憶檔）")
-	default:
-		log.Fatalf("unknown CODEX_MODE %q (use \"app-server\" or \"exec\")", envOr("CODEX_MODE", "app-server"))
 	}
 
-	// IMAGE_BACKEND selects the default illustration backend; the frontend can
-	// override it per request:
-	//   codex (default) — Codex CLI's built-in image_gen tool (cloud)
-	//   local           — Stable Diffusion WebUI Forge on this machine (FORGE_*)
+	// IMAGE_BACKEND: codex | grok | local (frontend can override per request)
 	forgeClient := forge.NewClientFromEnv()
-	// Optional second local checkpoint (e.g. a fast turbo one alongside the
-	// main quality/lightning one) via FORGE_CHECKPOINT_2/FORGE_PRESET_2.
 	forgeClient2 := forge.NewClientFromEnvVariant("2")
-	defaultImageBackend := strings.ToLower(envOr("IMAGE_BACKEND", "codex"))
+	defaultImageBackend := strings.ToLower(envOr("IMAGE_BACKEND", ""))
+	if defaultImageBackend == "" {
+		defaultImageBackend = "codex"
+		if defaultDM == "grok" {
+			if grokHTTP != nil {
+				defaultImageBackend = "grok"
+			} else {
+				defaultImageBackend = "local"
+			}
+		}
+	}
 	switch defaultImageBackend {
 	case "codex":
+	case "grok", "xai":
+		defaultImageBackend = "grok"
 	case "local", "forge", "sd":
 		defaultImageBackend = "local"
 	default:
-		log.Fatalf("unknown IMAGE_BACKEND %q (use \"codex\" or \"local\")", envOr("IMAGE_BACKEND", "codex"))
+		log.Fatalf("unknown IMAGE_BACKEND %q (use \"codex\", \"grok\", or \"local\")", envOr("IMAGE_BACKEND", "codex"))
+	}
+	if defaultImageBackend == "grok" && grokHTTP == nil {
+		log.Printf("警告：IMAGE_BACKEND=grok 但沒有 XAI_API_KEY；圖片生成會失敗。可改 local/codex，或補上 API key。")
 	}
 	log.Printf("圖片後端：預設 %s（本地 SD Forge：%s）", defaultImageBackend, forgeClient.BaseURL)
 
-	// Condenses Chinese scene/narration text into English SD tags for the
-	// local Forge renderers, since their CLIP encoder is English-only.
 	promptTranslator := &images.PromptTranslator{
-		API:        client,
-		CWD:        codexCWD,
-		SchemaPath: imagePromptSchemaPath,
-		Effort:     "low",
+		API: client, CWD: codexCWD, SchemaPath: imagePromptSchemaPath, Effort: "low",
 	}
-
 	imageRenderers := map[string]images.Renderer{
-		"codex": images.NewCodexRenderer(client, codexCWD),
 		"local": images.NewForgeRenderer(forgeClient, promptTranslator),
+	}
+	if c, ok := providers["codex"]; ok && c != nil {
+		imageRenderers["codex"] = images.NewCodexRenderer(c, codexCWD)
+	}
+	if grokHTTP != nil {
+		imageRenderers["grok"] = images.NewGrokRenderer(grokHTTP)
+		log.Printf("圖片後端：已啟用 grok HTTP（%s）", grokHTTP.ImageModel())
 	}
 	if forgeClient2 != nil {
 		imageRenderers["local2"] = images.NewForgeRenderer(forgeClient2, promptTranslator)
@@ -160,6 +237,8 @@ func main() {
 
 	srv := &httpapi.Server{
 		Provider:            client,
+		Providers:           providers,
+		DefaultDMProvider:   defaultDM,
 		Store:               db,
 		WebDist:             webDist,
 		SchemaPath:          schemaPath,
@@ -170,6 +249,7 @@ func main() {
 		Memory:              mem,
 		Game:                game.New(db, nil),
 		TacticsSchemaPath:   tacticsSchemaPath,
+		Prompt:              promptSession,
 	}
 	log.Printf("語音朗讀：GPT-SoVITS %s（未啟動時 /api/tts 會回報連線錯誤）", srv.TTS.BaseURL)
 
@@ -179,13 +259,11 @@ func main() {
 	log.Printf("D&D local table: http://127.0.0.1:%s", port)
 	status := client.Status(context.Background())
 	if status.Configured {
-		log.Printf("%s: %s", status.Provider, status.Model)
+		log.Printf("預設 DM %s: %s", defaultDM, status.Model)
 	} else {
-		log.Printf("%s: %s", status.Provider, status.Message)
+		log.Printf("預設 DM %s: %s", defaultDM, status.Message)
 	}
 
-	// Shut down gracefully on Ctrl-C / SIGTERM so the deferred Close() calls run
-	// (important in app-server mode, which owns a long-lived child process).
 	go func() {
 		sig := make(chan os.Signal, 1)
 		signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
@@ -200,9 +278,6 @@ func main() {
 	}
 }
 
-// resolveRepoRoot finds the repository root by walking up for a .git directory,
-// so the server locates web-dist and campaign-data whether it is launched from
-// the repo root or from backend/.
 func resolveRepoRoot() string {
 	if root := strings.TrimSpace(os.Getenv("DND_ROOT")); root != "" {
 		return absOr(root)
@@ -239,8 +314,6 @@ func absOr(p string) string {
 	return p
 }
 
-// loadEnvFile applies KEY=VALUE lines from a .env file without overriding
-// variables already present in the environment.
 func loadEnvFile(path string) {
 	f, err := os.Open(path)
 	if err != nil {

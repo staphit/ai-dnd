@@ -10,11 +10,11 @@ import (
 	"time"
 )
 
-// ErrNeedsConsent is returned by RunStructured when there is no live codex
+// ErrNeedsConsent is returned by RunStructured when there is no live provider
 // connection bound to the requested story. The HTTP layer maps it to 409 so the
 // frontend can ask the player to (re)connect — connections are never
 // established implicitly.
-var ErrNeedsConsent = errors.New("尚未連線 Codex，或連線綁定的是其他故事；請先按「連線」。")
+var ErrNeedsConsent = errors.New("尚未連線 DM 資料源，或連線綁定的是其他故事；請先按「連線」。")
 
 // Status reports whether a provider's CLI is usable.
 type Status struct {
@@ -49,6 +49,14 @@ type StructuredOpts struct {
 	// provider requires a live connection bound to this story (else
 	// ErrNeedsConsent); the stateless exec provider ignores it.
 	StoryID string
+	// SystemPrompt is optional static DM rules / instructions. Providers that
+	// support multi-turn chat put this in the system role (or first message);
+	// others prepend it to the user prompt. Empty means the prompt argument is
+	// the complete text.
+	SystemPrompt string
+	// ResetSession clears any per-story multi-turn history before this call
+	// (e.g. after Connect). Providers without a session ignore it.
+	ResetSession bool
 }
 
 // ImageOpts configures an image-generation run.

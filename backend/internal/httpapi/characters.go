@@ -94,6 +94,16 @@ func (s *Server) handleRest(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// handleRevive: {pid} is the downed target; body names the rescuer.
+func (s *Server) handleRevive(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		RescuerID string `json:"rescuerId"`
+	}
+	s.characterAction(w, r, &body, func(id, pid string) (game.View, error) {
+		return s.Game.Revive(id, body.RescuerID, pid)
+	})
+}
+
 func (s *Server) handleLevelUp(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		ClassName string `json:"className"`

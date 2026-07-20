@@ -103,4 +103,5 @@ describe('PartySetup', () => {
     expect(onComplete).not.toHaveBeenCalled();
     expect(calls.some((entry) => entry.method === 'POST' && entry.url === '/api/campaigns')).toBe(false);
   });
+
 });

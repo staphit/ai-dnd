@@ -91,6 +91,141 @@ func TestCombatFlowAndVictoryXP(t *testing.T) {
 	}
 }
 
+func TestRetryCombatRestoresSnapshot(t *testing.T) {
+	s := newTestService(t)
+	view := createSample(t, s)
+	id := view.ID
+
+	// No active combat yet: retry must 400.
+	if _, err := s.RetryCombat(id); apperr.StatusOf(err, 0) != 400 {
+		t.Fatalf("expected 400 without combat, got %v", err)
+	}
+
+	// Party acts first against a tough enemy.
+	s.WithDice(seq(0.99, 0.5, 0.01))
+	view2, err := s.StartCombatManual(id, []EnemySpec{{Name: "石像鬼", AC: 5, HP: 30, AttackBonus: 4, Damage: "1d6", DamageType: "鈍擊"}})
+	if err != nil {
+		t.Fatalf("start combat: %v", err)
+	}
+	startHP := map[string]int{}
+	for _, c := range view2.Combat.Combatants {
+		startHP[c.ID] = c.HP
+	}
+	startOrder := initiativeOrder(*view2.Combat)
+
+	// A hit damages the enemy, diverging from the snapshot.
+	s.WithDice(seq(0.9, 0.9))
+	result, err := s.Attack(id, AttackParams{})
+	if err != nil {
+		t.Fatalf("attack: %v", err)
+	}
+	enemyHurt := false
+	for _, c := range result.View.Combat.Combatants {
+		if c.Side == "enemy" && c.HP < startHP[c.ID] {
+			enemyHurt = true
+		}
+	}
+	if !enemyHurt {
+		t.Fatalf("enemy should be damaged before retry: %+v", result.View.Combat.Combatants)
+	}
+
+	retried, err := s.RetryCombat(id)
+	if err != nil {
+		t.Fatalf("retry: %v", err)
+	}
+	if retried.Combat == nil || !retried.Combat.Active {
+		t.Fatalf("combat should stay active after retry: %+v", retried.Combat)
+	}
+	for _, c := range retried.Combat.Combatants {
+		if c.HP != startHP[c.ID] {
+			t.Fatalf("%s HP not restored: got %d want %d", c.Name, c.HP, startHP[c.ID])
+		}
+	}
+	if got := initiativeOrder(*retried.Combat); got != startOrder {
+		t.Fatalf("initiative order changed: got %q want %q", got, startOrder)
+	}
+	last := retried.Story[len(retried.Story)-1]
+	if !strings.Contains(last.Text, "戰鬥重來") {
+		t.Fatalf("missing retry log: %q", last.Text)
+	}
+
+	// Conclude drops the snapshot: a later retry (new combat, missing
+	// snapshot) is impossible only when no combat is active.
+	if _, err := s.Conclude(id); err != nil {
+		t.Fatalf("conclude: %v", err)
+	}
+	if _, err := s.RetryCombat(id); apperr.StatusOf(err, 0) != 400 {
+		t.Fatalf("expected 400 after conclude, got %v", err)
+	}
+}
+
+func TestReviveDownedAlly(t *testing.T) {
+	s := newTestService(t)
+	view := createSample(t, s)
+	id := view.ID
+
+	// Nobody is down yet.
+	if _, err := s.Revive(id, "player1", "player2"); apperr.StatusOf(err, 0) != 400 {
+		t.Fatalf("expected 400 when target standing, got %v", err)
+	}
+
+	// Down player2 via import-free path: enemy first, huge damage.
+	s.WithDice(seq(0.01, 0.02, 0.99))
+	if _, err := s.StartCombatManual(id, []EnemySpec{{Name: "巨魔", AC: 12, HP: 40, AttackBonus: 30, Damage: "6d6+20", DamageType: "鈍擊"}}); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	s.WithDice(seq(0.95))
+	runner := func(ctx context.Context, input dm.TacticsInput) (dm.Tactic, error) {
+		return dm.Tactic{TargetID: "player2", Attack: "重擊", Intent: "巨魔掄起巨棒砸向牧師。"}, nil
+	}
+	result, err := s.EnemyTurn(context.Background(), id, runner)
+	if err != nil {
+		t.Fatalf("enemy turn: %v", err)
+	}
+	var downed bool
+	for _, p := range result.View.Players {
+		if p.ID == "player2" && p.HP == 0 {
+			downed = true
+		}
+	}
+	if !downed {
+		t.Fatalf("player2 should be at 0 HP: %+v", result.View.Players)
+	}
+
+	// It is now a party member's turn; player1 spends the action to revive.
+	roundBefore := result.View.Round
+	revived, err := s.Revive(id, "player1", "player2")
+	if err != nil {
+		t.Fatalf("revive: %v", err)
+	}
+	for _, p := range revived.Players {
+		if p.ID == "player2" {
+			if p.HP <= 0 {
+				t.Fatalf("player2 not revived: %+v", p)
+			}
+			if p.Condition == "倒地" {
+				t.Fatalf("condition not cleared: %+v", p)
+			}
+		}
+	}
+	for _, c := range revived.Combat.Combatants {
+		if c.PlayerID == "player2" && (c.Defeated || c.HP <= 0) {
+			t.Fatalf("combatant not stood up: %+v", c)
+		}
+	}
+	if revived.Round != roundBefore {
+		t.Fatalf("combat revive must not consume exploration time: %d -> %d", roundBefore, revived.Round)
+	}
+	// The action is spent: attacking now must fail.
+	if _, err := s.Attack(id, AttackParams{}); apperr.StatusOf(err, 0) != 400 {
+		t.Fatalf("expected action-used 400 after revive, got %v", err)
+	}
+	last := revived.Story[len(revived.Story)-1]
+	if !strings.Contains(last.Text, "救援倒地的") {
+		t.Fatalf("missing revive log: %q", last.Text)
+	}
+}
+
 func TestEnemyTurnAIAndFallback(t *testing.T) {
 	s := newTestService(t)
 	view := createSample(t, s)

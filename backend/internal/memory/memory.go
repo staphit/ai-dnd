@@ -90,13 +90,13 @@ func (m *Manager) MaterialiseRules(storyID, content string) error {
 	return os.Rename(tmp, path)
 }
 
-// Materialise writes the story's current compacted memory + recent raw tail to
-// its Markdown file, so a Codex turn started right after can read prior context.
-// Call it before running the turn.
-func (m *Manager) Materialise(storyID string) error {
+// Render builds the story's compacted memory + recent raw tail as Markdown text.
+// Used by Grok (and any provider that cannot read a file from the sandbox) so
+// prior plot is injected into the prompt body rather than referenced by path.
+func (m *Manager) Render(storyID string) (string, error) {
 	summary, coveredSeq, hasSummary, err := m.store.MemorySummary(storyID)
 	if err != nil {
-		return err
+		return "", err
 	}
 	// Recent uncompacted events (bounded — compaction keeps this small).
 	limit := m.tailK * 3
@@ -105,7 +105,7 @@ func (m *Manager) Materialise(storyID string) error {
 	}
 	recent, err := m.store.MemoryEventsAfter(storyID, coveredSeq, limit)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	var b strings.Builder
@@ -122,12 +122,28 @@ func (m *Manager) Materialise(storyID string) error {
 		b.WriteString("（無新的未壓縮事件。）\n")
 	} else {
 		for _, e := range recent {
-			fmt.Fprintf(&b, "- [第 %d 回合] %s\n", e.Round, strings.TrimSpace(e.Text))
+			role := strings.TrimSpace(e.Role)
+			if role != "" {
+				fmt.Fprintf(&b, "- [第 %d 回合／%s] %s\n", e.Round, role, strings.TrimSpace(e.Text))
+			} else {
+				fmt.Fprintf(&b, "- [第 %d 回合] %s\n", e.Round, strings.TrimSpace(e.Text))
+			}
 		}
 	}
 
+	return b.String(), nil
+}
+
+// Materialise writes the story's current compacted memory + recent raw tail to
+// its Markdown file, so a Codex turn started right after can read prior context.
+// Call it before running the turn.
+func (m *Manager) Materialise(storyID string) error {
+	body, err := m.Render(storyID)
+	if err != nil {
+		return err
+	}
 	tmp := m.filePath(storyID) + ".tmp"
-	if err := os.WriteFile(tmp, []byte(b.String()), 0o644); err != nil {
+	if err := os.WriteFile(tmp, []byte(body), 0o644); err != nil {
 		return err
 	}
 	return os.Rename(tmp, m.filePath(storyID))

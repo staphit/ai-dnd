@@ -49,9 +49,9 @@
         "properties": {
           "targetId": { "type": "string", "pattern": "^player[1-4]$" },
           "kind": { "type": "string", "enum": ["damage", "healing", "condition"] },
-          "amount": {
+          "severity": {
             "anyOf": [
-              { "type": "integer", "minimum": 0, "maximum": 500 },
+              { "type": "string", "enum": ["light", "moderate", "heavy"] },
               { "type": "null" }
             ]
           },
@@ -63,7 +63,7 @@
           },
           "reason": { "type": "string", "minLength": 1, "maxLength": 160 }
         },
-        "required": ["targetId", "kind", "amount", "condition", "reason"],
+        "required": ["targetId", "kind", "severity", "condition", "reason"],
         "additionalProperties": false
       }
     },
@@ -120,6 +120,15 @@
         "additionalProperties": false
       }
     },
+    "arc": {
+      "type": "object",
+      "properties": {
+        "phaseComplete": { "type": "boolean" },
+        "nextGoal": { "type": "string", "maxLength": 240 }
+      },
+      "required": ["phaseComplete", "nextGoal"],
+      "additionalProperties": false
+    },
     "experienceAwards": {
       "type": "array",
       "maxItems": 4,
@@ -127,14 +136,14 @@
         "type": "object",
         "properties": {
           "playerId": { "type": "string", "pattern": "^player[1-4]$" },
-          "amount": { "type": "integer", "minimum": 0, "maximum": 10000 },
+          "tier": { "type": "string", "enum": ["minor", "clue", "social", "quest"] },
           "reason": { "type": "string", "minLength": 1, "maxLength": 200 }
         },
-        "required": ["playerId", "amount", "reason"],
+        "required": ["playerId", "tier", "reason"],
         "additionalProperties": false
       }
     }
   },
-  "required": ["narration", "scene", "imagePrompt", "objective", "objectiveContext", "stakes", "requiresCheck", "check", "choices", "effects", "combat", "privateMessages", "actionIssues", "experienceAwards"],
+  "required": ["narration", "scene", "imagePrompt", "objective", "objectiveContext", "stakes", "requiresCheck", "check", "choices", "effects", "combat", "privateMessages", "actionIssues", "arc", "experienceAwards"],
   "additionalProperties": false
 }

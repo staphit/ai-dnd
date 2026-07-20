@@ -13,7 +13,8 @@ import (
 
 func openStore(t *testing.T) *store.Store {
 	t.Helper()
-	st, err := store.Open(filepath.Join(t.TempDir(), "test.db"))
+	dir := t.TempDir()
+	st, err := store.Open(filepath.Join(dir, "test.db"), filepath.Join(dir, "images"))
 	if err != nil {
 		t.Fatalf("open store: %v", err)
 	}
@@ -56,6 +57,18 @@ func TestMaterialiseWritesSummaryAndTail(t *testing.T) {
 
 	if ref := m.Ref("s1"); ref != "campaign-data/memory/s1.md" {
 		t.Errorf("Ref = %q", ref)
+	}
+
+	// Render returns the same content Materialise writes (for Grok inline injection).
+	rendered, err := m.Render("s1")
+	if err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	if !strings.Contains(rendered, "前情：伊薩克失蹤") || !strings.Contains(rendered, "找到符文") {
+		t.Errorf("render missing expected memory:\n%s", rendered)
+	}
+	if string(data) != rendered {
+		t.Errorf("materialised file should match Render output")
 	}
 }
 

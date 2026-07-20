@@ -50,7 +50,7 @@ func writeFile(t *testing.T, dir, name string, data []byte) string {
 
 func newStore(t *testing.T, dir string) *store.Store {
 	t.Helper()
-	st, err := store.Open(filepath.Join(dir, "test.db"))
+	st, err := store.Open(filepath.Join(dir, "test.db"), filepath.Join(dir, "images"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -62,7 +62,7 @@ func configured() provider.Status {
 	return provider.Status{Configured: true, Provider: "Codex CLI", Model: "m"}
 }
 
-func TestGenerateSceneOrdersVisualDataAndStores(t *testing.T) {
+func TestGenerateSceneSendsContentDirectlyAndStores(t *testing.T) {
 	dir := t.TempDir()
 	png := []byte{0x89, 0x50, 0x4e, 0x47}
 	src := writeFile(t, dir, "src.png", png)
@@ -70,18 +70,22 @@ func TestGenerateSceneOrdersVisualDataAndStores(t *testing.T) {
 	api := &fakeProvider{status: configured(), imagePath: src}
 
 	res, err := images.GenerateScene(context.Background(), images.NewCodexRenderer(api, dir), st, images.SceneInput{
-		Title:     "T",
-		Scene:     "S",
-		Narration: "N",
-		Players:   []images.ScenePlayer{{Name: "甲", ClassName: "法師"}, {Name: "乙", ClassName: "戰士"}},
+		Title:     "灰燼王冠",
+		Scene:     "廢墟禮拜堂",
+		Narration: "燭火搖曳，門後有聲。",
+		Players:   []images.ScenePlayer{{Name: "甲", ClassName: "法師", Species: "人類"}, {Name: "乙", ClassName: "戰士", Species: "矮人"}},
 	})
 	if err != nil {
 		t.Fatalf("GenerateScene: %v", err)
 	}
-	// Keys must follow the Node object-literal order, not Go's alphabetical map order.
-	want := `{"visualData":{"campaign":"T","location":"S","characters":"甲，法師；乙，戰士","latestScene":"N"}}`
-	if !strings.Contains(res.Prompt, want) {
-		t.Errorf("prompt missing ordered visualData\nwant substring: %s\ngot: %s", want, res.Prompt)
+	// Direct dump: no intermediate visualData JSON, no multi-step SD engineering brief.
+	if strings.Contains(res.Prompt, "visualData") {
+		t.Errorf("prompt should not wrap visualData JSON, got: %s", res.Prompt)
+	}
+	for _, want := range []string{"灰燼王冠", "廢墟禮拜堂", "燭火搖曳", "甲", "法師", "image_gen"} {
+		if !strings.Contains(res.Prompt, want) {
+			t.Errorf("prompt missing %q\ngot: %s", want, res.Prompt)
+		}
 	}
 	if res.Model != "IMG-MODEL" {
 		t.Errorf("model = %q", res.Model)
@@ -95,21 +99,25 @@ func TestGenerateSceneOrdersVisualDataAndStores(t *testing.T) {
 	}
 }
 
-func TestGenerateCharacterOrdersVisualData(t *testing.T) {
+func TestGenerateCharacterSendsContentDirectly(t *testing.T) {
 	dir := t.TempDir()
 	src := writeFile(t, dir, "src.webp", []byte{1, 2, 3})
 	st := newStore(t, dir)
 	api := &fakeProvider{status: configured(), imagePath: src}
 
 	res, err := images.GenerateCharacter(context.Background(), images.NewCodexRenderer(api, dir), st, images.CharacterInput{
-		Name: "N", Species: "S", ClassName: "C", Background: "B", Appearance: "A",
+		Name: "賽勒恩", Species: "精靈", ClassName: "遊俠", Background: "流浪者", Appearance: "銀髮綠眼",
 	})
 	if err != nil {
 		t.Fatalf("GenerateCharacter: %v", err)
 	}
-	want := `{"visualData":{"name":"N","species":"S","className":"C","background":"B","appearance":"A"}}`
-	if !strings.Contains(res.Prompt, want) {
-		t.Errorf("prompt missing ordered visualData\nwant substring: %s\ngot: %s", want, res.Prompt)
+	if strings.Contains(res.Prompt, "visualData") {
+		t.Errorf("prompt should not wrap visualData JSON, got: %s", res.Prompt)
+	}
+	for _, want := range []string{"賽勒恩", "精靈", "遊俠", "銀髮綠眼", "image_gen"} {
+		if !strings.Contains(res.Prompt, want) {
+			t.Errorf("prompt missing %q\ngot: %s", want, res.Prompt)
+		}
 	}
 	if !strings.HasSuffix(res.URL, ".webp") {
 		t.Errorf("url = %q (webp ext expected)", res.URL)
@@ -189,8 +197,16 @@ func TestForgeSceneGeneratesAndStores(t *testing.T) {
 		t.Errorf("model = %q", res.Model)
 	}
 	prompt, _ := (*captured)["prompt"].(string)
-	if !strings.Contains(prompt, "廢棄禮拜堂") || !strings.Contains(prompt, "photorealistic") {
+	if !strings.Contains(prompt, "photorealistic") {
 		t.Errorf("prompt = %q", prompt)
+	}
+	// Local Forge must never receive Chinese / CJK — CLIP is English-only.
+	if hasCJKTest(prompt) {
+		t.Errorf("forge prompt must be English-only, got CJK: %q", prompt)
+	}
+	// Known Chinese scene labels are mapped when translator is offline.
+	if !strings.Contains(prompt, "ruined chapel") && !strings.Contains(prompt, "chapel") {
+		t.Errorf("expected English scene mapping in prompt: %q", prompt)
 	}
 	if neg, _ := (*captured)["negative_prompt"].(string); !strings.Contains(neg, "watermark") {
 		t.Errorf("negative_prompt = %q", neg)
@@ -287,9 +303,57 @@ func TestForgeCharacterUsesSquarePortrait(t *testing.T) {
 		t.Errorf("size = %vx%v, want 1024x1024", w, h)
 	}
 	prompt, _ := (*captured)["prompt"].(string)
-	if !strings.Contains(prompt, "elf ranger") || !strings.Contains(prompt, "灰斗篷") {
-		t.Errorf("prompt = %q", prompt)
+	if !strings.Contains(prompt, "elf ranger") {
+		t.Errorf("prompt missing class/species English tags: %q", prompt)
 	}
+	if !strings.Contains(prompt, "gray cloak") {
+		t.Errorf("prompt missing mapped appearance English tags: %q", prompt)
+	}
+	if hasCJKTest(prompt) {
+		t.Errorf("forge character prompt must be English-only, got CJK: %q", prompt)
+	}
+}
+
+func hasCJKTest(s string) bool {
+	for _, r := range s {
+		switch {
+		case r >= 0x3000 && r <= 0x303F:
+			return true
+		case r >= 0x4E00 && r <= 0x9FFF:
+			return true
+		case r >= 0xFF00 && r <= 0xFFEF:
+			return true
+		}
+	}
+	return false
+}
+
+func TestForgeSceneChineseCustomPositiveIsForcedEnglish(t *testing.T) {
+	srv, captured := newForgeServer(t, func(w http.ResponseWriter) {
+		json.NewEncoder(w).Encode(map[string]any{"images": []string{base64.StdEncoding.EncodeToString([]byte{1})}})
+	})
+	renderer := images.NewForgeRenderer(forgeClientFor(srv.URL), nil)
+	_, err := renderer.RenderScene(context.Background(), images.SceneInput{
+		Title: "T", Scene: "S", Narration: "N",
+		Forge: &images.ForgeOptions{
+			PositivePrompt: "廢棄禮拜堂，燭火搖曳",
+			NegativePrompt: sceneNegForTest(),
+			Steps:          3, CFGScale: 2, Sampler: "Euler", Scheduler: "SGM Uniform",
+			Width: 640, Height: 512,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	prompt, _ := (*captured)["prompt"].(string)
+	if hasCJKTest(prompt) {
+		t.Errorf("custom positive with Chinese must be forced English: %q", prompt)
+	}
+}
+
+// sceneNegForTest mirrors the package default enough for CFG checks.
+func sceneNegForTest() string {
+	return "text, watermark"
 }
 
 func TestForgeErrorsSurfaceMessage(t *testing.T) {

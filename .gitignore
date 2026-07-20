@@ -5,6 +5,9 @@ vendor/
 *.vsix
 campaign-data/
 web-dist/
+# Generated scene/portrait art (persisted locally; kept out of git)
+generated-images/*
+!generated-images/.gitkeep
 .DS_Store
 
 # Go backend

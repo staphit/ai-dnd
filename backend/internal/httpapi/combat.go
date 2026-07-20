@@ -88,6 +88,15 @@ func (s *Server) handleCombatEnemyTurn(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, result)
 }
 
+func (s *Server) handleCombatRetry(w http.ResponseWriter, r *http.Request) {
+	id, ok := combatCampaignID(w, r)
+	if !ok {
+		return
+	}
+	view, err := s.Game.RetryCombat(id)
+	writeView(w, view, err)
+}
+
 func (s *Server) handleCombatConclude(w http.ResponseWriter, r *http.Request) {
 	id, ok := combatCampaignID(w, r)
 	if !ok {

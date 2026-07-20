@@ -14,7 +14,8 @@ import (
 
 func newTestService(t *testing.T) *Service {
 	t.Helper()
-	st, err := store.Open(filepath.Join(t.TempDir(), "test.db"))
+	dir := t.TempDir()
+	st, err := store.Open(filepath.Join(dir, "test.db"), filepath.Join(dir, "images"))
 	if err != nil {
 		t.Fatalf("open store: %v", err)
 	}

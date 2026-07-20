@@ -79,6 +79,7 @@ type View struct {
 	Choices          []rules.Choice              `json:"choices"`
 	RequiredCheck    *rules.RequiredCheck        `json:"requiredCheck"`
 	Combat           *rules.CombatState          `json:"combat,omitempty"`
+	StoryArc         *StoryArc                   `json:"storyArc,omitempty"`
 	ImagePrompt      string                      `json:"imagePrompt,omitempty"`
 	Settings         json.RawMessage             `json:"settings"`
 	XPProgress       map[string]rules.XPProgress `json:"xpProgress"`
@@ -154,6 +155,16 @@ func (s *Service) assembleView(row store.CampaignRow) (View, error) {
 		}
 	}
 
+	var arc *StoryArc
+	if data, ok, err := s.store.StoryArc(row.ID); err != nil {
+		return View{}, err
+	} else if ok {
+		arc = &StoryArc{}
+		if err := json.Unmarshal([]byte(data), arc); err != nil {
+			arc = nil
+		}
+	}
+
 	tail, err := s.store.StoryTail(row.ID, storyViewLimit)
 	if err != nil {
 		return View{}, err
@@ -223,6 +234,7 @@ func (s *Service) assembleView(row store.CampaignRow) (View, error) {
 		Choices:          choices,
 		RequiredCheck:    check,
 		Combat:           combat,
+		StoryArc:         arc,
 		ImagePrompt:      row.ImagePrompt,
 		Settings:         settings,
 		XPProgress:       xp,
@@ -487,4 +499,15 @@ func (s *Service) AppendStory(id string, entries []store.StoryRow) error {
 		}
 	}
 	return s.store.AppendStoryEntries(id, entries)
+}
+
+// ReplaceLastPublicDM rewrites the most recent public DM narration without
+// advancing the round or changing mechanical state.
+func (s *Service) ReplaceLastPublicDM(id, text string) error {
+	unlock := s.Lock(id)
+	defer unlock()
+	if _, err := s.mustCampaign(id); err != nil {
+		return err
+	}
+	return s.store.ReplaceLastPublicDMText(id, text)
 }
