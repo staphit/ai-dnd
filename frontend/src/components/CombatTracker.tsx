@@ -1,71 +1,106 @@
-import { useMemo, useState } from 'react';
-import { ArrowClockwise, Crosshair, Plus, Shield, Sword, X } from '@phosphor-icons/react';
-import type { CombatState, Combatant, PlayerCharacter } from '../types';
-import { advanceTurn, partyCombatants, resolveAttack, spendCombatResource, startCombat } from '../rules/combat';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowClockwise, Crosshair, Plus, Shield, Skull, Sword, X } from '@phosphor-icons/react';
+import type { Campaign, CombatState, PlayerCharacter } from '../types';
+import { combatAttack, combatEndTurn, combatEnemyTurn, combatStart, type EnemySpec } from '../api';
 
 interface CombatTrackerProps {
+  campaignId: string;
   players: PlayerCharacter[];
   combat?: CombatState;
-  onChange: (combat: CombatState) => void;
-  onEnd: (combat: CombatState) => void;
-  onLog: (text: string) => void;
+  // Every combat endpoint returns the full server view; the parent adopts it.
+  onView: (view: Campaign) => void;
+  // 結束戰鬥並敘述: the parent runs conclude + the DM narration turn.
+  onEnd: () => void;
 }
 
-const emptyEnemy = { name: '骸骨守衛', ac: 13, hp: 13, initiativeBonus: 2, attackBonus: 4, damage: '1d6+2', damageType: '穿刺' };
+const emptyEnemy: EnemySpec = { name: '骸骨守衛', ac: 13, hp: 13, initiativeBonus: 2, attackBonus: 4, damage: '1d6+2', damageType: '穿刺' };
 
-export function CombatTracker({ players, combat, onChange, onEnd, onLog }: CombatTrackerProps) {
-  const [enemies, setEnemies] = useState<Combatant[]>([]);
+export function CombatTracker({ campaignId, players, combat, onView, onEnd }: CombatTrackerProps) {
+  const [enemies, setEnemies] = useState<EnemySpec[]>([]);
   const [draft, setDraft] = useState(emptyEnemy);
   const [targetId, setTargetId] = useState('');
   const [attackId, setAttackId] = useState('');
-  const current = combat?.combatants[combat.turnIndex];
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [enemyIntent, setEnemyIntent] = useState('');
+  const busyRef = useRef(false);
+  const enemyTurnFiredRef = useRef('');
+
+  const current = combat?.active ? combat.combatants[combat.turnIndex] : undefined;
   const currentPlayer = players.find((player) => player.id === current?.playerId);
   const availableAttacks = currentPlayer?.attacks || [];
   const validTargets = useMemo(() => combat?.combatants.filter((entry) => !entry.defeated && entry.id !== current?.id && entry.side !== current?.side) || [], [combat, current]);
   const currentEconomy = current ? combat?.turnEconomy?.[current.id] || { actionUsed: false, bonusActionUsed: false, reactionUsed: false } : undefined;
+  const enemyTurnKey = combat?.active && current?.side === 'enemy' && !current.defeated
+    ? `${combat.round}:${combat.turnIndex}:${current.id}`
+    : '';
+
+  async function run<T>(call: () => Promise<T>, apply: (result: T) => void) {
+    if (busyRef.current) return;
+    busyRef.current = true;
+    setBusy(true);
+    setError('');
+    try {
+      apply(await call());
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : String(caught));
+    } finally {
+      busyRef.current = false;
+      setBusy(false);
+    }
+  }
 
   function addEnemy() {
-    const enemy: Combatant = {
-      id: `enemy-${crypto.randomUUID()}`,
-      side: 'enemy',
-      initiative: 0,
-      maxHp: Math.max(1, draft.hp),
-      defeated: false,
-      ...draft,
-      name: draft.name.trim() || '未命名敵人',
-      hp: Math.max(1, draft.hp),
-    };
-    setEnemies((list) => [...list, enemy]);
+    setEnemies((list) => [...list, { ...draft, name: draft.name.trim() || '未命名敵人', hp: Math.max(1, draft.hp) }]);
   }
 
   function begin() {
-    const state = startCombat([...partyCombatants(players), ...enemies]);
-    onChange(state);
-    onLog(`戰鬥開始。先攻順序：${state.combatants.map((entry) => `${entry.name} ${entry.initiative}`).join(' → ')}`);
+    void run(() => combatStart(campaignId, enemies), (view) => {
+      onView(view);
+      setEnemies([]);
+      setEnemyIntent('');
+    });
   }
 
   function attack() {
-    if (!combat || !current) return;
-    const target = targetId || validTargets[0]?.id;
+    const target = targetId || validTargets[0]?.id || '';
     if (!target) return;
-    try {
-      const chosenAttack = availableAttacks.find((entry) => entry.id === attackId) || availableAttacks[0];
-      const prepared = chosenAttack ? { ...combat, combatants: combat.combatants.map((entry) => entry.id === current.id ? { ...entry, attackBonus: chosenAttack.attackBonus, damage: chosenAttack.damage, damageType: chosenAttack.damageType } : entry) } : combat;
-      const result = resolveAttack(prepared, current.id, target);
-      const spent = spendCombatResource(result.state, current.id, 'action');
-      onLog(`${result.resolution.text}（已使用動作）`);
-      onChange(spent);
+    const chosenAttack = attackId || availableAttacks[0]?.id || '';
+    void run(() => combatAttack(campaignId, { attackId: chosenAttack, targetId: target }), (result) => {
+      onView(result.view);
       setTargetId('');
-    } catch (error) {
-      onLog(error instanceof Error ? error.message : String(error));
-    }
+    });
   }
+
+  function endTurn() {
+    void run(() => combatEndTurn(campaignId), (result) => onView(result.view));
+  }
+
+  function enemyTurn() {
+    if (enemyTurnKey) enemyTurnFiredRef.current = enemyTurnKey;
+    void run(() => combatEnemyTurn(campaignId), (result) => {
+      setEnemyIntent(result.intent);
+      onView(result.view);
+    });
+  }
+
+  // When the initiative order lands on an undefeated enemy, trigger its AI
+  // turn automatically once (after a short beat); the button stays available
+  // for manual retries if the request fails.
+  useEffect(() => {
+    if (!enemyTurnKey || enemyTurnFiredRef.current === enemyTurnKey) return;
+    const timer = window.setTimeout(() => {
+      if (enemyTurnFiredRef.current !== enemyTurnKey && !busyRef.current) enemyTurn();
+    }, 600);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enemyTurnKey]);
 
   if (!combat?.active) {
     return (
       <section className="combat-console">
         <header><div><p className="eyebrow">Encounter setup</p><h2>建立戰鬥</h2></div><Sword size={24} /></header>
-        <p className="muted-copy">玩家會自動加入。新增敵人後擲先攻；每次攻擊會自動判斷命中、重擊、傷害並前進至下一位。</p>
+        <p className="muted-copy">玩家會自動加入。新增敵人後擲先攻；每次攻擊由伺服器判斷命中、重擊、傷害並記錄至故事。</p>
         <div className="enemy-builder">
           <label>名稱<input value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} /></label>
           <label>AC<input type="number" min="1" max="40" value={draft.ac} onChange={(event) => setDraft({ ...draft, ac: Number(event.target.value) })} /></label>
@@ -76,9 +111,10 @@ export function CombatTracker({ players, combat, onChange, onEnd, onLog }: Comba
           <button type="button" onClick={addEnemy}><Plus />加入敵人</button>
         </div>
         <div className="enemy-roster">
-          {enemies.map((enemy) => <span key={enemy.id}>{enemy.name}／AC {enemy.ac}／HP {enemy.hp}<button type="button" onClick={() => setEnemies((list) => list.filter((entry) => entry.id !== enemy.id))}><X /></button></span>)}
+          {enemies.map((enemy, index) => <span key={`${enemy.name}-${index}`}>{enemy.name}／AC {enemy.ac}／HP {enemy.hp}<button type="button" onClick={() => setEnemies((list) => list.filter((_, entryIndex) => entryIndex !== index))}><X /></button></span>)}
         </div>
-        <button type="button" className="primary-action" onClick={begin} disabled={enemies.length === 0}><Crosshair />擲先攻並開始</button>
+        {error && <p className="combat-error" role="alert">{error}</p>}
+        <button type="button" className="primary-action" onClick={begin} disabled={busy || enemies.length === 0}><Crosshair />擲先攻並開始</button>
       </section>
     );
   }
@@ -94,12 +130,20 @@ export function CombatTracker({ players, combat, onChange, onEnd, onLog }: Comba
         ))}
       </div>
       {currentEconomy && <div className="turn-economy"><span className={currentEconomy.actionUsed ? 'used' : ''}>動作：{currentEconomy.actionUsed ? '已使用' : '可用'}</span><span className={currentEconomy.bonusActionUsed ? 'used' : ''}>附贈動作：{currentEconomy.bonusActionUsed ? '已使用' : '可用'}</span><span className={currentEconomy.reactionUsed ? 'used' : ''}>反應：{currentEconomy.reactionUsed ? '已使用' : '可用'}</span></div>}
+      {enemyIntent && <p className="enemy-intent" role="status"><Skull size={16} weight="fill" />【敵方】{enemyIntent}</p>}
+      {error && <p className="combat-error" role="alert">{error}</p>}
       <div className="combat-actions">
-        {availableAttacks.length > 0 && <label>攻擊方式<select value={attackId || availableAttacks[0]?.id} onChange={(event) => setAttackId(event.target.value)}>{availableAttacks.map((entry) => <option key={entry.id} value={entry.id}>{entry.name}／命中 +{entry.attackBonus}／{entry.damage}</option>)}</select></label>}
-        <label>攻擊目標<select value={targetId} onChange={(event) => setTargetId(event.target.value)}>{validTargets.map((entry) => <option key={entry.id} value={entry.id}>{entry.name}（AC {entry.ac}）</option>)}</select></label>
-        <button type="button" className="primary-action" onClick={attack} disabled={!validTargets.length || currentEconomy?.actionUsed}><Crosshair />攻擊（使用動作）</button>
-        <button type="button" onClick={() => onChange(advanceTurn(combat))}><ArrowClockwise />結束回合</button>
-        <button type="button" onClick={() => onEnd(combat)}><X />結束戰鬥並敘述</button>
+        {current?.side === 'enemy' ? (
+          <button type="button" className="primary-action" onClick={enemyTurn} disabled={busy}><Skull />{busy ? '敵方行動結算中…' : '敵方行動'}</button>
+        ) : (
+          <>
+            {availableAttacks.length > 0 && <label>攻擊方式<select value={attackId || availableAttacks[0]?.id} onChange={(event) => setAttackId(event.target.value)}>{availableAttacks.map((entry) => <option key={entry.id} value={entry.id}>{entry.name}／命中 +{entry.attackBonus}／{entry.damage}</option>)}</select></label>}
+            <label>攻擊目標<select value={targetId} onChange={(event) => setTargetId(event.target.value)}>{validTargets.map((entry) => <option key={entry.id} value={entry.id}>{entry.name}（AC {entry.ac}）</option>)}</select></label>
+            <button type="button" className="primary-action" onClick={attack} disabled={busy || !validTargets.length || currentEconomy?.actionUsed}><Crosshair />攻擊（使用動作）</button>
+          </>
+        )}
+        <button type="button" onClick={endTurn} disabled={busy}><ArrowClockwise />結束回合</button>
+        <button type="button" onClick={onEnd} disabled={busy}><X />結束戰鬥並敘述</button>
       </div>
     </section>
   );

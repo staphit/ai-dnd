@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Bed, BookOpenText, Minus, Shield, Sparkle, Sword, Timer, X } from '@phosphor-icons/react';
 import type { CharacterSpell, PlayerCharacter, RestType } from '../types';
-import { abilityLabels, abilityModifier } from '../rules/characters';
+import { abilityLabels, abilityModifier } from '../labels';
 import { StatHint } from './StatHint';
 
 interface CharacterSheetProps {

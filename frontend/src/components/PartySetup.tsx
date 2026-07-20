@@ -1,55 +1,59 @@
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { ArrowRight, BookOpenText, ShieldCheck, Sword } from '@phosphor-icons/react';
 import { motion } from 'framer-motion';
-import type { AbilityKey, AbilityScores, PlayerCharacter, PlayerId } from '../types';
+import type { AbilityKey, AbilityScores, Campaign } from '../types';
 import { storyPresets, type StoryPreset } from '../data';
 import { MagneticButton } from './MagneticButton';
-import { abilityLabels, classDefinitions, classNames, type ClassName } from '../rules/characters';
-import { createConfiguredCharacter } from '../rules/advancement';
+import { abilityLabels } from '../labels';
+import { createCampaign, getCatalog, type PlayerSeed } from '../api';
 
-type DraftPlayer = { name: string; className: ClassName; level: number; species: string; background: string; abilities: AbilityScores };
+// abilities stays undefined until the player opts into custom scores; the
+// server then applies the class preset values.
+type DraftPlayer = { name: string; className: string; level: number; species: string; background: string; abilities?: AbilityScores };
 
 const fallbackNames = ['冒險者一號', '冒險者二號', '冒險者三號', '冒險者四號'];
-const fallbackClasses: ClassName[] = ['戰士', '牧師', '遊俠', '法師'];
+const fallbackClasses = ['戰士', '牧師', '遊俠', '法師'];
+const customAbilityBase: AbilityScores = { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 };
 
-function normalizeClass(value?: string, index = 0): ClassName {
-  return classNames.find((className) => value?.includes(className)) || fallbackClasses[index] || '戰士';
-}
-
-function toDraft(player: PlayerCharacter | undefined, index: number): DraftPlayer {
-  const className = normalizeClass(player?.className, index);
+function makeDraft(index: number): DraftPlayer {
   return {
-    name: player?.name || fallbackNames[index],
-    className,
-    level: player?.level || 3,
-    species: player?.species || '人類',
-    background: player?.background || classDefinitions[className].background,
-    abilities: player?.abilities || { ...classDefinitions[className].abilities },
+    name: fallbackNames[index],
+    className: fallbackClasses[index] || '戰士',
+    level: 3,
+    species: '人類',
+    background: '',
   };
 }
 
 interface PartySetupProps {
-  initialTitle: string;
-  initialPlayers: PlayerCharacter[];
-  onComplete: (setup: { title: string; players: PlayerCharacter[]; storyId: string }) => void;
+  onComplete: (view: Campaign) => void;
+  onCancel?: () => void;
 }
 
-export function PartySetup({ initialTitle, initialPlayers, onComplete }: PartySetupProps) {
-  const initialCount = Math.min(4, Math.max(1, initialPlayers.length || 2));
-  const initialStory = storyPresets.find((story) => story.title === initialTitle) || storyPresets[0];
-  const [title, setTitle] = useState(initialTitle);
-  const [selectedStoryId, setSelectedStoryId] = useState(initialStory.id);
-  const [partySize, setPartySize] = useState(initialCount);
-  const [players, setPlayers] = useState<DraftPlayer[]>(() => Array.from({ length: 4 }, (_, index) => toDraft(initialPlayers[index], index)));
+export function PartySetup({ onComplete, onCancel }: PartySetupProps) {
+  const [title, setTitle] = useState(storyPresets[0].title);
+  const [selectedStoryId, setSelectedStoryId] = useState(storyPresets[0].id);
+  const [partySize, setPartySize] = useState(2);
+  const [players, setPlayers] = useState<DraftPlayer[]>(() => Array.from({ length: 4 }, (_, index) => makeDraft(index)));
+  const [classNames, setClassNames] = useState<string[]>(fallbackClasses);
   const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const activePlayers = useMemo(() => players.slice(0, partySize), [partySize, players]);
+
+  useEffect(() => {
+    let mounted = true;
+    getCatalog()
+      .then((catalog) => { if (mounted && catalog.classNames.length > 0) setClassNames(catalog.classNames); })
+      .catch(() => { /* keep the fallback list; the server normalizes classes anyway */ });
+    return () => { mounted = false; };
+  }, []);
 
   function updatePlayer(index: number, patch: Partial<DraftPlayer>) {
     setPlayers((current) => current.map((player, playerIndex) => playerIndex === index ? { ...player, ...patch } : player));
   }
 
-  function changeClass(index: number, className: ClassName) {
-    updatePlayer(index, { className, background: classDefinitions[className].background, abilities: { ...classDefinitions[className].abilities } });
+  function toggleCustomAbilities(index: number, enabled: boolean) {
+    updatePlayer(index, { abilities: enabled ? { ...customAbilityBase } : undefined });
   }
 
   function selectStory(story: StoryPreset) {
@@ -57,20 +61,43 @@ export function PartySetup({ initialTitle, initialPlayers, onComplete }: PartySe
     setTitle(story.title);
   }
 
-  function submit(event: FormEvent) {
+  async function submit(event: FormEvent) {
     event.preventDefault();
+    if (submitting) return;
     const campaignTitle = title.trim();
     const names = activePlayers.map((player) => player.name.trim());
     if (!campaignTitle) return setError('請替這次冒險取一個戰役名稱。');
     if (names.some((name) => !name)) return setError('每位玩家角色都需要一個名稱。');
     if (new Set(names).size !== names.length) return setError('角色名稱不能重複，這樣 DM 才能正確辨認行動。');
-    const configuredPlayers = activePlayers.map((player, index): PlayerCharacter => createConfiguredCharacter(
-      `player${index + 1}` as PlayerId,
-      player.name,
-      player.className,
-      { level: player.level, species: player.species, background: player.background, abilities: player.abilities },
-    ));
-    onComplete({ title: campaignTitle, players: configuredPlayers, storyId: selectedStoryId });
+    const seeds = activePlayers.map((player): PlayerSeed => ({
+      name: player.name.trim(),
+      className: player.className,
+      level: player.level,
+      species: player.species.trim() || undefined,
+      background: player.background.trim() || undefined,
+      abilities: player.abilities,
+    }));
+    const preset = storyPresets.find((story) => story.id === selectedStoryId) || storyPresets[0];
+    setSubmitting(true);
+    setError('');
+    try {
+      const view = await createCampaign({
+        storyId: preset.id,
+        title: campaignTitle,
+        chapter: preset.chapter,
+        scene: preset.scene,
+        objective: preset.objective,
+        objectiveContext: preset.objectiveContext,
+        stakes: preset.stakes,
+        opening: preset.opening,
+        players: seeds,
+      });
+      onComplete(view);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : String(caught));
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   const selectedStory = storyPresets.find((story) => story.id === selectedStoryId) || storyPresets[0];
@@ -82,7 +109,8 @@ export function PartySetup({ initialTitle, initialPlayers, onComplete }: PartySe
         <div className='setup-mark'><Sword size={26} weight='thin' /></div>
         <p className='eyebrow'>Session zero／開團設定</p><h1>先選故事，<br />再踏進黑暗。</h1>
         <p>從四種不同調性的冒險中選一本，再建立 1–4 人、等級 1–20 的隊伍。</p>
-        <div className='setup-note'><ShieldCheck size={18} /><span>角色與故事只保存在這台裝置</span></div>
+        <div className='setup-note'><ShieldCheck size={18} /><span>戰役與角色會保存在本機伺服器</span></div>
+        {onCancel && <button type='button' className='setup-cancel' onClick={onCancel}>返回目前戰役</button>}
       </motion.div>
       <motion.form className='setup-form' onSubmit={submit} initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}>
         <header><div><p className='eyebrow'>劇本與隊伍</p><h2>選擇這次的冒險</h2></div><BookOpenText size={24} /></header>
@@ -100,18 +128,19 @@ export function PartySetup({ initialTitle, initialPlayers, onComplete }: PartySe
             <motion.section key={index} className='player-setup-row advanced-setup-row' initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
               <span className='player-number'>{String(index + 1).padStart(2, '0')}</span>
               <label><span>角色名稱</span><input value={player.name} onChange={(event) => updatePlayer(index, { name: event.target.value })} aria-label={`玩家 ${index + 1} 角色名稱`} /></label>
-              <label><span>職業</span><select value={player.className} onChange={(event) => changeClass(index, event.target.value as ClassName)} aria-label={`玩家 ${index + 1} 職業`}>{classNames.map((name) => <option key={name}>{name}</option>)}</select><small>{classDefinitions[player.className].subclass}</small></label>
+              <label><span>職業</span><select value={player.className} onChange={(event) => updatePlayer(index, { className: event.target.value })} aria-label={`玩家 ${index + 1} 職業`}>{classNames.map((name) => <option key={name}>{name}</option>)}</select></label>
               <label><span>起始等級</span><input type='number' min='1' max='20' value={player.level} onChange={(event) => updatePlayer(index, { level: Math.min(20, Math.max(1, Number(event.target.value))) })} aria-label={`玩家 ${index + 1} 起始等級`} /></label>
               <details className='setup-advanced'><summary>自訂種族、背景與能力值</summary><div className='setup-advanced-fields'>
                 <label><span>種族</span><input value={player.species} onChange={(event) => updatePlayer(index, { species: event.target.value })} /></label>
-                <label><span>背景</span><input value={player.background} onChange={(event) => updatePlayer(index, { background: event.target.value })} /></label>
-                {(Object.keys(abilityLabels) as AbilityKey[]).map((key) => <label key={key}><span>{abilityLabels[key]}</span><input type='number' min='3' max='30' value={player.abilities[key]} onChange={(event) => updatePlayer(index, { abilities: { ...player.abilities, [key]: Number(event.target.value) } })} /></label>)}
+                <label><span>背景</span><input value={player.background} placeholder='留空使用職業預設' onChange={(event) => updatePlayer(index, { background: event.target.value })} /></label>
+                <label className='setup-custom-abilities'><input type='checkbox' checked={Boolean(player.abilities)} onChange={(event) => toggleCustomAbilities(index, event.target.checked)} aria-label={`玩家 ${index + 1} 自訂能力值`} /><span>自訂能力值（未勾選時使用職業預設值）</span></label>
+                {player.abilities && (Object.keys(abilityLabels) as AbilityKey[]).map((key) => <label key={key}><span>{abilityLabels[key]}</span><input type='number' min='3' max='30' value={player.abilities![key]} onChange={(event) => updatePlayer(index, { abilities: { ...player.abilities!, [key]: Number(event.target.value) } })} /></label>)}
               </div></details>
             </motion.section>
           ))}
         </div>
         {error && <p className='setup-error' role='alert'>{error}</p>}
-        <div className='setup-submit'><span>{selectedStory.genre}／{partySize} 位冒險者</span><MagneticButton type='submit'><span>開始冒險</span><ArrowRight size={17} /></MagneticButton></div>
+        <div className='setup-submit'><span>{selectedStory.genre}／{partySize} 位冒險者</span><MagneticButton type='submit' disabled={submitting}><span>{submitting ? '建立中…' : '開始冒險'}</span><ArrowRight size={17} /></MagneticButton></div>
       </motion.form>
     </main>
   );

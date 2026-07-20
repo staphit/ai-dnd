@@ -150,6 +150,13 @@ button:focus-visible, textarea:focus-visible, input:focus-visible, select:focus-
 .image-error { color: #d18f7e; }
 .image-helper { color: var(--muted); }
 
+/* 3D DM table (DMTable.tsx). Reuses the .scene-visual framing; the aspect-ratio
+   lives here on the wrapper because .scene-visual sets it on its child <img>. */
+.dm-table { position: relative; margin-top: 22px; overflow: hidden; border: 1px solid var(--line); background: #11110f; box-shadow: 0 24px 64px -42px rgba(0,0,0,.88); aspect-ratio: 3 / 2; max-height: 460px; }
+.dm-table > canvas { display: block; width: 100% !important; height: 100% !important; }
+.dm-table::after { content: ""; position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 1px 0 rgba(255,255,255,.08); }
+.dm-table-loading { display: grid; place-items: center; min-height: 250px; background: radial-gradient(circle at 50% 42%, rgba(197,150,86,.06), transparent 34%); }
+
 .story-panel { margin-top: 31px; }
 .section-heading { display: flex; justify-content: space-between; align-items: flex-end; padding-bottom: 17px; border-bottom: 1px solid var(--line); color: var(--muted); }
 .section-heading h2 { margin: 0; color: #e7e3d9; font-size: 18px; letter-spacing: -.025em; font-weight: 540; }

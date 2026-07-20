@@ -15,12 +15,13 @@
           "type": "object",
           "properties": {
             "character": { "type": "string", "minLength": 1, "maxLength": 100 },
+            "playerId": { "type": "string", "pattern": "^player[1-4]$" },
             "ability": { "type": "string", "minLength": 1, "maxLength": 100 },
             "skill": { "type": "string", "minLength": 1, "maxLength": 100 },
             "dc": { "type": "integer", "minimum": 5, "maximum": 30 },
             "reason": { "type": "string", "minLength": 1, "maxLength": 500 }
           },
-          "required": ["character", "ability", "skill", "dc", "reason"],
+          "required": ["character", "playerId", "ability", "skill", "dc", "reason"],
           "additionalProperties": false
         },
         { "type": "null" }

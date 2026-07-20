@@ -50,6 +50,48 @@ CREATE TABLE IF NOT EXISTS memory_summary (
 	covered_seq INTEGER NOT NULL,
 	updated_at  INTEGER NOT NULL
 );
+CREATE TABLE IF NOT EXISTS campaigns (
+	id                TEXT PRIMARY KEY,
+	title             TEXT NOT NULL,
+	chapter           TEXT NOT NULL DEFAULT '',
+	scene             TEXT NOT NULL DEFAULT '',
+	round             INTEGER NOT NULL DEFAULT 1,
+	objective         TEXT NOT NULL DEFAULT '',
+	objective_context TEXT NOT NULL DEFAULT '',
+	stakes            TEXT NOT NULL DEFAULT '',
+	setup_complete    INTEGER NOT NULL DEFAULT 0,
+	choices           TEXT NOT NULL DEFAULT '[]',
+	required_check    TEXT,
+	pending           TEXT NOT NULL DEFAULT '{}',
+	image_prompt      TEXT NOT NULL DEFAULT '',
+	settings          TEXT NOT NULL DEFAULT '{}',
+	doc_version       INTEGER NOT NULL DEFAULT 1,
+	created_at        INTEGER NOT NULL,
+	updated_at        INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS characters (
+	campaign_id TEXT NOT NULL,
+	player_id   TEXT NOT NULL,
+	name        TEXT NOT NULL,
+	data        TEXT NOT NULL,
+	updated_at  INTEGER NOT NULL,
+	PRIMARY KEY (campaign_id, player_id)
+);
+CREATE TABLE IF NOT EXISTS combats (
+	campaign_id TEXT PRIMARY KEY,
+	data        TEXT NOT NULL,
+	updated_at  INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS story_entries (
+	campaign_id TEXT NOT NULL,
+	seq         INTEGER NOT NULL,
+	speaker     TEXT NOT NULL,
+	audience    TEXT NOT NULL DEFAULT 'public',
+	text        TEXT NOT NULL,
+	time_label  TEXT NOT NULL DEFAULT '',
+	created_at  INTEGER NOT NULL,
+	PRIMARY KEY (campaign_id, seq)
+);
 `
 
 // MemoryEvent is one raw entry in a story's memory log.

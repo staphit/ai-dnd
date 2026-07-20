@@ -1,5 +1,4 @@
 import type { Campaign } from './types';
-import { createLevel3Character } from './rules/characters';
 
 interface DemoBeat {
   text: string;
@@ -165,9 +164,10 @@ export const storyPresets: StoryPreset[] = [
 
 const defaultStory = storyPresets[0];
 
+// Pre-setup placeholder only: setupComplete=false routes to PartySetup, which
+// creates the real campaign (and its characters) on the server.
 export const initialCampaign: Campaign = {
   setupComplete: false,
-  storyId: defaultStory.id,
   title: defaultStory.title,
   chapter: defaultStory.chapter,
   scene: defaultStory.scene,
@@ -175,14 +175,7 @@ export const initialCampaign: Campaign = {
   objective: defaultStory.objective,
   objectiveContext: defaultStory.objectiveContext,
   stakes: defaultStory.stakes,
-  showStatHints: true,
-  players: [
-    createLevel3Character('player1', '賽勒恩・瓦爾', '遊俠'),
-    createLevel3Character('player2', '米芮・鐵歌', '牧師'),
-  ],
-  story: [
-    { id: 'opening-1', speaker: 'dm', time: '23:41', text: defaultStory.opening },
-    { id: 'opening-2', speaker: 'system', time: '23:42', text: `目前目標：${defaultStory.objective}。所有玩家都提交行動後，DM 才會推進場景。` },
-  ],
+  players: [],
+  story: [],
   pending: {},
 };

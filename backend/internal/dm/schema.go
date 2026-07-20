@@ -11,6 +11,7 @@ import (
 // Check is a required ability check the DM is asking a player to roll.
 type Check struct {
 	Character string `json:"character"`
+	PlayerID  string `json:"playerId,omitempty"`
 	Ability   string `json:"ability"`
 	Skill     string `json:"skill"`
 	DC        int    `json:"dc"`
@@ -177,8 +178,13 @@ func validateDMTurn(raw json.RawMessage) (*Turn, error) {
 
 	if requiresCheck {
 		if m := asMap(v["check"]); m != nil {
+			playerID := strOf(m["playerId"])
+			if !playerIDPattern.MatchString(playerID) {
+				playerID = ""
+			}
 			turn.Check = &Check{
 				Character: strOf(m["character"]),
+				PlayerID:  playerID,
 				Ability:   strOf(m["ability"]),
 				Skill:     strOf(m["skill"]),
 				DC:        int(toNum(m["dc"])),
