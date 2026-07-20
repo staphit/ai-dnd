@@ -1,8 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Coins, Flask, Package, Shield, Storefront, Sword, X } from '@phosphor-icons/react';
+import { Coins, Flask, Hammer, Package, Shield, Storefront, Sword, X } from '@phosphor-icons/react';
 import type { PlayerCharacter, PlayerId } from '../types';
 import { shopCatalog, type ShopItem } from '../api';
+
+const FORGE_CAP = 3;
+const forgeWeaponCost = (nextLevel: number) => nextLevel * 100;
+const forgeArmorCost = (nextLevel: number) => nextLevel * 150;
 
 interface ShopModalProps {
   players: PlayerCharacter[];
@@ -10,6 +14,7 @@ interface ShopModalProps {
   onClose: () => void;
   onBuy: (playerId: PlayerId, itemId: string) => void;
   onSell: (playerId: PlayerId, itemName: string) => void;
+  onForge: (playerId: PlayerId, kind: 'weapon' | 'armor', attackId?: string) => void;
 }
 
 const kindIcon = {
@@ -23,7 +28,7 @@ const kindLabel = { weapon: '武器', armor: '護甲', potion: '藥劑', gear: '
 
 // Equipment merchant: buy from the fixed catalog, sell carried items back.
 // Available out of combat; the DM narrates who the merchant is in the story.
-export function ShopModal({ players, busy, onClose, onBuy, onSell }: ShopModalProps) {
+export function ShopModal({ players, busy, onClose, onBuy, onSell, onForge }: ShopModalProps) {
   const [items, setItems] = useState<ShopItem[]>([]);
   const [loadError, setLoadError] = useState('');
   const [activeId, setActiveId] = useState<PlayerId>(players[0]?.id as PlayerId);
@@ -100,6 +105,43 @@ export function ShopModal({ players, busy, onClose, onBuy, onSell }: ShopModalPr
                   </article>
                 );
               })}
+            </div>
+          </section>
+          <section aria-label="鍛造商">
+            <h3><Hammer size={14} /> 鍛造商（強化上限 +{FORGE_CAP}）</h3>
+            <div className="shop-list">
+              {active.attacks.map((attack) => {
+                const level = attack.upgradeLevel || 0;
+                const maxed = level >= FORGE_CAP;
+                const cost = forgeWeaponCost(level + 1);
+                const affordable = (active.gold ?? 0) >= cost;
+                return (
+                  <article key={attack.id} className="shop-item">
+                    <span className="shop-kind shop-kind-weapon"><Sword size={14} />武器</span>
+                    <strong>{attack.name}{level > 0 ? ` +${level}` : ''}</strong>
+                    <small>命中 +{attack.attackBonus}・{attack.damage}{(attack.attacksPerAction || 1) > 1 ? `・每動作 ${attack.attacksPerAction} 擊` : ''}</small>
+                    <button type="button" disabled={busy || maxed || !affordable} onClick={() => onForge(active.id, 'weapon', attack.id)}>
+                      {maxed ? '已達上限' : affordable ? `強化 ${cost} gp` : `需 ${cost} gp`}
+                    </button>
+                  </article>
+                );
+              })}
+              {(() => {
+                const level = active.armorUpgrade || 0;
+                const maxed = level >= FORGE_CAP;
+                const cost = forgeArmorCost(level + 1);
+                const affordable = (active.gold ?? 0) >= cost;
+                return (
+                  <article className="shop-item">
+                    <span className="shop-kind shop-kind-armor"><Shield size={14} />護甲</span>
+                    <strong>護甲{level > 0 ? ` +${level}` : ''}</strong>
+                    <small>目前 AC {active.ac}，每級強化 +1 AC</small>
+                    <button type="button" disabled={busy || maxed || !affordable} onClick={() => onForge(active.id, 'armor')}>
+                      {maxed ? '已達上限' : affordable ? `強化 ${cost} gp` : `需 ${cost} gp`}
+                    </button>
+                  </article>
+                );
+              })()}
             </div>
           </section>
           <section aria-label="身上裝備">

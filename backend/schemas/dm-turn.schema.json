@@ -140,9 +140,16 @@
             "type": "object",
             "properties": {
               "playerId": { "type": "string", "pattern": "^player[1-4]$" },
-              "name": { "type": "string", "minLength": 1, "maxLength": 60 }
+              "name": { "type": "string", "minLength": 1, "maxLength": 60 },
+              "damage": { "type": "string", "maxLength": 20 },
+              "damageType": { "type": "string", "maxLength": 20 },
+              "properties": {
+                "type": "array",
+                "maxItems": 4,
+                "items": { "type": "string", "minLength": 1, "maxLength": 20 }
+              }
             },
-            "required": ["playerId", "name"],
+            "required": ["playerId", "name", "damage", "damageType", "properties"],
             "additionalProperties": false
           }
         }

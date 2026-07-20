@@ -8,6 +8,7 @@ import (
 
 	"dndduet/internal/apperr"
 	"dndduet/internal/dm"
+	"dndduet/internal/rules"
 )
 
 // seq returns a slice-backed random source; it repeats the last value once
@@ -156,6 +157,207 @@ func TestRetryCombatRestoresSnapshot(t *testing.T) {
 	}
 	if _, err := s.RetryCombat(id); apperr.StatusOf(err, 0) != 400 {
 		t.Fatalf("expected 400 after conclude, got %v", err)
+	}
+}
+
+func TestActionSurgeRestoresAction(t *testing.T) {
+	s := newTestService(t)
+	view, err := s.Create(CreateParams{
+		Title: "動作如潮測試", Scene: "校場", Objective: "測試", ObjectiveContext: "ctx", Stakes: "無",
+		Players: []PlayerSeed{
+			{Name: "鐵手", ClassName: "戰士", Level: 3},
+			{Name: "米芮", ClassName: "牧師"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	id := view.ID
+
+	// Out of combat: action surge is rejected and the use is not consumed.
+	if _, err := s.ChangeResourceAction(id, "player1", "action_surge", -1); apperr.StatusOf(err, 0) != 400 {
+		t.Fatalf("expected 400 out of combat, got %v", err)
+	}
+
+	// Party first; attack spends the action.
+	s.WithDice(seq(0.99, 0.5, 0.01))
+	if _, err := s.StartCombatManual(id, []EnemySpec{{Name: "石守衛", AC: 5, HP: 40, AttackBonus: 2, Damage: "1d4", DamageType: "鈍擊"}}); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	s.WithDice(seq(0.9, 0.5))
+	if _, err := s.Attack(id, AttackParams{}); err != nil {
+		t.Fatalf("attack: %v", err)
+	}
+	if _, err := s.Attack(id, AttackParams{}); apperr.StatusOf(err, 0) != 400 {
+		t.Fatalf("second attack should be blocked, got %v", err)
+	}
+
+	surged, err := s.ChangeResourceAction(id, "player1", "action_surge", -1)
+	if err != nil {
+		t.Fatalf("action surge: %v", err)
+	}
+	for _, p := range surged.Players {
+		if p.ID == "player1" {
+			for _, r := range p.Resources {
+				if r.ID == "action_surge" && r.Current != 0 {
+					t.Fatalf("surge use not consumed: %+v", r)
+				}
+			}
+		}
+	}
+	// Action restored: attacking again works.
+	s.WithDice(seq(0.9, 0.5))
+	if _, err := s.Attack(id, AttackParams{}); err != nil {
+		t.Fatalf("attack after surge should succeed: %v", err)
+	}
+	last := surged.Story[len(surged.Story)-1]
+	if !strings.Contains(last.Text, "動作如潮") {
+		t.Fatalf("missing surge log: %q", last.Text)
+	}
+
+	// Second wind heals and spends the bonus action.
+	if _, err := s.ChangeResourceAction(id, "player1", "second_wind", -1); err != nil {
+		t.Fatalf("second wind: %v", err)
+	}
+	if _, err := s.ChangeResourceAction(id, "player1", "second_wind", -1); apperr.StatusOf(err, 0) != 400 {
+		t.Fatalf("second wind twice in one turn should 400 (bonus action used), got %v", err)
+	}
+}
+
+func TestForgeUpgradeWeapon(t *testing.T) {
+	s := newTestService(t)
+	view := createSample(t, s)
+	id := view.ID
+
+	var before rules.Attack
+	for _, a := range view.Players[0].Attacks {
+		if a.ID == "shortsword" {
+			before = a
+		}
+	}
+	forged, err := s.ForgeUpgrade(id, "player1", "weapon", "shortsword")
+	if err != nil {
+		t.Fatalf("forge: %v", err)
+	}
+	p := forged.Players[0]
+	if p.Gold != 0 {
+		t.Fatalf("gold not spent: %d", p.Gold)
+	}
+	for _, a := range p.Attacks {
+		if a.ID == "shortsword" {
+			if a.UpgradeLevel != 1 || a.AttackBonus != before.AttackBonus+1 {
+				t.Fatalf("upgrade not applied: before %+v after %+v", before, a)
+			}
+			if a.AttacksPerAction != 2 {
+				t.Fatalf("shortsword should strike twice: %+v", a)
+			}
+		}
+	}
+	// Broke now: second upgrade must fail on cost.
+	if _, err := s.ForgeUpgrade(id, "player1", "weapon", "shortsword"); apperr.StatusOf(err, 0) != 400 {
+		t.Fatalf("expected 400 for missing gold, got %v", err)
+	}
+}
+
+func TestLightWeaponStrikesTwice(t *testing.T) {
+	s := newTestService(t)
+	view := createSample(t, s)
+	id := view.ID
+
+	s.WithDice(seq(0.99, 0.5, 0.01))
+	if _, err := s.StartCombatManual(id, []EnemySpec{{Name: "石像", AC: 5, HP: 60, AttackBonus: 2, Damage: "1d4", DamageType: "鈍擊"}}); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	s.WithDice(seq(0.9, 0.5))
+	result, err := s.Attack(id, AttackParams{AttackID: "shortsword"})
+	if err != nil {
+		t.Fatalf("attack: %v", err)
+	}
+	var attackLog string
+	for _, e := range result.View.Story {
+		if strings.Contains(e.Text, "第 2 擊") {
+			attackLog = e.Text
+		}
+	}
+	if attackLog == "" {
+		t.Fatalf("missing second strike in log: %+v", result.View.Story[len(result.View.Story)-1])
+	}
+}
+
+func TestUseHealingPotion(t *testing.T) {
+	s := newTestService(t)
+	view := createSample(t, s)
+	id := view.ID
+
+	if _, err := s.BuyItem(id, "player1", "healing-potion"); err != nil {
+		t.Fatalf("buy: %v", err)
+	}
+	used, err := s.UseItem(id, "player1", "治療藥水")
+	if err != nil {
+		t.Fatalf("use: %v", err)
+	}
+	for _, item := range used.Players[0].Equipment {
+		if item == "治療藥水" {
+			t.Fatalf("potion not consumed: %v", used.Players[0].Equipment)
+		}
+	}
+	last := used.Story[len(used.Story)-1]
+	if !strings.Contains(last.Text, "治療藥水") {
+		t.Fatalf("missing potion log: %q", last.Text)
+	}
+	// Unknown items are narrative-only.
+	if _, err := s.BuyItem(id, "player1", "rope"); err != nil {
+		t.Fatalf("buy rope: %v", err)
+	}
+	if _, err := s.UseItem(id, "player1", "麻繩（50 呎）"); apperr.StatusOf(err, 0) != 400 {
+		t.Fatalf("expected 400 for non-consumable, got %v", err)
+	}
+}
+
+func TestBoughtWeaponBecomesAttack(t *testing.T) {
+	s := newTestService(t)
+	view := createSample(t, s)
+	id := view.ID
+
+	bought, err := s.BuyItem(id, "player1", "greatsword")
+	if err != nil {
+		t.Fatalf("buy: %v", err)
+	}
+	var greatsword *rules.Attack
+	for i, a := range bought.Players[0].Attacks {
+		if a.Name == "巨劍" {
+			greatsword = &bought.Players[0].Attacks[i]
+		}
+	}
+	if greatsword == nil {
+		t.Fatalf("greatsword attack missing: %+v", bought.Players[0].Attacks)
+	}
+	if greatsword.AttackBonus == 0 || !strings.HasPrefix(greatsword.Damage, "2d6") {
+		t.Fatalf("greatsword numbers not derived: %+v", greatsword)
+	}
+	if greatsword.AttacksPerAction != 1 {
+		t.Fatalf("greatsword should strike once: %+v", greatsword)
+	}
+
+	// Selling the only copy removes the shop attack.
+	sold, err := s.SellItem(id, "player1", "巨劍")
+	if err != nil {
+		t.Fatalf("sell: %v", err)
+	}
+	for _, a := range sold.Players[0].Attacks {
+		if a.Name == "巨劍" {
+			t.Fatalf("greatsword attack should be removed: %+v", sold.Players[0].Attacks)
+		}
+	}
+	// Class starting weapon untouched by the sweep (ranger keeps 短劍).
+	var shortswords int
+	for _, a := range sold.Players[0].Attacks {
+		if a.Name == "短劍" {
+			shortswords++
+		}
+	}
+	if shortswords != 1 {
+		t.Fatalf("class shortsword count wrong: %+v", sold.Players[0].Attacks)
 	}
 }
 

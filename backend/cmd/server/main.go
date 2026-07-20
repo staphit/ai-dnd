@@ -71,6 +71,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("cannot materialise combat-tactics schema: %v", err)
 	}
+	novelSchemaPath, err := schema.WriteNovelExportTempFile()
+	if err != nil {
+		log.Fatalf("cannot materialise novel-export schema: %v", err)
+	}
 
 	// Persisted scene/portrait art lives under generated-images/ (DND_IMAGE_DIR overrides).
 	imageDir := absOr(envOr("DND_IMAGE_DIR", filepath.Join(repoRoot, "generated-images")))
@@ -249,6 +253,7 @@ func main() {
 		Memory:              mem,
 		Game:                game.New(db, nil),
 		TacticsSchemaPath:   tacticsSchemaPath,
+		NovelSchemaPath:     novelSchemaPath,
 		Prompt:              promptSession,
 	}
 	log.Printf("語音朗讀：GPT-SoVITS %s（未啟動時 /api/tts 會回報連線錯誤）", srv.TTS.BaseURL)

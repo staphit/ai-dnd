@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"dndduet/internal/apperr"
+	"dndduet/internal/rules"
 )
 
 // ShopItem is one entry in the fixed equipment-merchant catalog (SRD-style
@@ -50,6 +51,62 @@ func shopItem(itemID string) *ShopItem {
 	return nil
 }
 
+func shopItemByName(name string) *ShopItem {
+	for i := range ShopCatalog {
+		if ShopCatalog[i].Name == name {
+			return &ShopCatalog[i]
+		}
+	}
+	return nil
+}
+
+// weaponSpecs are the attack entries a buyer gains for catalog weapons.
+// IDs carry a shop- prefix so selling can remove exactly the shop-granted
+// attack without touching class starting weapons. Recalculate fills the
+// attack bonus and damage modifier from the wielder's abilities.
+var weaponSpecs = map[string]rules.Attack{
+	"dagger":     {ID: "shop-dagger", Name: "匕首", Damage: "1d4", DamageType: "穿刺", Properties: []string{"靈巧", "輕型", "投擲 20/60"}},
+	"shortsword": {ID: "shop-shortsword", Name: "短劍", Damage: "1d6", DamageType: "穿刺", Properties: []string{"靈巧", "輕型"}},
+	"longsword":  {ID: "shop-longsword", Name: "長劍", Damage: "1d8", DamageType: "揮砍", Properties: []string{"多用途 1d10"}},
+	"warhammer":  {ID: "shop-warhammer", Name: "戰鎚", Damage: "1d8", DamageType: "鈍擊", Properties: []string{"多用途 1d10"}},
+	"rapier":     {ID: "shop-rapier", Name: "刺劍", Damage: "1d8", DamageType: "穿刺", Properties: []string{"靈巧"}},
+	"greatsword": {ID: "shop-greatsword", Name: "巨劍", Damage: "2d6", DamageType: "揮砍", Properties: []string{"重型", "雙手"}},
+	"longbow":    {ID: "shop-longbow", Name: "長弓", Damage: "1d8", DamageType: "穿刺", Properties: []string{"彈藥 150/600", "重型", "雙手"}},
+}
+
+// ensureShopWeaponAttacks grants an attack entry for every carried catalog
+// weapon the character has no same-named attack for, so bought (or previously
+// bought) weapons are actually usable in combat. Returns true when changed.
+func ensureShopWeaponAttacks(c *rules.Character) bool {
+	changed := false
+	for _, owned := range c.Equipment {
+		item := shopItemByName(owned)
+		if item == nil {
+			continue
+		}
+		spec, ok := weaponSpecs[item.ID]
+		if !ok {
+			continue
+		}
+		exists := false
+		for _, a := range c.Attacks {
+			if a.Name == spec.Name {
+				exists = true
+				break
+			}
+		}
+		if exists {
+			continue
+		}
+		c.Attacks = append(c.Attacks, spec)
+		changed = true
+	}
+	if changed {
+		*c = rules.Recalculate(*c)
+	}
+	return changed
+}
+
 // BuyItem purchases one catalog item for a character (out of combat only).
 func (s *Service) BuyItem(id, playerID, itemID string) (View, error) {
 	unlock := s.Lock(id)
@@ -74,7 +131,154 @@ func (s *Service) BuyItem(id, playerID, itemID string) (View, error) {
 	}
 	player.Gold -= item.Price
 	player.Equipment = append(player.Equipment, item.Name)
+	ensureShopWeaponAttacks(player) // weapons become a usable attack entry
 	return s.persist(st, []string{fmt.Sprintf("%s向裝備商購買「%s」（%d gp），剩餘 %d gp。", player.Name, item.Name, item.Price, player.Gold)})
+}
+
+// forgeUpgradeCap bounds blacksmith enhancement per weapon / armor set.
+const forgeUpgradeCap = 3
+
+// ForgeWeaponCost is the gp price for the NEXT weapon upgrade level.
+func ForgeWeaponCost(nextLevel int) int { return nextLevel * 100 }
+
+// ForgeArmorCost is the gp price for the NEXT armor upgrade level.
+func ForgeArmorCost(nextLevel int) int { return nextLevel * 150 }
+
+// ForgeUpgrade is the blacksmith: kind "weapon" enhances one attack (+1 hit,
+// +1 damage per level), kind "armor" enhances AC (+1 per level). Out of
+// combat only; each item caps at +3.
+func (s *Service) ForgeUpgrade(id, playerID, kind, attackID string) (View, error) {
+	unlock := s.Lock(id)
+	defer unlock()
+	st, err := s.loadState(id)
+	if err != nil {
+		return View{}, err
+	}
+	player, err := st.player(playerID)
+	if err != nil {
+		return View{}, err
+	}
+	if st.combat != nil && st.combat.Active {
+		return View{}, apperr.New(400, "戰鬥進行中無法鍛造裝備。")
+	}
+	switch kind {
+	case "weapon":
+		var attack *rules.Attack
+		for i := range player.Attacks {
+			if player.Attacks[i].ID == attackID {
+				attack = &player.Attacks[i]
+				break
+			}
+		}
+		if attack == nil {
+			return View{}, apperr.New(404, "找不到要鍛造的武器。")
+		}
+		if attack.UpgradeLevel >= forgeUpgradeCap {
+			return View{}, apperr.New(400, attack.Name+"已達鍛造上限 +"+fmt.Sprint(forgeUpgradeCap)+"。")
+		}
+		cost := ForgeWeaponCost(attack.UpgradeLevel + 1)
+		if player.Gold < cost {
+			return View{}, apperr.New(400, fmt.Sprintf("鍛造%s需要 %d gp，%s目前只有 %d gp。", attack.Name, cost, player.Name, player.Gold))
+		}
+		player.Gold -= cost
+		attack.UpgradeLevel++
+		name := attack.Name
+		level := attack.UpgradeLevel
+		*player = rules.Recalculate(*player)
+		return s.persist(st, []string{fmt.Sprintf("%s委託鍛造商強化「%s」至 +%d（%d gp）：命中與傷害各 +%d。", player.Name, name, level, cost, level)})
+	case "armor":
+		if player.ArmorUpgrade >= forgeUpgradeCap {
+			return View{}, apperr.New(400, player.Name+"的護甲已達鍛造上限 +"+fmt.Sprint(forgeUpgradeCap)+"。")
+		}
+		cost := ForgeArmorCost(player.ArmorUpgrade + 1)
+		if player.Gold < cost {
+			return View{}, apperr.New(400, fmt.Sprintf("強化護甲需要 %d gp，%s目前只有 %d gp。", cost, player.Name, player.Gold))
+		}
+		player.Gold -= cost
+		player.ArmorUpgrade++
+		*player = rules.Recalculate(*player) // folds the armor level into AC
+		return s.persist(st, []string{fmt.Sprintf("%s委託鍛造商強化護甲至 +%d（%d gp）：AC 現在 %d。", player.Name, player.ArmorUpgrade, cost, player.AC)})
+	default:
+		return View{}, apperr.New(400, "鍛造類型必須是 weapon 或 armor。")
+	}
+}
+
+// consumableEffects maps carried item names the server can resolve in play.
+var consumableEffects = map[string]string{
+	"治療藥水": "2d4+2", // heal roll
+	"解毒劑":  "",      // clears poison-style conditions
+}
+
+// UseItem consumes one carried consumable. 治療藥水 heals 2d4+2 (a bonus
+// action in combat); 解毒劑 clears poison conditions. The item is removed
+// from the equipment list.
+func (s *Service) UseItem(id, playerID, itemName string) (View, error) {
+	unlock := s.Lock(id)
+	defer unlock()
+	st, err := s.loadState(id)
+	if err != nil {
+		return View{}, err
+	}
+	player, err := st.player(playerID)
+	if err != nil {
+		return View{}, err
+	}
+	itemName = strings.TrimSpace(itemName)
+	index := -1
+	for i, owned := range player.Equipment {
+		if owned == itemName {
+			index = i
+			break
+		}
+	}
+	if index < 0 {
+		return View{}, apperr.New(404, player.Name+"身上沒有「"+itemName+"」。")
+	}
+	healExpr, known := consumableEffects[itemName]
+	if !known {
+		return View{}, apperr.New(400, "「"+itemName+"」不是可直接使用的消耗品；把它交給敘事處理即可。")
+	}
+	combatActive := st.combat != nil && st.combat.Active
+	if combatActive {
+		// Drinking is a bonus action; dry-run before consuming the item.
+		if _, err := rules.SpendCombatResource(*st.combat, playerID, "bonusAction"); err != nil {
+			return View{}, apperr.New(400, err.Error())
+		}
+	}
+
+	var logs []string
+	if healExpr != "" {
+		heal, err := rules.RollExpression(healExpr, s.dice, false)
+		if err != nil {
+			return View{}, err
+		}
+		healed := min(player.MaxHP-player.HP, heal)
+		if healed < 0 {
+			healed = 0
+		}
+		player.HP += healed
+		logs = append(logs, fmt.Sprintf("%s飲用「%s」恢復 %d 生命，現在 HP %d/%d。", player.Name, itemName, healed, player.HP, player.MaxHP))
+	} else {
+		if strings.Contains(player.Condition, "中毒") {
+			player.Condition = "正常"
+		}
+		logs = append(logs, fmt.Sprintf("%s使用「%s」，中毒類效果被中和。", player.Name, itemName))
+	}
+	player.Equipment = append(player.Equipment[:index], player.Equipment[index+1:]...)
+
+	if combatActive {
+		if spent, err := rules.SpendCombatResource(*st.combat, playerID, "bonusAction"); err == nil {
+			*st.combat = spent
+		}
+		for i := range st.combat.Combatants {
+			if st.combat.Combatants[i].PlayerID == playerID {
+				st.combat.Combatants[i].HP = player.HP
+				break
+			}
+		}
+		logs[0] += "（已使用附贈動作）"
+	}
+	return s.persist(st, logs)
 }
 
 // SellItem sells one carried item back to the merchant. Catalog items refund
@@ -116,5 +320,28 @@ func (s *Service) SellItem(id, playerID, itemName string) (View, error) {
 	}
 	player.Equipment = append(player.Equipment[:index], player.Equipment[index+1:]...)
 	player.Gold += price
+	// Selling the last copy of a shop or loot weapon removes the granted
+	// attack (class starting weapons use different IDs and stay).
+	stillOwned := false
+	for _, owned := range player.Equipment {
+		if owned == itemName {
+			stillOwned = true
+			break
+		}
+	}
+	if !stillOwned {
+		removeIDs := map[string]bool{"loot-" + itemName: true}
+		if item := shopItemByName(itemName); item != nil {
+			if spec, ok := weaponSpecs[item.ID]; ok {
+				removeIDs[spec.ID] = true
+			}
+		}
+		for i := range player.Attacks {
+			if removeIDs[player.Attacks[i].ID] {
+				player.Attacks = append(player.Attacks[:i], player.Attacks[i+1:]...)
+				break
+			}
+		}
+	}
 	return s.persist(st, []string{fmt.Sprintf("%s將「%s」賣給裝備商（+%d gp），現有 %d gp。", player.Name, itemName, price, player.Gold)})
 }

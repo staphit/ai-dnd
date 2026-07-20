@@ -35,9 +35,70 @@ var ExperienceThresholds = []int{
 	19000,
 }
 
-// abilityImprovementLevels mirrors the advancement.ts abilityImprovementLevels
-// set: total character levels that unlock 2 ability score points.
-var abilityImprovementLevels = map[int]bool{4: true, 8: true, 12: true, 16: true, 19: true}
+// armorDexContribution applies 5e armor rules to a DEX modifier: heavy armor
+// ignores DEX, medium caps it at +2, light/unarmored takes it in full.
+func armorDexContribution(mod int, kind string) int {
+	switch kind {
+	case "heavy":
+		return 0
+	case "medium":
+		if mod > 2 {
+			return 2
+		}
+		return mod
+	default:
+		return mod
+	}
+}
+
+// armorKindForEquipment infers the worn armor's weight class from the class
+// starting equipment names.
+func armorKindForEquipment(equipment []string) string {
+	for _, e := range equipment {
+		if strings.Contains(e, "鏈甲") || strings.Contains(e, "板甲") || strings.Contains(e, "全身甲") {
+			return "heavy"
+		}
+	}
+	for _, e := range equipment {
+		if strings.Contains(e, "鎖子衫") || strings.Contains(e, "鱗甲") || strings.Contains(e, "半身甲") || strings.Contains(e, "胸甲") {
+			return "medium"
+		}
+	}
+	return "light"
+}
+
+// computeAC keeps the class base AC (which assumes the class's default DEX)
+// and carries over the armor-appropriate share of any DEX the player has
+// gained since creation, plus blacksmith armor levels. (Monk WIS-to-AC is not
+// modelled; their base already reflects the template scores.)
+func computeAC(c Character) int {
+	primary := normalizedClasses(c)[0]
+	def, ok := ClassDefinitions[primary.ClassName]
+	if !ok || def.AC == 0 {
+		return c.AC // unknown class: keep the stored AC untouched
+	}
+	kind := armorKindForEquipment(def.Equipment)
+	baseDex := armorDexContribution(AbilityModifier(def.Abilities.Dex), kind)
+	nowDex := armorDexContribution(AbilityModifier(c.Abilities.Dex), kind)
+	return def.AC + (nowDex - baseDex) + c.ArmorUpgrade
+}
+
+// WeaponAttacksPerAction: light (輕型) weapons are fast enough to strike twice
+// per action; everything else lands one heavier blow. House rule so a
+// shortsword plays differently from a greatsword.
+func WeaponAttacksPerAction(attack Attack) int {
+	for _, p := range attack.Properties {
+		if strings.Contains(p, "輕型") {
+			return 2
+		}
+	}
+	return 1
+}
+
+// abilityPointsPerLevel: this duet grants ability points on EVERY level-up
+// (house rule replacing the official 4/8/12/16/19 ASI schedule) so growth is
+// felt each level.
+const abilityPointsPerLevel = 5
 
 // slotTable mirrors the advancement.ts slotTable: standard spell slots per
 // caster level (row index), one column per slot level starting at 1.
@@ -222,9 +283,11 @@ func Recalculate(c Character) Character {
 		if diePart == "" {
 			diePart = entry.Damage
 		}
-		entry.AttackBonus = proficiencyBonus + modifier
-		// `${diePart}${modifier >= 0 ? '+' : ''}${modifier}`
-		entry.Damage = fmt.Sprintf("%s%+d", diePart, modifier)
+		// Blacksmith enhancement adds +1 hit and +1 damage per upgrade level.
+		entry.AttackBonus = proficiencyBonus + modifier + entry.UpgradeLevel
+		damageMod := modifier + entry.UpgradeLevel
+		entry.Damage = fmt.Sprintf("%s%+d", diePart, damageMod)
+		entry.AttacksPerAction = WeaponAttacksPerAction(entry)
 		attacks[i] = entry
 	}
 	// skills.find((skill) => skill.name === '察覺')?.bonus || abilityModifier(wis)
@@ -316,6 +379,7 @@ func Recalculate(c Character) Character {
 	c.MaxHitDice = c.Level
 	c.Passive = 10 + perception
 	c.Initiative = AbilityModifier(c.Abilities.Dex)
+	c.AC = computeAC(c)
 	c.Skills = skills
 	c.Attacks = attacks
 	c.Spellcasting = spellcasting
@@ -450,11 +514,7 @@ func LevelUpCharacter(c Character, className string) (Character, error) {
 		ID:   fmt.Sprintf("progression-%s-%d", className, nextClassLevel),
 		Name: fmt.Sprintf("%s %d 級進展", className, nextClassLevel),
 	}
-	if abilityImprovementLevels[nextLevel] {
-		progressionFeature.Description = "解鎖 2 點能力值提升，可在角色成長頁分配；生命、熟練與法術進展亦已重新計算。"
-	} else {
-		progressionFeature.Description = fmt.Sprintf("解鎖 %s 第 %d 級進展；生命值、熟練加值、攻擊與法術位依新等級重新計算。", className, nextClassLevel)
-	}
+	progressionFeature.Description = fmt.Sprintf("解鎖 %s 第 %d 級進展與 %d 點能力值提升（角色成長頁分配）；生命值、熟練加值、攻擊與法術位依新等級重新計算。", className, nextClassLevel, abilityPointsPerLevel)
 	// Math.max(1, Math.floor(starter.hitDie / 2) + 1 + conModifier); the
 	// starter hit die is always positive, so truncation matches Math.floor.
 	hpGain := starter.HitDie/2 + 1 + AbilityModifier(c.Abilities.Con)
@@ -472,9 +532,7 @@ func LevelUpCharacter(c Character, className string) (Character, error) {
 	if c.Spellcasting == nil {
 		c.Spellcasting = starter.Spellcasting
 	}
-	if abilityImprovementLevels[nextLevel] {
-		c.AbilityPoints += 2 // (character.abilityPoints || 0) + 2
-	}
+	c.AbilityPoints += abilityPointsPerLevel
 	return Recalculate(c), nil
 }
 

@@ -126,6 +126,27 @@ func (s *Server) handleSellItem(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// handleForgeUpgrade: blacksmith enhancement of a weapon or armor.
+func (s *Server) handleForgeUpgrade(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Kind     string `json:"kind"`
+		AttackID string `json:"attackId"`
+	}
+	s.characterAction(w, r, &body, func(id, pid string) (game.View, error) {
+		return s.Game.ForgeUpgrade(id, pid, body.Kind, body.AttackID)
+	})
+}
+
+// handleUseItem: consume a carried consumable (potion etc.).
+func (s *Server) handleUseItem(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		ItemName string `json:"itemName"`
+	}
+	s.characterAction(w, r, &body, func(id, pid string) (game.View, error) {
+		return s.Game.UseItem(id, pid, body.ItemName)
+	})
+}
+
 func (s *Server) handleLevelUp(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		ClassName string `json:"className"`

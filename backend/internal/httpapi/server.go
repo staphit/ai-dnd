@@ -47,6 +47,10 @@ type Server struct {
 	// AI enemy turns (mechanical fallback targeting only).
 	TacticsSchemaPath string
 
+	// NovelSchemaPath is the first-person novel-export output schema; empty
+	// disables /api/campaign/{id}/export-novel.
+	NovelSchemaPath string
+
 	// ImageRenderers maps a backend id ("codex", "local", "grok") to its renderer.
 	ImageRenderers map[string]images.Renderer
 	// DefaultImageBackend is used when a request omits imageBackend (IMAGE_BACKEND).
@@ -260,6 +264,8 @@ func (s *Server) Router() http.Handler {
 	r.Get("/api/shop/catalog", s.handleShopCatalog)
 	r.Post("/api/campaign/{id}/players/{pid}/buy", s.handleBuyItem)
 	r.Post("/api/campaign/{id}/players/{pid}/sell", s.handleSellItem)
+	r.Post("/api/campaign/{id}/players/{pid}/forge-upgrade", s.handleForgeUpgrade)
+	r.Post("/api/campaign/{id}/players/{pid}/use-item", s.handleUseItem)
 	r.Post("/api/campaign/{id}/players/{pid}/level-up", s.handleLevelUp)
 	r.Post("/api/campaign/{id}/players/{pid}/ability-point", s.handleAbilityPoint)
 	r.Post("/api/campaign/{id}/players/{pid}/prepared-spells", s.handlePreparedSpells)
@@ -281,6 +287,7 @@ func (s *Server) Router() http.Handler {
 	r.Delete("/api/generated/{filename}", s.handleDeleteGenerated)
 	r.Get("/api/images/meta", s.handleListImageMeta)
 	r.Post("/api/campaign/{id}/revise-story", s.handleReviseStory)
+	r.Post("/api/campaign/{id}/export-novel", s.handleExportNovel)
 	r.Post("/api/tts", s.handleTTS)
 	r.Get("/generated/*", s.serveGenerated)
 	r.NotFound(s.serveStatic)

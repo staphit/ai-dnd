@@ -216,6 +216,22 @@ export function sellItem(id: string, playerId: PlayerId | string, itemName: stri
   return apiFetch(playerPath(id, playerId, '/sell'), { method: 'POST', body: JSON.stringify({ itemName }) });
 }
 
+// Blacksmith: enhance one weapon (+1 hit/+1 damage per level) or armor (+1 AC).
+export function forgeUpgrade(id: string, playerId: PlayerId | string, kind: 'weapon' | 'armor', attackId?: string): Promise<Campaign> {
+  return apiFetch(playerPath(id, playerId, '/forge-upgrade'), { method: 'POST', body: JSON.stringify({ kind, attackId }) });
+}
+
+// Consume a carried consumable (治療藥水 heals; bonus action in combat).
+export function useItem(id: string, playerId: PlayerId | string, itemName: string): Promise<Campaign> {
+  return apiFetch(playerPath(id, playerId, '/use-item'), { method: 'POST', body: JSON.stringify({ itemName }) });
+}
+
+// Rewrite the whole adventure as a first-person novel from one character's
+// point of view; the caller saves the returned text as a .txt file.
+export function exportNovel(id: string, playerId: PlayerId | string, dmProvider?: string, model?: string): Promise<{ title: string; novel: string; narrator: string }> {
+  return apiFetch(campaignPath(id, '/export-novel'), { method: 'POST', body: JSON.stringify({ playerId, dmProvider, model }) });
+}
+
 // ---------------------------------------------------------------------------
 // Combat
 

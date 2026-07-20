@@ -6,6 +6,7 @@ import (
 
 	"dndduet/internal/apperr"
 	"dndduet/internal/dm"
+	"dndduet/internal/rules"
 )
 
 func preparedActions(t *testing.T, s *Service, id string) PreparedDMTurn {
@@ -106,6 +107,52 @@ func TestStoryArcPhaseCompletion(t *testing.T) {
 	}
 	if !hasLog {
 		t.Fatal("missing 階段達成 journal entry")
+	}
+}
+
+func TestLootWeaponBecomesAttack(t *testing.T) {
+	s := newTestService(t)
+	view := createSample(t, s)
+	id := view.ID
+	prepared := preparedActions(t, s, id)
+
+	turn := &dm.Turn{
+		Narration: "冰層下露出一柄纏著霜紋的鈎矛。", Scene: "冰洞",
+		Objective: "obj", ObjectiveContext: "ctx", Stakes: "stakes",
+		Choices: []dm.Choice{{Text: "前進"}},
+		Combat:  dm.Combat{FirstTurn: "initiative", Enemies: []dm.Enemy{}},
+		Loot: dm.Loot{Gold: 30, Items: []dm.LootItem{
+			{PlayerID: "player1", Name: "結霜鈎矛", Damage: "1d10", DamageType: "穿刺", Properties: []string{"雙手"}},
+		}},
+	}
+	applied, err := s.ApplyDMTurn(id, prepared, turn)
+	if err != nil {
+		t.Fatalf("apply: %v", err)
+	}
+	p := applied.View.Players[0]
+	var loot *rules.Attack
+	for i, a := range p.Attacks {
+		if a.Name == "結霜鈎矛" {
+			loot = &p.Attacks[i]
+		}
+	}
+	if loot == nil {
+		t.Fatalf("loot weapon attack missing: %+v", p.Attacks)
+	}
+	if loot.AttackBonus == 0 || !strings.HasPrefix(loot.Damage, "1d10") {
+		t.Fatalf("loot weapon numbers not derived: %+v", loot)
+	}
+	found := false
+	for _, e := range p.Equipment {
+		if e == "結霜鈎矛" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("loot item missing from equipment: %v", p.Equipment)
+	}
+	if p.Gold != 100+15 { // 30 gold split across two players
+		t.Fatalf("gold split wrong: %d", p.Gold)
 	}
 }
 

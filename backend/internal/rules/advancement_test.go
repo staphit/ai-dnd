@@ -85,6 +85,38 @@ func TestSetPreparedSpellsExplicitConfiguration(t *testing.T) {
 	}
 }
 
+// TestDexRaisesAC: raising DEX must raise AC for light-armor classes; heavy
+// armor ignores DEX entirely.
+func TestDexRaisesAC(t *testing.T) {
+	rogue := CreateConfiguredCharacter("p1", "小影", "盜賊", BuildOptions{})
+	base := rogue.AC
+	rogue.AbilityPoints = 2
+	step1, err := SpendAbilityPoint(rogue, "dex")
+	if err != nil {
+		t.Fatalf("spend 1: %v", err)
+	}
+	step2, err := SpendAbilityPoint(step1, "dex")
+	if err != nil {
+		t.Fatalf("spend 2: %v", err)
+	}
+	wantDelta := AbilityModifier(step2.Abilities.Dex) - AbilityModifier(rogue.Abilities.Dex)
+	if wantDelta < 1 {
+		t.Fatalf("test setup: +2 DEX should raise the modifier (dex %d -> %d)", rogue.Abilities.Dex, step2.Abilities.Dex)
+	}
+	if step2.AC != base+wantDelta {
+		t.Fatalf("AC did not follow DEX: base %d, got %d, want %d", base, step2.AC, base+wantDelta)
+	}
+
+	fighter := CreateConfiguredCharacter("p2", "鐵手", "戰士", BuildOptions{})
+	fBase := fighter.AC
+	fighter.AbilityPoints = 2
+	f1, _ := SpendAbilityPoint(fighter, "dex")
+	f2, _ := SpendAbilityPoint(f1, "dex")
+	if f2.AC != fBase {
+		t.Fatalf("heavy armor must ignore DEX: %d -> %d", fBase, f2.AC)
+	}
+}
+
 // TestLevelUpRequiresXPAndGrantsAbilityPoints ports "requires XP to level and
 // grants ability points at level 4".
 func TestLevelUpRequiresXPAndGrantsAbilityPoints(t *testing.T) {
@@ -106,8 +138,9 @@ func TestLevelUpRequiresXPAndGrantsAbilityPoints(t *testing.T) {
 	if leveled.Level != 4 {
 		t.Errorf("level = %d, want 4", leveled.Level)
 	}
-	if leveled.AbilityPoints != 2 {
-		t.Errorf("abilityPoints = %d, want 2", leveled.AbilityPoints)
+	// House rule: every level-up grants abilityPointsPerLevel (5) points.
+	if leveled.AbilityPoints != abilityPointsPerLevel {
+		t.Errorf("abilityPoints = %d, want %d", leveled.AbilityPoints, abilityPointsPerLevel)
 	}
 	improved, err := SpendAbilityPoint(leveled, "str")
 	if err != nil {
@@ -116,7 +149,7 @@ func TestLevelUpRequiresXPAndGrantsAbilityPoints(t *testing.T) {
 	if improved.Abilities.Str != leveled.Abilities.Str+1 {
 		t.Errorf("str = %d, want %d", improved.Abilities.Str, leveled.Abilities.Str+1)
 	}
-	if improved.AbilityPoints != 1 {
-		t.Errorf("abilityPoints = %d, want 1", improved.AbilityPoints)
+	if improved.AbilityPoints != abilityPointsPerLevel-1 {
+		t.Errorf("abilityPoints = %d, want %d", improved.AbilityPoints, abilityPointsPerLevel-1)
 	}
 }

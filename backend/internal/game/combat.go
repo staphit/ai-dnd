@@ -214,6 +214,7 @@ func (s *Service) Attack(id string, p AttackParams) (AttackResult, error) {
 	// A player combatant may pick one of their sheet attacks; the tracker
 	// projects its numbers onto the combatant before rolling (CombatTracker.tsx).
 	state := *st.combat
+	strikes := 1
 	if current.PlayerID != "" {
 		for _, player := range st.players {
 			if player.ID != current.PlayerID {
@@ -240,20 +241,48 @@ func (s *Service) Attack(id string, p AttackParams) (AttackResult, error) {
 					}
 				}
 				state.Combatants = combatants
+				// Light weapons strike twice per action (house rule).
+				strikes = chosen.AttacksPerAction
+				if strikes < 1 {
+					strikes = rules.WeaponAttacksPerAction(*chosen)
+				}
 			}
 			break
 		}
 	}
 
-	resolved, resolution, err := rules.ResolveAttack(state, current.ID, targetID, s.dice, "normal")
-	if err != nil {
-		return AttackResult{}, apperr.New(400, err.Error())
+	// One action may carry several strikes; stop early once the target drops.
+	resolved := state
+	var resolution rules.AttackResolution
+	var strikeTexts []string
+	for strike := 0; strike < strikes; strike++ {
+		next, res, err := rules.ResolveAttack(resolved, current.ID, targetID, s.dice, "normal")
+		if err != nil {
+			return AttackResult{}, apperr.New(400, err.Error())
+		}
+		resolved = next
+		resolution = res
+		text := res.Text
+		if strikes > 1 {
+			text = fmt.Sprintf("第 %d 擊：%s", strike+1, text)
+		}
+		strikeTexts = append(strikeTexts, text)
+		targetDown := false
+		for _, c := range resolved.Combatants {
+			if c.ID == targetID && c.Defeated {
+				targetDown = true
+				break
+			}
+		}
+		if targetDown {
+			break
+		}
 	}
 	spent, err := rules.SpendCombatResource(resolved, current.ID, "action")
 	if err != nil {
 		return AttackResult{}, apperr.New(400, err.Error())
 	}
-	logs := append([]string{fmt.Sprintf("%s（已使用動作）", resolution.Text)}, s.applyCombatChange(st, spent)...)
+	logs := append([]string{fmt.Sprintf("%s（已使用動作）", strings.Join(strikeTexts, " "))}, s.applyCombatChange(st, spent)...)
 	view, err := s.persist(st, logs)
 	if err != nil {
 		return AttackResult{}, err

@@ -83,9 +83,14 @@ type ArcSignal struct {
 }
 
 // LootItem is one physical item found in the scene, granted to a player.
+// Damage/DamageType/Properties are optional weapon stats: when Damage is a
+// dice expression the item becomes a usable attack on the sheet.
 type LootItem struct {
-	PlayerID string `json:"playerId"`
-	Name     string `json:"name"`
+	PlayerID   string   `json:"playerId"`
+	Name       string   `json:"name"`
+	Damage     string   `json:"damage"`
+	DamageType string   `json:"damageType"`
+	Properties []string `json:"properties"`
 }
 
 // Loot is treasure the DM hands out this turn: gold is a party total the
@@ -310,7 +315,17 @@ func validateDMTurn(raw json.RawMessage) (*Turn, error) {
 				if !playerIDPattern.MatchString(playerID) || name == "" {
 					continue
 				}
-				turn.Loot.Items = append(turn.Loot.Items, LootItem{PlayerID: playerID, Name: jsSlice(name, 60)})
+				loot := LootItem{PlayerID: playerID, Name: jsSlice(name, 60)}
+				loot.Damage = strings.TrimSpace(strOr(get(item, "damage"), ""))
+				loot.DamageType = jsSlice(strings.TrimSpace(strOr(get(item, "damageType"), "")), 20)
+				if props, ok := asSlice(get(item, "properties")); ok {
+					for _, p := range arrTake(props, 4) {
+						if s := strings.TrimSpace(strOr(p, "")); s != "" {
+							loot.Properties = append(loot.Properties, jsSlice(s, 20))
+						}
+					}
+				}
+				turn.Loot.Items = append(turn.Loot.Items, loot)
 			}
 		}
 	}
